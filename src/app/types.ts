@@ -337,6 +337,8 @@ export type Preferences = {
   defaultFps: number;
   /** Downscale oversized start and reference images to the generation pixel budget. */
   autoResizeInputs: boolean;
+  /** Run a model's prompt enhancer (FLUX.3's upsampler) when it has one in place. */
+  promptEnhancer: boolean;
   generationPreviewMode: "advanced" | "simple";
   variationQueueMode: "batch" | "separate";
   zenMode: boolean;

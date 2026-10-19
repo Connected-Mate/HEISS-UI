@@ -722,3 +722,9 @@ button.lora-pill:focus-visible { outline: none; box-shadow: var(--focus-ring); }
   .rapid-row { box-shadow: none; border: 1px solid CanvasText; }
   .rapid-row.is-on .rapid-row-copy strong svg { color: Highlight; }
 }
+
+/* A model's own switch in Basics (FLUX.3's Prompt enhancer): what it does under its name, the switch beside. */
+.sidebar-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: var(--r-item); background: var(--control-fill); }
+.sidebar-switch-row > span { display: grid; gap: 2px; min-width: 0; }
+.sidebar-switch-row strong { font-size: 12.5px; font-weight: 550; color: hsl(var(--foreground)); }
+.sidebar-switch-row small { font-size: 11.5px; line-height: 1.4; color: hsl(var(--muted-foreground)); }

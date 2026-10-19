@@ -6,7 +6,7 @@ import { showToastTone as showToast, toast } from "./app/toast";
 import "./styles.css";
 
 import { useModelFolders } from './app/useModelFolders';
-import type { AutoUpscale, PreviousExit, SavedSize, ComfyStatus, GalleryItem, Health, LoraSelection, MediaInput, Mode, Models, OutputFolderReport, Paths, Preferences, Profile, InpaintMask, ReferenceAsset, ReferenceInpaint, ReferenceRole, ReferenceRoleControl, SelectedReferenceAsset, TouchGesture, UpdatePrefs, UpdateStatus, WorkflowPreferences, WorkflowSummary } from './app/types';
+import type { AspectPreset, AutoUpscale, PreviousExit, SavedSize, ComfyStatus, GalleryItem, Health, LoraSelection, MediaInput, Mode, Models, OutputFolderReport, Paths, Preferences, Profile, InpaintMask, ReferenceAsset, ReferenceInpaint, ReferenceRole, ReferenceRoleControl, SelectedReferenceAsset, TouchGesture, UpdatePrefs, UpdateStatus, WorkflowPreferences, WorkflowSummary } from './app/types';
 import { fallbackAspectPresets } from './app/constants';
 import { apiJson, copyImage, copyText, loadDraft, loadPrefs, referenceAssetFromGallery } from './app/api';
 import { characterMeta, clampText, clientJobUuid, formatElapsed, generationDetailEntries, settingMax, textLength, titleFromPrompt } from './app/format';
@@ -1093,12 +1093,23 @@ function App() {
   }
   const restartForUpdate = () => restartHeiss({ update: true });
 
+  /** The preset closest to a width-to-height ratio, compared on a log scale so 2:1 and 1:2 are as far from 1:1. */
+  function nearestShape(presets: AspectPreset[], ratio: number) {
+    if (!presets.length || !Number.isFinite(ratio) || ratio <= 0) return undefined;
+    return presets.reduce((best, item) => (Math.abs(Math.log(item.w / item.h / ratio)) < Math.abs(Math.log(best.w / best.h / ratio)) ? item : best));
+  }
+
   function applyProfile(profile: Profile, setModelId = true) {
     const nextReferenceInput = imageInputsForProfile(profile)[0];
     if (setModelId) setModel(profile.id);
     // A custom size is yours, so it stays across models of the same kind, fitted to the new one's limits.
     const keepCustom = customSize && profile.kind === mode;
     if (!keepCustom) setCustomSize(false);
+    // A shape you picked (16:9, 3:4 …) stays too: the new model's own size for it, or its nearest
+    // shape. Default stays the new model's default, which may be another shape.
+    const keptShape = !keepCustom && setModelId && profile.kind === mode && model && aspectValue !== defaultAspectSize
+      ? nearestShape(profile.aspectPresets || [], width / height)
+      : undefined;
     setTextEncoder(String(profile.defaults.textEncoder || ""));
     setTextEncoders((profile.encoderSlots || []).map((slot) => slot.default));
     setVae(String(profile.defaults.vae || ""));
@@ -1111,6 +1122,9 @@ function App() {
       if (fitted.width !== width || fitted.height !== height) {
         showToast(`Custom size fitted to ${profile.displayName || profile.label || "this model"}: ${fitted.width} × ${fitted.height}`, "default", { description: `${width} × ${height} is past what it takes.` });
       }
+    } else if (keptShape) {
+      setWidth(keptShape.w);
+      setHeight(keptShape.h);
     } else {
       setWidth(Number(profile.defaults.width || 1024));
       setHeight(Number(profile.defaults.height || 1024));

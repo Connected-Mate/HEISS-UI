@@ -7,6 +7,7 @@ export const defaultPrefs: Preferences = {
   defaultVideoSteps: 12,
   defaultFps: 16,
   autoResizeInputs: true,
+  promptEnhancer: true,
   generationPreviewMode: "advanced",
   variationQueueMode: "batch",
   zenMode: false,

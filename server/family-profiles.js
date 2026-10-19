@@ -487,6 +487,8 @@ export function familyProfiles(info, helpers) {
         ...(diffusersRunner ? { sampler: false, scheduler: false } : {}),
         // ComfyUI's LoRA loader cannot patch a model it did not build.
         lora: canUseLoras && (!ownLoaders || Boolean(runner?.loras)),
+        // A prompt upsampler in place (FLUX.3's): the sidebar's Prompt enhancer switch turns it off.
+        promptUpsampler: Boolean(upsampler),
         startImage: Boolean(family.img2img || family.startImage),
         startImageRequired: family.startImage === "required",
         denoise: Boolean(family.img2img),

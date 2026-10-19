@@ -14,6 +14,7 @@ import { referenceName } from './ReferenceMediaPicker';
 import { PhoneSelect, PhoneSlider } from './phoneControls';
 import { PhoneRapidRow, SidebarRapidRow } from './RapidRow';
 import { WorkflowSettingsPanel } from './WorkflowSettings';
+import { Switch } from './SettingsDialog';
 
 function WorkflowPreviewCard({ workflow, onOpen }: { workflow: WorkflowSummary | null; onOpen: () => void }) {
   const comfyRestarting = useComfyRestarting();
@@ -255,6 +256,16 @@ export function SidebarControls({ view }: { view: any }) {
                   </>
                 ) : null}
               </section>
+            ) : null}
+            {currentProfile?.capabilities?.promptUpsampler ? (
+              // The model's prompt enhancer (FLUX.3's upsampler), on by default; remembered on this device.
+              <div className="sidebar-switch-row">
+                <span>
+                  <strong>Prompt enhancer</strong>
+                  <small>{view.prefs?.promptEnhancer !== false ? `Expands your prompt into the detailed description ${currentProfile.familyName || "the model"} works best with.` : "Your prompt goes in exactly as written."}</small>
+                </span>
+                <Switch label="Prompt enhancer" size="sm" checked={view.prefs?.promptEnhancer !== false} onChange={(next) => view.setPrefs({ promptEnhancer: next })} />
+              </div>
             ) : null}
             {mode === "video" ? (
               <div className="number-row">

@@ -948,6 +948,8 @@ export function generationSettings(body) {
     weightDtype: body.weightDtype || "",
     referenceImageName: body.startImageName || "",
     autoResizeInputs: body.autoResizeInputs !== false,
+    // The Prompt enhancer turned off for this run (FLUX.3): kept, so Try again runs it the same way.
+    ...(body.promptUpsampler === false ? { promptUpsampler: false } : {}),
     ...(body.requestedSize ? { width: body.requestedSize.width, height: body.requestedSize.height } : {}),
     referenceAssets: Array.isArray(body.referenceAssets) ? body.referenceAssets.map(({ slot, assetId, source, name }) => ({ slot, assetId, source, name })) : [],
     // A first reference that only guided: kept, so a retry runs it the same way (Edit is the default).

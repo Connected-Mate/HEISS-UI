@@ -185,6 +185,7 @@ export function useGenerationActions(view: any) {
         rapid: Boolean(rapid),
         rapidGuidance: Boolean(rapidGuidance),
         ...((rapid || rapidGuidance) && prefs.rapidSpeed && prefs.rapidSpeed !== "balanced" ? { rapidSpeed: prefs.rapidSpeed } : {}),
+        promptUpsampler: prefs.promptEnhancer !== false,
         loras,
         referenceAssets: (referenceAssets || []).map(({ slot, asset }: any) => ({ slot, assetId: asset.id })),
         referenceRole: framedByReference ? "edit" : "reference",

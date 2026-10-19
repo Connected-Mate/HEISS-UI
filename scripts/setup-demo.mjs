@@ -58,6 +58,10 @@ const headers = {
   wan14b: { "head.modulation": t([1, 2, 5120]), "head.head.weight": t([64, 5120]), "patch_embedding.weight": t([5120, 16, 1, 2, 2]) },
   sdxlUnet: { "input_blocks.0.0.weight": t([320, 4, 3, 3]), "input_blocks.4.1.transformer_blocks.0.attn2.to_k.weight": t([640, 2048]) },
   clipL: { "text_model.encoder.layers.0.mlp.fc1.weight": t([3072, 768]) },
+  flux3: { "content_mode_blocks.image.0.attn_out.weight": t([3072, 3072]), "single_stream_modulations.txt.lin.weight": t([9216, 3072]), "ref_time_in.in_layer.weight": t([3072, 256]) },
+  qwen3vl4b: { "model.visual.deepstack_merger_list.0.norm.weight": t([1]), "model.visual.merger.linear_fc2.weight": t([2560, 1]) },
+  qwen35_9b: { "model.language_model.layers.0.linear_attn.A_log": t([32]), "model.language_model.layers.0.input_layernorm.weight": t([4096]) },
+  flux2Vae: { "decoder.conv_in.weight": t([512, 32, 3, 3]), "bn.running_mean": t([128]) },
   kl4: { "decoder.conv_in.weight": t([512, 4, 3, 3]) }
 };
 
@@ -81,12 +85,17 @@ function seed() {
   put("diffusion_models", "flux1-dev-fp8.safetensors", headers.fluxDev); // CLIP-L + T5-XXL + Flux VAE
   put("diffusion_models", "z_image_turbo_bf16.safetensors", headers.zimage); // Qwen3 4B + the same Flux VAE
   put("diffusion_models", "wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", headers.wan14b); // + low-noise partner (manual), UMT5 (flaky), Wan VAE
-  put("diffusion_models", "ideogram4_fp8_scaled.safetensors", null); // partner (gated), Qwen3-VL 8B (disk full), Flux.2 VAE, newer ComfyUI
+  put("diffusion_models", "ideogram4_fp8_scaled.safetensors", null); // partner (gated), Qwen3-VL 8B (disk full), newer ComfyUI (the Flux.2 VAE is in, for FLUX.3)
   put("diffusion_models", "mystery_model_v3.safetensors", { "foo.weight": t([1]) }); // not recognised
   put("checkpoints", "sd_xl_base_1.0.safetensors", { ...prefixed("model.diffusion_model.", headers.sdxlUnet), ...prefixed("conditioner.embedders.0.transformer.", headers.clipL), ...prefixed("first_stage_model.", headers.kl4) }); // ready
   put("checkpoints", "ponyRealism_v22_noVAE_noCLIP.safetensors", prefixed("model.diffusion_model.", headers.sdxlUnet)); // CLIP-L + CLIP-G + SDXL VAE
   put("checkpoints", "Sana_1600M_1024px_MultiLing.safetensors", null); // ExtraModels pack
   put("loras", "film_grain_35mm.safetensors", null);
+  // FLUX.3 Klein, ready, with its prompt enhancer: the sidebar shows its Prompt enhancer switch.
+  put("diffusion_models", "flux3-image-klein-int8-convrot.safetensors", headers.flux3);
+  put("text_encoders", "qwen3vl_4b_int8_convrot.safetensors", headers.qwen3vl4b);
+  put("text_encoders", "qwen3.5_9b_flux3_prompt_upsampler_int8_convrot.safetensors", headers.qwen35_9b);
+  put("vae", "flux2-vae.safetensors", headers.flux2Vae);
 }
 seed();
 
@@ -112,7 +121,8 @@ const coreNodes = ["CLIPTextEncode", "VAEDecode", "VAEEncode", "SaveImage", "Loa
   "Flux2Scheduler", "SamplerCustomAdvanced", "CFGGuider", "BasicGuider", "BasicScheduler", "KSamplerSelect", "RandomNoise", "FluxGuidance",
   "ConditioningZeroOut", "ModelSamplingFlux", "ModelSamplingAuraFlow", "ModelSamplingSD3", "ModelSamplingDiscrete", "CLIPSetLastLayer",
   "KSamplerAdvanced", "EmptyHunyuanLatentVideo", "Wan22ImageToVideoLatent", "CreateVideo", "SaveVideo", "DualCLIPLoader", "TripleCLIPLoader",
-  "QuadrupleCLIPLoader", "T5TokenizerOptions", "DualModelGuider", "CFGOverride", "TextEncodeQwenImage21", "EmptyHunyuanImageLatent"];
+  "QuadrupleCLIPLoader", "T5TokenizerOptions", "DualModelGuider", "CFGOverride", "TextEncodeQwenImage21", "EmptyHunyuanImageLatent",
+  "TextGenerate", "BatchImagesNode", "ImageScaleToTotalPixels"];
 const clipTypes = [...new Set(Object.values(families).map((family) => family.clipType).filter(Boolean))];
 
 function objectInfo() {

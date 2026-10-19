@@ -801,6 +801,10 @@ test("FLUX.3 Klein and Klein Base are told apart by their weights, and run behin
   assert.equal(base[positive.inputs.text[0]].class_type, "TextGenerate");
   assert.equal(negative.inputs.text, "blurry");
   assert.deepEqual([byType(base, "KSampler")[0].inputs.cfg, byType(base, "EmptyFlux2LatentImage").length], [4, 1]);
+  // The sidebar's Prompt enhancer switch, off: no upsampler, the prompt as written.
+  assert.equal(flux3[1].capabilities.promptUpsampler, true);
+  const plain = familyGraph(sanitizeGenerateBody({ kind: "image", workflow: flux3[1].workflow, profileId: flux3[1].id, prompt: "a fox in snow", promptUpsampler: false }, info));
+  assert.deepEqual([byType(plain, "TextGenerate").length, byType(plain, "CLIPTextEncode")[0].inputs.text], [0, "a fox in snow"]);
 
   const edit = familyGraph({ family: "flux3", variant: "distilled", source: "unet", model: "flux3.safetensors", encoders: ["qwen3vl_4b.safetensors"], vae: "flux2-vae.safetensors", upsampler: "upsampler.safetensors", prompt: "make the dress red", referenceImages: ["a.png", "b.png"], steps: 16, cfg: 1, seed: 1 });
   const editGenerate = byType(edit, "TextGenerate")[0].inputs;

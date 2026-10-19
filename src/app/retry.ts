@@ -48,6 +48,8 @@ export function retryRequest(item: GalleryItem, options: RetryOptions = {}): Ret
     ...(kind === 'video' ? { frames: Number(settings.frames || 0) || undefined, fps: Number(settings.fps || 0) || undefined } : {}),
     loras: normalizeLoras(settings.loras),
     autoResizeInputs: settings.autoResizeInputs !== false,
+    // Try again repeats the run as it was made, with or without the prompt enhancer.
+    promptUpsampler: settings.promptUpsampler !== false,
     referenceAssets: references.filter((ref) => ref?.assetId).map((ref) => ({ slot: ref.slot || 'reference', assetId: ref.assetId })),
     // Edit unless the run's first reference only guided: then the retry keeps its size and aspect too.
     referenceRole: settings.referenceRole === 'reference' ? 'reference' : 'edit',
