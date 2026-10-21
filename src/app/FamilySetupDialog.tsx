@@ -243,8 +243,8 @@ export function FamilySetupDialog({ family, profileId, open, onOpenChange, showT
         {route === 'native' && !plan.comfy.native ? (
           <>
             <div className="upscale-callout family-setup-gap">
-              <strong>Update ComfyUI to its newest version</strong>
-              <span>ComfyUI learned {title} on 16 October 2026, after release 0.41.3{plan.comfy.version ? `. This one is ${plan.comfy.version}` : ''}. Update it (<code>git pull</code> in its folder, or the nightly in ComfyUI-Manager), then restart it.</span>
+              <strong>Update ComfyUI to 0.42 or newer</strong>
+              <span>{title} runs on ComfyUI 0.42 and newer{plan.comfy.version ? `. This one is ${plan.comfy.version}` : ''}. Update it, then restart it.</span>
             </div>
             <p className="upscale-fine">Or use the official model folder in <code>models/diffusers</code> with its makers’ nodes, which run on the ComfyUI you have. <a href={plan.page} target="_blank" rel="noreferrer">How <ExternalLink size={11} /></a></p>
             <Watcher lastChecked={checkedAt}>Waiting for ComfyUI to know {title}…</Watcher>
