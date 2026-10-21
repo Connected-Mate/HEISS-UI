@@ -735,7 +735,7 @@ export const families = {
   // OpenMOSS's MOSS-Image (Oct 2026): a 5B single-stream DiT in Flux.2's latent space that
   // reads prompts with a stock Qwen3.5 9B. Settings from its model card and ComfyUI
   // workflow: 50 steps, CFG 3, shift 5, euler / sgm_uniform, 1-2 MP (0.25-4 MP work).
-  // Two ways to run it: ComfyUI's own nodes (master after 0.41.3, CLIPLoader type
+  // Two ways to run it: ComfyUI's own nodes (0.42 and newer, CLIPLoader type
   // moss_image) with Comfy-Org's single files, or its makers' pack with the official
   // Diffusers folder, which also skips layer 22 on the negative pass as they sample.
   moss_image: {

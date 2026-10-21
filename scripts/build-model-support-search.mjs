@@ -79,6 +79,8 @@ const familyAliases = {
   ideogram4: ["ideogram 4", "ideogram 4.0"],
   mage_flow: ["mageflow", "mage flow"],
   ernie: ["ernie image", "ernie"],
+  flux3: ["flux 3", "flux.3", "flux3 klein", "flux 3 klein"],
+  moss_image: ["moss image", "moss"],
   sana: ["sana", "sana 1.5", "sana sprint"],
 };
 

@@ -9,7 +9,7 @@
 
 <p align="center">
   A local front end for ComfyUI.<br />
-  28 model families work out of the box, and your own ComfyUI workflows come along. Write a prompt and watch it render.
+  30 model families work out of the box, and your own ComfyUI workflows come along. Write a prompt and watch it render.
 </p>
 
 <p align="center">
@@ -39,7 +39,7 @@ The node graph is for building workflows. HEISS UI is for the everyday loop of p
 
 ## Features
 
-- **28 model families, ready to go.** From SD 1.5 and SDXL to Flux.2, Qwen-Image, Krea 2 and Wan 2.2, each with its makers' recommended settings. [The full list ↓](#supported-models)
+- **30 model families, ready to go.** From SD 1.5 and SDXL to Flux.2, Qwen-Image, Krea 2 and Wan 2.2, each with its makers' recommended settings. [The full list ↓](#supported-models)
 - **Missing parts, one click away.** Pick a model and see what it still needs, with a Download button for each part and **Get all** for the lot.
 - **Native 2K.** Pick 2K and the model draws the picture at 2048 itself, in one run, with no upscale in between. Or set any size of your own, in pixels or megapixels, and save it for every device. [Sizes ↓](#native-2k-and-sizes)
 - **Smart upscale.** Any picture goes to 2K or 4K with SeedVR2 in one click, with a countdown. [How ↓](#smart-upscale)
@@ -109,7 +109,7 @@ ComfyUI on another machine or port? Set its address in **Settings › Connection
 
 30 families run out of the box with their makers' recommended settings, and a renamed file is still recognized.
 
-**Image (23):** FLUX.3 Klein (with its prompt upsampler), MOSS-Image (with a guided setup), Krea 2, Anima, Z-Image, Flux.2 (Dev, Klein 4B, Klein 9B), SDXL (NoobAI, Illustrious, Pony and more), Pony V7, Chroma, Qwen-Image (and 2.1), Ideogram 4, MageFlow, ERNIE-Image, Lumina Image 2.0, Sana, HiDream I1, SD 3.5, Flux.1, SD 2.x and SD 1.5.
+**Image (23):** Krea 2, Anima, Z-Image, FLUX.3 Klein, Flux.2 (Dev, Klein 4B, Klein 9B), SDXL (NoobAI, Illustrious, Pony and more), Pony V7, Chroma, Qwen-Image (and 2.1), Ideogram 4, MageFlow, MOSS-Image, ERNIE-Image, Lumina Image 2.0, Sana, HiDream I1, SD 3.5, Flux.1, SD 2.x and SD 1.5.
 
 **Video (7, beta):** MiniMax H3, HunyuanVideo 1.5, Wan 2.2 (5B and 14B) and Wan 2.1, with text and image to video where the model has both.
 
