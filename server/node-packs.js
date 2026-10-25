@@ -28,7 +28,7 @@ export const nodePacks = {
     repository: "https://github.com/tristmeister/ComfyUI-HEISS-UI-Nodes.git",
     folder: "ComfyUI-HEISS-UI-Nodes",
     commit: "19d066f1276247185cdcef001c30b3711bb11ad3",
-    ref: "feature/rapid-v2, 2026-10-14",
+    ref: "main, 2026-10-14",
     search: "HEISS UI",
     // It grows with HEISS: an installed older copy is updated to `commit` (pack-installer.js).
     update: true,
@@ -46,7 +46,7 @@ export const nodePacks = {
     repository: "https://github.com/tristmeister/ComfyUI-HEISS-UI-Nodes.git",
     folder: "ComfyUI-HEISS-UI-Nodes",
     commit: "19d066f1276247185cdcef001c30b3711bb11ad3",
-    ref: "feature/rapid-v2, 2026-10-14",
+    ref: "main, 2026-10-14",
     update: true,
     signature: "heiss_rapid.py",
     requirements: "requirements-rtx.txt",
