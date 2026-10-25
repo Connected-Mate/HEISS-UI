@@ -525,13 +525,6 @@ function App() {
   }, [prefs.zenMode, active, settings, zenControls]);
 
   useEffect(() => {
-    const textarea = zenPromptRef.current;
-    if (!textarea) return;
-    textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(128, Math.max(44, textarea.scrollHeight))}px`;
-  }, [prompt, prefs.zenMode]);
-
-  useEffect(() => {
     if (prefs.zenMode) return;
     setZenControls(false);
     setActive(null);
@@ -1495,6 +1488,23 @@ function App() {
   const promptRemaining = promptLimit ? Math.max(0, promptLimit - textLength(prompt)) : undefined;
   const focusPrompt = useCallback(() => window.setTimeout(() => zenPromptRef.current?.focus(), 0), []);
   const promptEnhance = usePromptEnhance({ prompt, setPrompt, mode, profile: currentProfile, imageId: referenceAsset?.id || "", limit: promptLimit, showToast, focus: focusPrompt });
+
+  // The prompt grows (and shrinks) to its text, gliding there rather than jumping a line at a time
+  // (the transition is in 02-zen.css). While prompt enhance writes it only grows: a shorter first
+  // line doesn't pull it in and back out; once done it settles to the final text.
+  useEffect(() => {
+    const textarea = zenPromptRef.current;
+    if (!textarea) return;
+    const from = textarea.getBoundingClientRect().height;
+    textarea.style.height = "auto";
+    let target = Math.min(128, Math.max(44, textarea.scrollHeight));
+    if (promptEnhance.busy && from) target = Math.max(target, Math.round(from));
+    if (!from || Math.abs(from - target) < 0.5) { textarea.style.height = `${target}px`; return; }
+    // Back to where it was, laid out, then to the new height: that change is what the transition animates.
+    textarea.style.height = `${from}px`;
+    void textarea.offsetHeight;
+    textarea.style.height = `${target}px`;
+  }, [prompt, prefs.zenMode, promptEnhance.busy]);
   const profileOptions = currentProfile?.options || {};
   const aspectValue = `${width}x${height}`;
   /* Megapixels (Settings › Generation) takes 2K's place, for images: Default draws every shape

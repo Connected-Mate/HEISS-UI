@@ -127,7 +127,12 @@
   resize: none; text-align: left;
   overflow-y: auto;
   font-weight: 400;
+  /* Grows and shrinks to its text smoothly (main.tsx sets the height). */
+  transition: height 200ms cubic-bezier(.2, .8, .2, 1);
 }
+/* While prompt enhance writes, a slower, softer glide, so the box breathes out with the words. */
+.zen-prompt.is-enhancing textarea { transition-duration: 460ms; transition-timing-function: cubic-bezier(.22, 1, .36, 1); }
+@media (prefers-reduced-motion: reduce) { .zen-prompt textarea { transition: none; } }
 .zen-prompt textarea::placeholder { color: hsl(var(--muted-foreground) / 0.5); }
 .zen-prompt textarea:focus { box-shadow: none; }
 .zen-prompt:focus-within {

@@ -270,10 +270,21 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
     return () => observer.disconnect();
   }, [busy, field]);
 
-  // Newest words in view, as a textarea would scroll.
+  // Newest words in view, as a textarea would scroll. The prompt underneath scrolls with them, so
+  // when the ghost fades at the end the same lines are where they were, not the prompt's first ones.
   useLayoutEffect(() => {
     if (ghost.current) ghost.current.scrollTop = ghost.current.scrollHeight;
-  }, [text]);
+    const area = field.current;
+    if (area && text) area.scrollTop = area.scrollHeight;
+  }, [text, field]);
+  useLayoutEffect(() => {
+    const area = field.current;
+    if (!busy && area && phase === 'done') area.scrollTop = area.scrollHeight;
+  }, [busy, phase, field]);
+
+  // The person's own words as they were when the run started: `original` becomes the new text as it is written.
+  const before = useRef('');
+  if (busy && !text) before.current = original;
 
   return (
     <AnimatePresence>
@@ -297,12 +308,31 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
           className={cn('enhance-ghost', text ? 'is-writing' : 'is-waiting')}
           style={box}
           aria-hidden="true"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.12 } }}
-          transition={{ duration: 0.2 }}
+          // In place at once, over the words it replaces: they don't blink out and back.
+          initial={false}
+          exit={{ opacity: 0, transition: { duration: 0.2 } }}
         >
-          {text ? <EnhanceWords text={text} /> : <span className="enhance-scan">{original.trim() || ' '}</span>}
+          <AnimatePresence initial={false} mode="popLayout">
+            {text ? (
+              <motion.span key="words" className="enhance-ghost-words" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: reduced ? 0 : 0.35 }}>
+                <EnhanceWords text={text} />
+              </motion.span>
+            ) : (
+              // The person's words: dimming into the sheen at the start, dissolving as the new words arrive.
+              <motion.span
+                key="before"
+                className="enhance-ghost-before"
+                exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, y: -4, filter: 'blur(3px)', transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } }}
+              >
+                <span className="enhance-scan">{before.current.trim() || ' '}</span>
+                {reduced ? null : (
+                  <motion.span className="enhance-ghost-plain" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
+                    {before.current.trim() || ' '}
+                  </motion.span>
+                )}
+              </motion.span>
+            )}
+          </AnimatePresence>
         </motion.div>
       ) : null}
     </AnimatePresence>

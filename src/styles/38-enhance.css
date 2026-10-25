@@ -136,6 +136,12 @@
   color: hsl(var(--foreground));
   pointer-events: none;
 }
+/* The person's words while it thinks: the dim sheen, with the same words in full
+   colour on top at first, fading, so they dim gently instead of switching. */
+.enhance-ghost-before { position: relative; display: block; }
+.enhance-ghost-plain { position: absolute; inset: 0; color: hsl(var(--foreground)); }
+.enhance-ghost-words { display: block; }
+
 /* Each word lands white-hot and cools: amber, ember, then plain text. */
 .enhance-word {
   display: inline;
