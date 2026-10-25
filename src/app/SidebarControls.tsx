@@ -14,7 +14,7 @@ import { referenceName } from './ReferenceMediaPicker';
 import { PhoneSelect, PhoneSlider } from './phoneControls';
 import { PhoneRapidRow, SidebarRapidRow } from './RapidRow';
 import { WorkflowSettingsPanel } from './WorkflowSettings';
-import { Switch } from './SettingsDialog';
+import { Switch } from './SettingsControls';
 
 function WorkflowPreviewCard({ workflow, onOpen }: { workflow: WorkflowSummary | null; onOpen: () => void }) {
   const comfyRestarting = useComfyRestarting();

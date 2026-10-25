@@ -1,6 +1,6 @@
 import React from 'react';
 import { apiJson } from './api';
-import { Group, Row } from './SettingsDialog';
+import { Group, Row } from './SettingsControls';
 import type { ShowToast } from './toast';
 
 type TokenStatus = { set: boolean; source: '' | 'settings' | 'environment'; editable: boolean; key?: string; hint?: string; mirror?: string };

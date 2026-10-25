@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowUpRight, Bug, Check, ChevronDown, HelpCircle, Lightbulb } from 'lucide-react';
 import { Modal } from './Modal';
-import { Segmented, Switch } from './SettingsDialog';
+import { Segmented, Switch } from './SettingsControls';
 import { knownDiagnostics, loadDiagnostics } from './diagnostics';
 import { boardComposeUrl, boardUrl, sendFeedback, subscribeFeedback, versionFromDiagnostics, type FeedbackDraft, type FeedbackKind, type SentPost } from './feedback';
 import { cn } from './format';

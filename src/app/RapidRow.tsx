@@ -1,6 +1,6 @@
 import { Zap } from 'lucide-react';
 import { cn } from './format';
-import { Switch } from './SettingsDialog';
+import { Switch } from './SettingsControls';
 import { Tip } from './components';
 import { rapidLabel, type RapidStatus } from './rapid.js';
 import { requireHeissNodes } from './heissNodes';

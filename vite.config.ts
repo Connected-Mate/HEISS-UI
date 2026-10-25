@@ -44,6 +44,8 @@ export default defineConfig({
           if (id.includes('vite/preload-helper') || id.includes('commonjsHelpers')) return 'vendor';
           if (/node_modules\/(@videojs\/|react-compiler-runtime\/)/.test(id)) return "video-player";
           if (/node_modules\/(img-fx|three)\//.test(id)) return "generation-fx";
+          // Only Settings draws QR codes (Other devices), so it loads with that lazy chunk.
+          if (/node_modules\/uqr\//.test(id)) return;
           if (id.includes("node_modules")) return "vendor";
         }
       }

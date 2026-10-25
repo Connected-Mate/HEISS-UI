@@ -8,8 +8,8 @@ import type { ShowToast } from './toast';
 
 /* ---------------------------------------------------------------------------
    Settings › Library additions: earlier images, Civitai-ready files (beta),
-   and forgetting recent prompts. The row pieces come from SettingsDialog, as
-   HiddenSettings takes them, so every row reads the same.
+   and forgetting recent prompts. SettingsDialog hands in the row pieces
+   (SettingsControls), as HiddenSettings takes them, so every row reads the same.
 --------------------------------------------------------------------------- */
 
 type GroupProps = React.PropsWithChildren<{ title?: string; note?: React.ReactNode; tone?: 'danger' }>;

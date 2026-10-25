@@ -128,8 +128,8 @@ version opens with a `> ` summary line, which the update pill shows.
   Scrolling the gallery restyles about a third as much, and the phone's
   gallery does about a third less work in all, since its tiles no longer
   carry the hover buttons a phone never shows. Dialogs cost nothing until
-  they first open, and the Workflows window loads once the studio is idle
-  instead of with the page.
+  they first open, and Settings and Workflows load just after the studio
+  instead of with it: about 150 kB less to load before it shows.
 
 ### Fixed
 - **The viewer's details fit their panel.** Long LoRA and model names no

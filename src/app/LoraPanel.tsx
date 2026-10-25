@@ -3,7 +3,7 @@ import { Reorder, useDragControls } from 'framer-motion';
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, GripVertical, Layers, Plus, RotateCcw, Save, Search, Star, X } from 'lucide-react';
 import { cn } from './format';
 import { defaultLoraStrength, loraGroups, maxLoras, recommendedLoras, rankedLoras, type FitOf } from './loras';
-import { Switch } from './SettingsDialog';
+import { Switch } from './SettingsControls';
 import { Tip } from './components';
 import { copyText } from './api';
 import { loraFit, useLoraInfo, type LoraInfo } from './useLoraInfo';

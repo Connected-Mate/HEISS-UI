@@ -45,7 +45,7 @@ import { haptic } from './phoneControls';
 import { ConnectedCard } from './ConnectedCard';
 import { Toaster } from './Toaster';
 import { EmptyStage } from './EmptyStage';
-import { SettingsDialog, type SettingsSection } from './SettingsDialog';
+import type { SettingsSection } from './SettingsDialog';
 import { GetModelsSheet, StarterModels } from './StarterModels';
 import { FamilySetupDialog, useFamilySetupRequests } from './FamilySetupDialog';
 import { NoComfySheet } from './NoComfySheet';
@@ -61,10 +61,24 @@ import type { AutoUpscale, GalleryItem } from './types';
 import type { HiddenState } from './useHidden';
 import { memoLatest } from '@/lib/memo-latest';
 
-// Its own chunk: most visits never open it. Fetched once the studio is idle,
-// so the first open doesn't wait on it either.
+// Their own chunks, so the first render doesn't wait to compile them. Fetched
+// as soon as the studio is up (ahead of the gallery's thumbnails) and drawn
+// straight from the loaded module: React.lazy would suspend the first open and
+// show it on a low-priority retry, close to a second later while the studio loads.
 const loadWorkflowGallery = () => import('./WorkflowGallery');
-const WorkflowGallery = React.lazy(() => loadWorkflowGallery().then((module) => ({ default: module.WorkflowGallery })));
+const loadSettingsDialog = () => import('./SettingsDialog');
+
+/** A module from its own chunk once it has arrived, null until then. Opening (`wanted`) asks again after a failed load. */
+function useChunk<T>(load: () => Promise<T>, wanted: boolean) {
+  const [loaded, setLoaded] = React.useState<T | null>(null);
+  React.useEffect(() => {
+    if (loaded) return;
+    let live = true;
+    load().then((module) => { if (live) setLoaded(() => module); }).catch(() => null);
+    return () => { live = false; };
+  }, [load, loaded, wanted]);
+  return loaded;
+}
 
 // App rebuilds every prop on each render (a keystroke in the prompt, a poll);
 // these skip re-rendering unless their data actually changed.
@@ -310,15 +324,8 @@ export function StudioView({ view }: { view: Record<string, any> }) {
   const viewerRef = React.useRef<HTMLDivElement | null>(null);
   useFocusTrap(viewerRef, Boolean(active));
   useHistoryDismiss(Boolean(workflowGalleryOpen), () => setWorkflowGalleryOpen(false));
-  React.useEffect(() => {
-    const prefetch = () => void loadWorkflowGallery().catch(() => null);
-    if (window.requestIdleCallback) {
-      const id = window.requestIdleCallback(prefetch, { timeout: 5000 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const timer = window.setTimeout(prefetch, 3000);
-    return () => window.clearTimeout(timer);
-  }, []);
+  const workflowChunk = useChunk(loadWorkflowGallery, Boolean(workflowGalleryOpen));
+  const settingsChunk = useChunk(loadSettingsDialog, Boolean(settings));
   const [settingsSection, setSettingsSection] = React.useState<SettingsSection>("general");
   const openSettings = React.useCallback((section?: SettingsSection) => {
     if (section) setSettingsSection(section);
@@ -329,6 +336,9 @@ export function StudioView({ view }: { view: Record<string, any> }) {
     if (typeof settings === "string") setSettingsSection(settings as SettingsSection);
   }, [settings]);
   useHistoryDismiss(Boolean(settings), () => setSettings(false));
+  // Settings mounts the first time it opens and stays, so closing still animates.
+  const settingsOpened = React.useRef(false);
+  if (settings) settingsOpened.current = true;
   const [noComfyOpen, setNoComfyOpen] = React.useState(false);
   const [getModelsOpen, setGetModelsOpen] = React.useState(false);
   const openGetModels = React.useCallback(() => setGetModelsOpen(true), []);
@@ -934,7 +944,9 @@ export function StudioView({ view }: { view: Record<string, any> }) {
           </section>
         </>
       )}
-      <SettingsDialog view={view} open={Boolean(settings)} section={settingsSection} onSectionChange={setSettingsSection} onClose={() => setSettings(false)} onGetModels={thisComputer ? () => { setSettings(false); openGetModels(); } : undefined} />
+      {settingsOpened.current && settingsChunk ? (
+        <settingsChunk.SettingsDialog view={view} open={Boolean(settings)} section={settingsSection} onSectionChange={setSettingsSection} onClose={() => setSettings(false)} onGetModels={thisComputer ? () => { setSettings(false); openGetModels(); } : undefined} />
+      ) : null}
       <NoComfySheet open={noComfyOpen} onOpenChange={setNoComfyOpen} onChangeAddress={thisComputer ? () => openSettings("connection") : undefined} />
       <GetModelsSheet open={getModelsOpen} onOpenChange={setGetModelsOpen} showToast={showToast} onStarted={view.onStarterStarted} onUse={view.selectStarterModel} onFindModels={thisComputer ? modelFolders?.openDialog : undefined} />
       {familySetup.family ? (
@@ -1145,7 +1157,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
           </div>
         );
       })() : null}
-      {workflowGalleryOpen ? <React.Suspense fallback={null}><WorkflowGallery view={{ ...view, onClose: () => setWorkflowGalleryOpen(false) }} /></React.Suspense> : null}
+      {workflowGalleryOpen && workflowChunk ? <workflowChunk.WorkflowGallery view={{ ...view, onClose: () => setWorkflowGalleryOpen(false) }} /> : null}
       {/* Generation progress for screen readers: started, rendering, ready. */}
       <div className="sr-only" role="status" aria-live="polite">{view.status && view.status !== "Ready" && !/^Rendering|^Queued/.test(view.status) ? view.status : ""}</div>
       {/* Portaled to <body>: inside the fixed shell it would sit under every dialog's scrim. */}
