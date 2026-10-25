@@ -83,7 +83,7 @@ import { cancelModelInstall, downloadPlan, installState, managerAvailable, manag
 import { findUpscaleTarget, startRtxUpscale, startUpscale, toggleUpscaleView } from './upscale-jobs.js';
 import { dropsAutoUpscale, planRunUpscale } from './run-upscale.js';
 import { comfyOutputName, planRunRtx, rtxCheck, rtxStatusFrom, rtxTiers } from './rtx.js';
-import { heissNodesReport, heissNodesStatusFrom, localHeissCopy } from './heiss-nodes.js';
+import { autoUpdateHeissNodes, heissNodesSnapshot, saveHeissNodesSettings } from './heiss-nodes.js';
 import { autoDetectOutputDir, detectOutputDirs, inspectOutputDir, outputDirChoice, pickFolder } from './output-folder.js';
 import { compressJson, serveApp } from './http-assets.js';
 import { describeGitError, updateCheckout } from './git-update.js';
@@ -1934,7 +1934,9 @@ app.get("/api/upscale/status", async (req, res) => {
 app.get("/api/rapid/status", async (_req, res) => {
   try {
     const status = await heissNodesStatus();
-    res.json({ ok: true, installed: status.state === "ready", setup: status.state === "ready" ? null : status.setup });
+    // Rapid runs on any pack from version 2; a newer pin only improves it, so an older copy still counts.
+    const installed = Boolean(status.features.find((feature) => feature.id === "rapid")?.ready);
+    res.json({ ok: true, installed, state: status.state, setup: installed ? null : status.setup });
   } catch {
     res.status(503).json({ ok: false, offline: true, restarting: comfyRestarting() });
   }
@@ -1948,9 +1950,12 @@ app.get("/api/rapid/status", async (_req, res) => {
  */
 async function heissNodesStatus({ fresh = false } = {}) {
   const { info } = await loadComfyContext({ force: fresh });
-  const status = heissNodesStatusFrom({ info, report: await heissNodesReport(), local: localHeissCopy(comfyRootDir()) });
+  const root = comfyRootDir();
+  const status = await heissNodesSnapshot({ info, root });
+  // Behind, and safe to move without anyone noticing: HEISS updates the files itself (heiss-nodes.js).
+  autoUpdateHeissNodes(status, root).catch(() => null);
   if (status.state !== "ready" && status.state !== "restart") {
-    status.setup = { manager: await managerAvailable(), pack: nodePack("heiss"), autoInstall: packInstallRoutes("heiss"), ...packInstallPlan(nodePacks.heiss, comfyRootDir(), process.platform) };
+    status.setup = { manager: await managerAvailable(), pack: nodePack("heiss"), autoInstall: packInstallRoutes("heiss"), ...packInstallPlan(nodePacks.heiss, root, process.platform) };
   }
   return status;
 }
@@ -1962,6 +1967,15 @@ app.get("/api/heiss-nodes", async (req, res) => {
     res.status(503).json({ ok: false, offline: true, restarting: comfyRestarting(), error: "ComfyUI is offline. Start it, and HEISS checks again." });
   }
 });
+
+app.post("/api/heiss-nodes/settings", (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  res.json({ ok: true, ...saveHeissNodesSettings({ autoUpdate: req.body?.autoUpdate }) });
+});
+
+// The quiet update needs nobody to open anything: look shortly after start, then now and then.
+setTimeout(() => { heissNodesStatus().catch(() => null); }, 20_000).unref?.();
+setInterval(() => { heissNodesStatus().catch(() => null); }, 30 * 60_000).unref?.();
 
 /**
  * Prompt enhance (prompt-enhance.js, docs/prompt-enhance.md): whether it runs
@@ -2174,8 +2188,7 @@ app.post("/api/upscale", async (req, res) => {
 async function rtxStatus({ fresh = false, probe = false } = {}) {
   const { info, stats } = await loadComfyContext({ force: fresh });
   const device = (stats || comfyCache.stats)?.devices?.[0] || null;
-  const [check, report] = await Promise.all([rtxCheck({ probe }), heissNodesReport()]);
-  const nodes = heissNodesStatusFrom({ info, report, local: localHeissCopy(comfyRootDir()) });
+  const [check, nodes] = await Promise.all([rtxCheck({ probe }), heissNodesSnapshot({ info, root: comfyRootDir() })]);
   const status = rtxStatusFrom({ info, device, check, nodesReady: nodes.features.find((feature) => feature.id === "rtx")?.ready });
   if (status.stage === "nodes" || status.stage === "package") {
     const id = status.stage === "nodes" ? "heiss" : "heissrtx";

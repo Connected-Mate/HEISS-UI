@@ -54,7 +54,7 @@ export function ShellCommand({ plan, showToast }: { plan: ShellPlan; showToast: 
  */
 function QuickInstall({ pack, onDone, showToast, onRestarted, afterRestart, verb = 'Install', resumeFinished = true }: {
   pack: NodePackInfo & { id: string };
-  verb?: 'Install' | 'Update';
+  verb?: 'Install' | 'Update' | 'Repair';
   resumeFinished?: boolean;
   onDone: (state: PackInstallState | null) => void;
   showToast: ShowToast;
@@ -120,7 +120,7 @@ function QuickInstall({ pack, onDone, showToast, onRestarted, afterRestart, verb
     <div className="node-quick">
       <button type="button" className="btn is-primary" onClick={() => start()} disabled={running}>
         {running ? <RotateCw size={14} className="is-spinning" /> : <Download size={14} />}
-        {running ? state.step || (verb === 'Update' ? 'Updating…' : 'Installing…') : state?.status === 'error' ? 'Try again' : `${verb} ${pack.name}`}
+        {running ? state.step || (verb === 'Update' ? 'Updating…' : verb === 'Repair' ? 'Repairing…' : 'Installing…') : state?.status === 'error' ? 'Try again' : `${verb} ${pack.name}`}
         {running ? null : <BetaTag />}
       </button>
       {running ? <p className="upscale-fine">{state.route === 'manager' ? 'Installing through ComfyUI-Manager. ' : 'Installing with ComfyUI’s own Python. '}It can take a few minutes.</p> : null}
@@ -139,8 +139,8 @@ function QuickInstall({ pack, onDone, showToast, onRestarted, afterRestart, verb
  */
 export function NodeInstall({ pack, plan, managerHint, autoInstall, showToast, onRestarted, afterRestart = '', verb = 'Install', resumeFinished = true }: {
   pack: NodePackInfo;
-  /** The one-click button's word: Update for a pack that is there but older (HeissNodesDialog). */
-  verb?: 'Install' | 'Update';
+  /** The one-click button's word: Update for a pack that is there but older, Repair for one ComfyUI couldn't load (HeissNodesDialog). */
+  verb?: 'Install' | 'Update' | 'Repair';
   /** Show an install that finished earlier (default); off where the caller reads the pack's state itself. */
   resumeFinished?: boolean;
   /** The one-click routes the server has for this pack; without one only the manual steps show. */

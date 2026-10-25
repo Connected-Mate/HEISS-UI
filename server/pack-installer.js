@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -146,22 +146,68 @@ export function constraintsFrom(freeze = "") {
     .join("\n");
 }
 
-async function installLocally(state, pack) {
+/**
+ * Every copy of a pack in custom_nodes, the one in its own folder first. A pack
+ * with a `signature` file is found under any folder name: a GitHub zip unpacks
+ * to "<name>-main", Manager's registry installs into its lowercase id. Folders
+ * ComfyUI skips (".disabled", hidden) don't count.
+ */
+export function packCopies(customNodes, pack) {
+  let entries;
+  try {
+    entries = fs.readdirSync(customNodes, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const own = pack.folder.toLowerCase();
+  return entries
+    .filter((entry) => (entry.isDirectory() || entry.isSymbolicLink()) && !entry.name.startsWith(".") && !/\.disabled$/i.test(entry.name) && entry.name !== "__pycache__")
+    .map((entry) => entry.name)
+    .filter((name) => name.toLowerCase() === own || (pack.signature && fs.existsSync(path.join(customNodes, name, pack.signature))))
+    .sort((a, b) => Number(b.toLowerCase() === own) - Number(a.toLowerCase() === own));
+}
+
+/** The copy HEISS keeps: one in its own folder, else a git checkout it can move, else the first found. */
+export function primaryPackCopy(customNodes, pack, copies = packCopies(customNodes, pack)) {
+  const own = copies.find((name) => name.toLowerCase() === pack.folder.toLowerCase());
+  if (own) return own;
+  return copies.find((name) => fs.existsSync(path.join(customNodes, name, ".git"))) || copies[0] || "";
+}
+
+/** Renames a copy so ComfyUI skips it (".disabled"); nothing is deleted. */
+function setAside(state, customNodes, name, pack) {
+  const from = path.join(customNodes, name);
+  const onDisk = packVersionOnDisk(from, pack);
+  const aside = path.join(customNodes, `${name}-v${onDisk || "old"}-${Date.now()}.disabled`);
+  fs.renameSync(from, aside);
+  state.log += `Moved ${name} (version ${onDisk || "unknown"}) to ${path.basename(aside)}.\n`;
+}
+
+async function installLocally(state, pack, { requirements: withRequirements = true } = {}) {
   const root = comfyRootDir();
   const python = comfyPython(root);
   if (!root || !python) throw new Error("ComfyUI isn't on this computer. Use the terminal steps instead.");
   const customNodes = path.join(root, "custom_nodes");
-  const target = path.join(customNodes, pack.folder);
+  let target = path.join(customNodes, pack.folder);
+  if (pack.signature) {
+    const copies = packCopies(customNodes, pack);
+    const keep = primaryPackCopy(customNodes, pack, copies);
+    // A git checkout under another name is updated where it is; a copy without git is replaced in the pack's own folder.
+    if (keep && (keep.toLowerCase() === pack.folder.toLowerCase() || fs.existsSync(path.join(customNodes, keep, ".git")))) target = path.join(customNodes, keep);
+    // One copy only: two copies of one pack register the same nodes, and the older one can win.
+    if (pack.update && pack.version) {
+      const extra = copies.filter((name) => path.join(customNodes, name) !== target);
+      if (extra.length) state.step = "Setting the older copy aside";
+      for (const name of extra) setAside(state, customNodes, name, pack);
+    }
+  }
   const git = (args) => run(state, "git", gitArgsIn(target, args), target);
   // An older copy that isn't a git checkout (a zip, or Manager's registry install) can't be moved to the reviewed
   // commit: set it aside, where ComfyUI won't load it (".disabled"), and install fresh. Nothing is deleted.
   if (pack.update && pack.version && fs.existsSync(target) && !fs.existsSync(path.join(target, ".git"))) {
-    const onDisk = packVersionOnDisk(target, pack);
-    if (onDisk < pack.version) {
-      const aside = path.join(customNodes, `${pack.folder}-v${onDisk || "old"}-${Date.now()}.disabled`);
+    if (packVersionOnDisk(target, pack) < pack.version) {
       state.step = "Setting the older copy aside";
-      fs.renameSync(target, aside);
-      state.log += `Moved the older ${pack.folder} (version ${onDisk || "unknown"}) to ${path.basename(aside)}.\n`;
+      setAside(state, customNodes, path.basename(target), pack);
     }
   }
   if (!fs.existsSync(target)) {
@@ -213,7 +259,7 @@ async function installLocally(state, pack) {
     }
   }
   const requirements = pack.requirements || "requirements.txt";
-  if (fs.existsSync(path.join(target, requirements))) {
+  if (withRequirements && fs.existsSync(path.join(target, requirements))) {
     state.step = "Checking ComfyUI’s PyTorch";
     let freeze;
     try {
@@ -319,9 +365,33 @@ async function installWithManager3(state, pack) {
  * `overrideManager`: the person saw Manager's security refusal and chose to
  * install with ComfyUI's own Python anyway.
  */
-export async function startPackInstall(id, { overrideManager = false } = {}) {
+export async function startPackInstall(id, { overrideManager = false, background = false } = {}) {
   const pack = nodePack(id);
-  return beginInstall(id, pack, packInstallRoutes(id), { overrideManager });
+  return beginInstall(id, pack, packInstallRoutes(id), { overrideManager, background });
+}
+
+/** git in `folder`, resolving to what it printed, or null when it failed. */
+function gitQuiet(folder, args) {
+  return new Promise((resolve) => {
+    execFile("git", gitArgsIn(folder, args), { cwd: folder, windowsHide: true, timeout: 120_000, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } }, (error, stdout) => resolve(error ? null : String(stdout)));
+  });
+}
+
+/**
+ * Whether a pack's git checkout can move to its reviewed commit without
+ * anyone noticing: nothing edited, simply behind the pin (no branch of its
+ * own past it), and the same Python requirements, so no pip runs. Only then
+ * does HEISS update it in the background (heiss-nodes.js).
+ */
+export async function packFastForwardable(folder, pack) {
+  if (!pack.commit || !fs.existsSync(path.join(folder, ".git"))) return false;
+  const head = (await gitQuiet(folder, ["rev-parse", "HEAD"]))?.trim();
+  if (!head || head === pack.commit) return false;
+  if ((await gitQuiet(folder, ["status", "--porcelain"])) !== "") return false;
+  if ((await gitQuiet(folder, ["cat-file", "-e", `${pack.commit}^{commit}`])) === null && (await gitQuiet(folder, ["fetch", "--quiet", "origin"])) === null) return false;
+  if ((await gitQuiet(folder, ["merge-base", "--is-ancestor", head, pack.commit])) === null) return false;
+  const files = ["requirements.txt", pack.requirements].filter(Boolean);
+  return (await gitQuiet(folder, ["diff", "--quiet", head, pack.commit, "--", ...files])) !== null;
 }
 
 /**
@@ -342,7 +412,7 @@ export async function startResolvedPackInstall(spec, { overrideManager = false }
   return beginInstall(spec.key, pack, routes, { overrideManager });
 }
 
-async function beginInstall(id, pack, routes, { overrideManager = false } = {}) {
+async function beginInstall(id, pack, routes, { overrideManager = false, background = false } = {}) {
   const current = installs.get(id);
   if (current?.status === "running") return snapshot(current);
   if (overrideManager && !routes.local) throw new Error("ComfyUI isn't on this computer, so only ComfyUI-Manager can install this.");
@@ -351,7 +421,7 @@ async function beginInstall(id, pack, routes, { overrideManager = false } = {}) 
   if (!viaManager && !routes.local) {
     throw new Error("ComfyUI runs on another computer and ComfyUI-Manager can’t install this pack. Use the steps below.");
   }
-  const state = { id, name: pack.name, route: viaManager ? "manager" : "local", status: "running", step: "Starting", log: "", error: "", startedAt: Date.now(), finishedAt: 0, folder: pack.folder || "" };
+  const state = { id, name: pack.name, route: viaManager ? "manager" : "local", status: "running", step: "Starting", log: "", error: "", startedAt: Date.now(), finishedAt: 0, folder: pack.folder || "", background };
   installs.set(id, state);
   state.done = (async () => {
     try {
@@ -373,7 +443,8 @@ async function beginInstall(id, pack, routes, { overrideManager = false } = {}) 
           await installLocally(state, pack);
         }
       } else {
-        await installLocally(state, pack);
+        // In the background only files move (packFastForwardable checked the requirements are the same).
+        await installLocally(state, pack, { requirements: !background });
       }
       Object.assign(state, { status: "done", step: pack.noRestart ? "Installed." : "Installed. Restart ComfyUI to load it.", finishedAt: Date.now() });
     } catch (error) {

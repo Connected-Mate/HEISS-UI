@@ -28,7 +28,7 @@ import { HuggingFaceTokenSettings } from './HuggingFaceToken';
 import { OtherDevicesGroup } from './OtherDevices';
 import { TrashRow } from './TrashRow';
 import { loadRtxStatus, rtxStageLine, useRtxStatus } from './rtx';
-import { featureReady, loadHeissNodes, openHeissNodes, useHeissNodes } from './heissNodes';
+import { featureReady, heissNodesAction, loadHeissNodes, openHeissNodes, saveHeissNodesSettings, useHeissNodes } from './heissNodes';
 import { loadEnhanceStatus, openEnhanceSetup, saveEnhanceSettings, useEnhance } from './promptEnhance';
 import { enhanceShortcut } from './EnhanceComposer';
 import type { ShowToast } from './toast';
@@ -417,6 +417,7 @@ const profileName = (profile: Profile) => profile.displayName || profile.label;
  */
 function RtxVideoSettings({ prefs, setPrefs, showToast }: { prefs: Preferences; setPrefs: (patch: Partial<Preferences>) => void; showToast: ShowToast }) {
   const status = useRtxStatus();
+  const nodes = useHeissNodes();
   const [checking, setChecking] = React.useState(false);
   const check = React.useCallback(async () => {
     setChecking(true);
@@ -436,7 +437,7 @@ function RtxVideoSettings({ prefs, setPrefs, showToast }: { prefs: Preferences; 
       </Row>
       {status.stage === 'nodes' ? (
         <div className="set-node-install">
-          <button type="button" className="btn is-primary" onClick={() => openHeissNodes('rtx')}><Download size={14} /> Set up HEISS UI Nodes</button>
+          <button type="button" className="btn is-primary" onClick={() => openHeissNodes('rtx')}><Download size={14} /> {heissNodesAction(nodes.status, 'rtx')}</button>
         </div>
       ) : status.stage === 'restart' ? (
         <div className="set-node-install">
@@ -459,24 +460,41 @@ function RtxVideoSettings({ prefs, setPrefs, showToast }: { prefs: Preferences; 
 }
 
 /**
- * HEISS UI Nodes at a glance: the version ComfyUI runs, and one button that
- * opens the HEISS Nodes dialog to install, update or check. Features ask by
- * themselves the first time they're used; this is for looking on purpose.
+ * HEISS UI Nodes at a glance: where they stand, one button that opens the
+ * HEISS Nodes dialog for whatever is next (set up, update, repair, restart),
+ * and whether HEISS keeps them current by itself. Features ask by themselves
+ * the first time they're used; this is for looking on purpose.
  */
 function HeissNodesRow() {
   const { status, offline } = useHeissNodes();
+  const admin = useThisComputer();
   React.useEffect(() => { loadHeissNodes(); }, []);
   const line = offline ? 'ComfyUI is offline.'
     : !status ? 'Checking…'
-    : status.state === 'ready' ? `Version ${status.loadedVersion}, up to date.`
-    : status.state === 'restart' ? 'Updated. Restart ComfyUI to load it.'
-    : status.state === 'update' ? `Version ${status.loadedVersion || 'unknown'} in ComfyUI; this HEISS needs ${status.requiredVersion}.`
+    : status.updating ? 'Updating…'
+    : status.state === 'ready' ? `Up to date (version ${status.loadedVersion}).`
+    : status.state === 'restart' ? `${status.autoUpdated ? 'Updated in the background.' : 'Updated.'} Restart ComfyUI to load them; until then everything works as before.`
+    : status.state === 'failed' ? `ComfyUI couldn’t load them. ${status.failure?.reason || ''}`
+    : status.state === 'update' ? 'A newer version is ready for this HEISS. What you use now keeps working.'
     : 'Not installed. Features that need them ask the first time you use them.';
-  const label = status?.state === 'install' ? 'Set up' : status?.state === 'update' ? 'Update' : 'Details';
+  const action = status ? { install: 'Set up', update: 'Update', failed: 'Repair', restart: 'Restart…', ready: 'Details' }[status.state] : 'Details';
+  const needed = Boolean(status && status.state !== 'ready');
+  const features = status?.features.length ? new Intl.ListFormat('en', { type: 'conjunction' }).format(status.features.map((feature) => feature.label)) : 'Rapid and more';
   return (
-    <Row label="HEISS UI Nodes" description={<>HEISS’s own small add-on for ComfyUI, behind Rapid and RTX video upscale.<br />{line}</>}>
-      <button className={cn('btn', (status?.state === 'install' || status?.state === 'update') ? 'is-primary' : 'is-ghost')} onClick={() => openHeissNodes()}>{label}</button>
-    </Row>
+    <>
+      <Row label="HEISS UI Nodes" description={<>HEISS’s own small add-on for ComfyUI, behind {features}.<br />{line}</>}>
+        <button className={cn('btn', needed ? 'is-primary' : 'is-ghost')} onClick={() => openHeissNodes()}>{action}</button>
+      </Row>
+      {status && status.state !== 'install' ? (
+        <SwitchRow
+          label="Keep them up to date"
+          description="HEISS moves them to the version it needs by itself when nothing of yours would change. ComfyUI loads an update at its next restart."
+          checked={status.autoUpdate}
+          disabled={!admin}
+          onChange={(next) => { saveHeissNodesSettings({ autoUpdate: next }).catch(() => null); }}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -492,7 +510,7 @@ function InpaintSeamRow() {
       : 'Edit models like Qwen-Image and Flux.2 shift and tint what they repaint a little, which can show as doubled lines or a patch a shade off. HEISS UI Nodes line it up and match its colour before it goes into the picture. Without them, inpainting works as before.'} stacked={!ready}>
       {ready ? null : (
         <div className="set-node-install">
-          <button type="button" className="btn is-primary" onClick={() => openHeissNodes('inpaint')}><Download size={14} /> {status.state === 'update' ? 'Update HEISS UI Nodes' : 'Set up HEISS UI Nodes'}</button>
+          <button type="button" className="btn is-primary" onClick={() => openHeissNodes('inpaint')}><Download size={14} /> {heissNodesAction(status, 'inpaint')}</button>
         </div>
       )}
     </Row>

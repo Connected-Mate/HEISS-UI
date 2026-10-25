@@ -95,7 +95,7 @@ function copyFor(stage: Stage, nodeState: string) {
     case 'offline': return { title: 'Waiting for ComfyUI', description: 'Start ComfyUI, and this carries on by itself.' };
     case 'nodes': return {
       title: 'Write prompts like a pro, on this computer',
-      description: `A few words become the prompt your model wants. A picture becomes a prompt. A start frame gets its motion. It runs privately in ComfyUI, uncensored, with nothing sent anywhere. First, ${nodeState === 'update' ? 'an update to' : 'the small add-on for'} ComfyUI it runs on.`
+      description: `A few words become the prompt your model wants. A picture becomes a prompt. A start frame gets its motion. It runs privately in ComfyUI, uncensored, with nothing sent anywhere. ${nodeState === 'failed' ? 'First, a repair: ComfyUI couldn’t load the small add-on it runs on.' : `First, ${nodeState === 'update' ? 'an update to' : 'the small add-on for'} ComfyUI it runs on.`}`
     };
     case 'restart': return { title: 'Restart ComfyUI to continue', description: 'The new HEISS UI Nodes are in place. ComfyUI loads them when it restarts.' };
     case 'model': return { title: 'Choose the model that writes', description: 'A vision model that reads your words and pictures. It runs inside ComfyUI and makes room for your image models by itself.' };
@@ -179,7 +179,7 @@ export function EnhanceSetupDialog({ showToast }: { showToast: ShowToast }) {
         showToast={showToast}
         onRestarted={() => { loadHeissNodes({ fresh: true }); loadEnhanceStatus({ fresh: true }); }}
         afterRestart="Then choose the model."
-        verb={status?.nodes.state === 'update' ? 'Update' : 'Install'}
+        verb={status?.nodes.state === 'failed' ? 'Repair' : status?.nodes.state === 'update' ? 'Update' : 'Install'}
         resumeFinished={false}
       />
     ) : <Watcher>Checking HEISS UI Nodes…</Watcher>;

@@ -35,6 +35,8 @@ export const nodePacks = {
     // PACK_VERSION in the pack's heiss_info.py at `commit`; what each feature needs is in heiss-nodes.js.
     version: 9,
     versionFile: "heiss_info.py",
+    // In every version: finds a copy under another folder name (a zip's "-main", Manager's lowercase id).
+    signature: "heiss_rapid.py",
     nodes: ["HeissRapid", "HeissRapidGuidance", "HeissRTXVideo", "HeissRTXUpscale", "HeissInpaintStitch", "HeissPromptEnhance"]
   },
   // RTX upscaling's second part (docs/rtx-video.md): NVIDIA's own package, into ComfyUI's Python, from the
@@ -46,6 +48,7 @@ export const nodePacks = {
     commit: "19d066f1276247185cdcef001c30b3711bb11ad3",
     ref: "feature/rapid-v2, 2026-10-14",
     update: true,
+    signature: "heiss_rapid.py",
     requirements: "requirements-rtx.txt",
     // NVIDIA hosts the wheels; PyPI only has a stub that fetches them while installing.
     pipIndex: "https://pypi.nvidia.com",

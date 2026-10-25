@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { apiFetch, apiJson } from './api';
+import type { HeissNodesState } from './heissNodes';
 
 /**
  * Prompt enhance (server/prompt-enhance.js): a local vision LLM, running in
@@ -15,7 +16,7 @@ export type EnhanceChoice = { id: string; file: string; label: string; note: str
 export type EnhanceSettings = { model: string; instructions: string; creativity: number };
 export type EnhanceStatus = {
   ready: boolean;
-  nodes: { state: 'install' | 'update' | 'restart' | 'ready'; ready: boolean };
+  nodes: { state: HeissNodesState; ready: boolean };
   model: string;
   choices: EnhanceChoice[];
   settings: EnhanceSettings;

@@ -10,7 +10,7 @@ import type { NodePackInfo, PackAutoInstall, ShellPlan } from './types';
  * HEISS Nodes dialog opens, installs or updates the whole pack, waits for the
  * ComfyUI restart, and runs `then` once the feature is ready.
  */
-export type HeissNodesState = 'install' | 'update' | 'restart' | 'ready';
+export type HeissNodesState = 'install' | 'update' | 'restart' | 'failed' | 'ready';
 
 export type HeissNodesFeature = { id: string; label: string; blurb: string; version: number; nvidia: boolean; ready: boolean };
 
@@ -19,7 +19,15 @@ export type HeissNodesStatus = {
   requiredVersion: number;
   loadedVersion: number;
   diskVersion: number | null;
-  local: { present: boolean; git: boolean; onPin: boolean } | null;
+  local: { present: boolean; git: boolean; onPin: boolean; folder: string; others: number } | null;
+  /** Why ComfyUI couldn't import the pack when it last started (state 'failed'). */
+  failure: { reason: string; error: string } | null;
+  /** HEISS is installing or updating it right now. */
+  updating: boolean;
+  /** HEISS updated it by itself; it loads at ComfyUI's next restart. */
+  autoUpdated: boolean;
+  /** Whether HEISS keeps it current by itself (Settings). */
+  autoUpdate: boolean;
   features: HeissNodesFeature[];
   setup?: ShellPlan & { pack: NodePackInfo; manager?: boolean; autoInstall?: PackAutoInstall; exact?: boolean; cloned?: boolean; needsGit?: boolean; customNodesDir?: string; python?: string };
 };
@@ -49,6 +57,22 @@ export async function loadHeissNodes({ fresh = false } = {}): Promise<HeissNodes
     set({ offline: true, checkedAt: Date.now() });
     return null;
   }
+}
+
+/** Settings: whether HEISS updates the pack by itself when it safely can. */
+export async function saveHeissNodesSettings(patch: { autoUpdate: boolean }) {
+  if (store.status) set({ status: { ...store.status, autoUpdate: patch.autoUpdate } });
+  await apiJson('/api/heiss-nodes/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(patch) });
+  return loadHeissNodes();
+}
+
+/** What a button for the pack says, the same everywhere: Settings rows, the dialog's own action. */
+export function heissNodesAction(status: HeissNodesStatus | null, feature = '') {
+  if (!status) return 'Set up HEISS UI Nodes';
+  if (status.state === 'failed') return 'Repair HEISS UI Nodes';
+  if (status.state === 'restart') return 'Restart ComfyUI';
+  if (status.state === 'update' || (status.state === 'ready' && feature && !featureReady(status, feature))) return 'Update HEISS UI Nodes';
+  return 'Set up HEISS UI Nodes';
 }
 
 export function featureReady(status: HeissNodesStatus | null, feature: string) {
