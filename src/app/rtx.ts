@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { apiJson } from './api';
+import { requireHeissNodes } from './heissNodes';
 import type { AutoUpscale, NodePackInfo, PackAutoInstall, ShellPlan } from './types';
 
 /**
@@ -73,6 +74,17 @@ export const rtxVideoTiers: { value: AutoUpscale; label: string }[] = [
   { value: '2k', label: '2K' },
   { value: '4k', label: '4K' }
 ];
+
+/**
+ * Picking a video tier, from the desktop size menu or the phone's size sheet:
+ * on a ComfyUI without HEISS UI Nodes, the HEISS Nodes dialog first, then the tier is on.
+ */
+export async function chooseVideoTier(tier: AutoUpscale, setPrefs: (next: { videoUpscale: AutoUpscale }) => void) {
+  if (tier === 'none') return setPrefs({ videoUpscale: tier });
+  const rtx = await loadRtxStatus();
+  if (rtx?.stage === 'nodes') return requireHeissNodes('rtx', () => setPrefs({ videoUpscale: tier }));
+  setPrefs({ videoUpscale: tier });
+}
 
 /** One line on where setup stands, for Settings and a refused upscale. */
 export function rtxStageLine(status: RtxStatus | null) {

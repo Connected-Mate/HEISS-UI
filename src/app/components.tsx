@@ -589,11 +589,17 @@ function sizeNote(profile: Profile, hardware: ReturnType<typeof useHardware>) {
  * from reference images, inpainting (paint over part of a reference to change
  * only that), and HEISS Rapid (faster pictures, docs/rapid.md).
  */
+export function modelAbilities(profile: Profile, { showInpaint = true, showRapid = true } = {}) {
+  return {
+    // An edit model takes references without a start-image strength; img2img models have one.
+    edits: Boolean(profile.mediaInputs?.length && !profile.capabilities.denoise),
+    inpaints: showInpaint && Boolean(profile.capabilities.inpaint),
+    rapid: showRapid && Boolean(profile.capabilities.rapid || profile.capabilities.rapidGuidance)
+  };
+}
+
 function ModelAbilities({ profile, showInpaint = true, showRapid = true, onHover }: { profile: Profile; showInpaint?: boolean; showRapid?: boolean; onHover?: (hovering: boolean) => void }) {
-  // An edit model takes references without a start-image strength; img2img models have one.
-  const edits = Boolean(profile.mediaInputs?.length && !profile.capabilities.denoise);
-  const inpaints = showInpaint && Boolean(profile.capabilities.inpaint);
-  const rapid = showRapid && Boolean(profile.capabilities.rapid || profile.capabilities.rapidGuidance);
+  const { edits, inpaints, rapid } = modelAbilities(profile, { showInpaint, showRapid });
   if (!edits && !inpaints && !rapid) return null;
   return (
     // While one of these speaks, the row's own name tooltip stays shut.

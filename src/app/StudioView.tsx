@@ -21,8 +21,7 @@ import { runTitle, type Run } from './runs';
 import { UpscaleArrow } from './UpscaleArrow';
 import { UpscaleCompare } from './UpscaleCompare';
 import { canUpscaleItem, shortLeft, upscaledWithRun, upscaleTooltip, useUpscaleClock } from './useUpscale';
-import { loadRtxStatus, useRtxOffered } from './rtx';
-import { requireHeissNodes } from './heissNodes';
+import { chooseVideoTier, useRtxOffered } from './rtx';
 import { UpscaleSetupDialog } from './UpscaleDialogs';
 import { ModelFoldersDialog } from './ModelFoldersDialog';
 import { UpscaleNoticePopover } from './UpscaleNotice';
@@ -58,7 +57,7 @@ import { PromptHistoryPopover } from './PromptHistory';
 import { GallerySearchBar, GallerySearchButton, SearchEmpty, useGallerySearchKeys } from './GallerySearch';
 import { canStar, emptySearch, FavoriteContext, searchActive, type GallerySearch } from './favorites';
 import { refreshPrompts, usePromptHistory } from './recentPrompts';
-import type { GalleryItem } from './types';
+import type { AutoUpscale, GalleryItem } from './types';
 import type { HiddenState } from './useHidden';
 import { memoLatest } from '@/lib/memo-latest';
 
@@ -125,13 +124,6 @@ export function StudioView({ view }: { view: Record<string, any> }) {
   // Videos get RTX's upscale tabs on an NVIDIA card, while upscaling is on in Settings.
   const rtxVideos = useRtxOffered();
   const rtxTabs = mode === "video" && prefs.smartUpscale !== false && rtxVideos;
-  // A video tier on a ComfyUI without HEISS UI Nodes: the HEISS Nodes dialog first, then the tier is on.
-  const chooseVideoTier = async (tier: string) => {
-    if (tier === "none") return setPrefs({ videoUpscale: tier });
-    const rtx = await loadRtxStatus();
-    if (rtx?.stage === "nodes") return requireHeissNodes("rtx", () => setPrefs({ videoUpscale: tier }));
-    setPrefs({ videoUpscale: tier });
-  };
   const strayModelCount = modelFolders?.strayCount || 0;
   const canUseNegativePrompt = currentProfile?.capabilities?.negativePrompt !== false;
   const { confirmAction, referenceAssets, referenceInputs, referenceInpaint, referenceRole, retryComfyStatus, comfyRetrying, comfyReconnectedAt, promptEnhance } = view;
@@ -719,7 +711,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
               removeSavedSize={view.removeSavedSize}
               pickSavedSize={view.pickSavedSize}
               videoUpscale={rtxTabs ? prefs.videoUpscale || "none" : undefined}
-              onVideoUpscaleChange={rtxTabs ? chooseVideoTier : undefined}
+              onVideoUpscaleChange={rtxTabs ? (tier: AutoUpscale) => chooseVideoTier(tier, setPrefs) : undefined}
               customSize={Boolean(customSize)}
               aspectLocked={Boolean(aspectLocked)}
               width={width}
@@ -857,7 +849,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
               removeSavedSize={view.removeSavedSize}
               pickSavedSize={view.pickSavedSize}
               videoUpscale={rtxTabs ? prefs.videoUpscale || "none" : undefined}
-              onVideoUpscaleChange={rtxTabs ? chooseVideoTier : undefined}
+              onVideoUpscaleChange={rtxTabs ? (tier: AutoUpscale) => chooseVideoTier(tier, setPrefs) : undefined}
               customSize={Boolean(customSize)}
               aspectLocked={Boolean(aspectLocked)}
               width={width}

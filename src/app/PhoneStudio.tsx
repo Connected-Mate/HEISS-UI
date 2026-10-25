@@ -2,13 +2,14 @@ import React from 'react';
 import { GridAutoplayButton } from './GridAutoplayButton';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useDragControls, useReducedMotion } from 'framer-motion';
-import { ArrowLeft, ArrowUp, Check, CheckCircle2, ChevronRight, Columns2, CircleStop, Dices, Download, Eye, EyeOff, History, ImagePlus, Info, LockKeyhole, MoreHorizontal, RefreshCw, RotateCcw, Search, Share, SlidersHorizontal, Sparkles, Square, Star, Trash2, Undo2, Wand2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Brush, Check, CheckCircle2, ChevronRight, Columns2, CircleStop, Dices, Download, Eye, EyeOff, History, ImagePlus, Info, LockKeyhole, MoreHorizontal, RefreshCw, RotateCcw, Search, Share, SlidersHorizontal, Sparkles, Square, Star, Trash2, Undo2, Wand2, X, Zap } from 'lucide-react';
 import { cn, aspectIconStyle } from './format';
 import type { PromptEnhance } from './usePromptEnhance';
-import { familyLabel, setupNote } from './components';
+import { familyLabel, modelAbilities, setupNote } from './components';
+import { EnhanceOverlay } from './EnhanceComposer';
 import { downloadUrl } from './GalleryTile';
 import { canUpscaleItem, shortLeft, upscaledWithRun, upscaleLeftLine, upscaleTooltip, useUpscaleClock } from './useUpscale';
-import { useRtxOffered } from './rtx';
+import { chooseVideoTier, rtxVideoTiers, useRtxOffered } from './rtx';
 import { UpscaleArrow } from './UpscaleArrow';
 import { ReferenceSlots } from './ReferenceMediaPicker';
 import { haptic, HapticTarget } from './phoneControls';
@@ -18,7 +19,7 @@ import { useHistoryDismiss } from './useHistoryDismiss';
 import { progressLine, progressReading, RunLeft } from './GenerationProgress';
 import { RestartEtaText } from './ComfyRestart';
 import { estimatePhrase } from './useGenerationEstimate';
-import type { GalleryItem, Profile, SavedSize } from './types';
+import type { AutoUpscale, GalleryItem, Profile, SavedSize } from './types';
 import { LinkedSizeFields, MegapixelField, SizePreview, SizeTabs, sizeMenuModel, type SizeRow, type SizeTier } from './SizeMenu';
 import { MEGAPIXEL, presetRatio, ratioName } from './sizing';
 import type { ShowToast } from './toast';
@@ -543,6 +544,9 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
     customSize, sizeTier, sizeMax, customLimits, savedSizes, sizeArea, sizeTiers, promptEnhance
   } = view;
   const enhance = promptEnhance as PromptEnhance | null;
+  const promptRef = React.useRef<HTMLTextAreaElement | null>(null);
+  usePhoneEnhanceHaptics(enhance);
+  const rtxTier = useVideoTier(view);
   // Several references: Edit and Ref say what happens to all of them, not only the first.
   const many = (referenceAssets || []).length > 1;
   const [sheet, setSheet] = React.useState<'' | 'workflow' | 'size' | 'advanced'>('');
@@ -594,7 +598,7 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
         </>
       }
     >
-      <div className={cn('phone-compose', enhance?.busy && 'is-enhancing')}>
+      <div className={cn('phone-compose', enhance?.busy && 'is-enhance-live')}>
         <ReferenceSlots
           inputs={referenceInputs || []}
           inpaint={referenceInpaint}
@@ -626,6 +630,7 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
           ) : null}
         </AnimatePresence>
         <textarea
+          ref={promptRef}
           aria-label={hiddenSpace ? 'Prompt (Hidden)' : 'Prompt'}
           value={prompt}
           placeholder={referenceInpaint?.mask ? 'Describe what the painted part becomes…' : hiddenSpace ? 'Describe what to make, privately…' : 'Describe what to make…'}
@@ -634,22 +639,33 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
           rows={4}
           autoFocus={!prompt.trim()}
         />
+        {/* The new words develop in where they will stay, with the heat running round the card. */}
+        {enhance ? <EnhanceOverlay enhance={enhance} field={promptRef} original={prompt} /> : null}
         <div className="phone-compose-tools">
-          {enhance?.settled ? (
+          {enhance?.busy ? (
             <>
-              <button type="button" className="phone-compose-recent" onClick={() => { haptic('tap'); enhance.undo(); }}><Undo2 size={15} /> Undo</button>
-              <button type="button" className="phone-compose-recent" onClick={() => { haptic('tap'); enhance.again(); }}><RotateCcw size={15} /> Try again</button>
+              <span className="phone-enhance-status" role="status"><Sparkles size={15} aria-hidden="true" /><span className="enhance-shimmer">{enhance.working}</span></span>
+              <button type="button" className="phone-compose-recent phone-enhance-stop" onClick={() => { haptic('tap'); enhance.stop(); }}><Square size={11} fill="currentColor" aria-hidden="true" /> Stop<HapticTarget /></button>
             </>
-          ) : recentPrompts.length && !enhance?.busy ? (
-            <button type="button" className="phone-compose-recent" onClick={() => { haptic('tap'); setHistoryOpen(true); }}>
-              <History size={15} /> Recent
-            </button>
-          ) : null}
-          {enhance && !enhance.settled ? (
-            <button type="button" className={cn('phone-compose-recent phone-compose-enhance', enhance.busy && 'is-busy')} onClick={() => { haptic('tap'); enhance.run(); }}>
-              <Sparkles size={15} /> {enhance.busy ? <span className="enhance-shimmer">{enhance.working}</span> : 'Enhance'}
-            </button>
-          ) : null}
+          ) : enhance?.settled ? (
+            <>
+              <button type="button" className="phone-compose-recent" onClick={() => { haptic('tap'); enhance.undo(); }}><Undo2 size={15} /> Undo<HapticTarget /></button>
+              <button type="button" className="phone-compose-recent" onClick={() => { haptic('tap'); enhance.again(); }}><RotateCcw size={15} /> Try again<HapticTarget /></button>
+            </>
+          ) : (
+            <>
+              {recentPrompts.length ? (
+                <button type="button" className="phone-compose-recent" onClick={() => { haptic('tap'); setHistoryOpen(true); }}>
+                  <History size={15} /> Recent
+                </button>
+              ) : null}
+              {enhance ? (
+                <button type="button" className="phone-compose-recent phone-compose-enhance" onClick={() => { haptic('tap'); enhance.run(); }}>
+                  <Sparkles size={15} /> {enhance.verb}<HapticTarget />
+                </button>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
       <PromptHistorySheet
@@ -682,14 +698,14 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
           <span>{currentProfile?.displayName || currentProfile?.label || 'Choose a model'}<small>{currentProfile ? familyLabel(currentProfile) : 'Model'}</small></span>
           <ChevronRight size={18} className="phone-row-end" />
         </button>
-        {(aspectOptions || []).length && !aspectLocked ? (
+        {(aspectOptions || []).length && !aspectLocked && currentProfile?.capabilities?.size !== false ? (
           <button type="button" className="phone-row" onClick={() => setSheet('size')}>
             {/* The real shape, tagged 2K or C like the desktop's size button. */}
             <span className="aspect-shape-slot phone-size-icon">
               <span className="aspect-shape" style={aspectIconStyle({ label: '', value: '', w: size.shown.width, h: size.shown.height })} />
-              {size.badge ? <b className="aspect-upscale-badge" aria-hidden="true">{size.badge}</b> : null}
+              {rtxTier !== 'none' ? <b className="aspect-upscale-badge" aria-hidden="true">{rtxTier.toUpperCase()}</b> : size.badge ? <b className="aspect-upscale-badge" aria-hidden="true">{size.badge}</b> : null}
             </span>
-            <span>{size.captionFor(null)}<small>{size.shown.width} × {size.shown.height}</small></span>
+            <span>{size.captionFor(null)}<small>{size.shown.width} × {size.shown.height}{rtxTier !== 'none' ? ` · RTX upscale to ${rtxTier.toUpperCase()}` : ''}</small></span>
             <ChevronRight size={18} className="phone-row-end" />
           </button>
         ) : null}
@@ -706,11 +722,11 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
         </div>
       ) : null}
 
-      <div className="phone-control">
+      {currentProfile?.capabilities?.steps === false ? null : <div className="phone-control">
         <span className="phone-control-label">Steps <b>{steps}</b></span>
         <input className="phone-slider" type="range" min={stepMin} max={stepMax} step={1} value={steps} aria-label="Steps" onChange={(event) => setSteps(Number(event.target.value))} />
         <span className="phone-control-hint"><span>Faster</span>{stepDefault ? <button type="button" className="phone-step-default" onClick={() => setSteps(stepDefault)} disabled={steps === stepDefault}>Recommended {stepDefault}</button> : null}<span>More detail</span></span>
-      </div>
+      </div>}
 
       <button type="button" className="phone-link is-strong" onClick={() => setSheet('advanced')}>
         Advanced settings{loraActiveCount ? ` · ${loraActiveCount} LoRA${loraActiveCount === 1 ? '' : 's'}` : ''} <ChevronRight size={16} />
@@ -723,6 +739,43 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
       </Sheet>
     </Sheet>
   );
+}
+
+/** What a model can do, as small marks after its name; the sheet's key says what each means. */
+function PhoneAbilities({ edits, inpaints, rapid }: { edits: boolean; inpaints: boolean; rapid: boolean }) {
+  if (!edits && !inpaints && !rapid) return null;
+  const said = [rapid && 'Rapid', edits && 'edits pictures', inpaints && 'inpainting'].filter(Boolean).join(', ');
+  return (
+    <span className="phone-abilities" role="img" aria-label={said}>
+      {rapid ? <Zap size={13} className="is-rapid" /> : null}
+      {edits ? <ImagePlus size={13} /> : null}
+      {inpaints ? <Brush size={13} /> : null}
+    </span>
+  );
+}
+
+/**
+ * While enhance writes: a light tick as each sentence lands, and a settled one
+ * when it is done. Android only; iOS gives a page no haptics outside a tap.
+ */
+function usePhoneEnhanceHaptics(enhance: PromptEnhance | null) {
+  const sentences = (enhance?.text.match(/[.!?](\s|$)/g) || []).length;
+  const seen = React.useRef(0);
+  React.useEffect(() => {
+    if (sentences > seen.current) haptic('tap');
+    seen.current = sentences;
+  }, [sentences]);
+  const settled = Boolean(enhance?.settled);
+  React.useEffect(() => { if (settled) haptic('success'); }, [settled]);
+}
+
+const videoTierOf = (prefs: Record<string, any> | undefined): AutoUpscale => (prefs?.videoUpscale === '2k' || prefs?.videoUpscale === '4k' ? prefs.videoUpscale : 'none');
+
+/** RTX upscale for new videos: the tier in use, or 'none' where it isn't offered (not a video model, upscaling off, no NVIDIA card). */
+function useVideoTier(view: Record<string, any>): AutoUpscale {
+  const offered = useRtxOffered();
+  const on = view.mode === 'video' && view.prefs?.smartUpscale !== false && offered;
+  return on ? videoTierOf(view.prefs) : 'none';
 }
 
 function WorkflowSheet({ view, open, onClose }: { view: Record<string, any>; open: boolean; onClose: () => void }) {
@@ -738,10 +791,14 @@ function WorkflowSheet({ view, open, onClose }: { view: Record<string, any>; ope
   const recent = needle ? [] : (modelMenu?.recents || []).filter((id) => !favorites.has(id)).map((id) => byId.get(id)).filter((profile): profile is Profile => Boolean(profile)).slice(0, 4);
   const shown = new Set([...starred, ...recent].map((profile) => profile.id));
   const rest = profiles.filter((profile) => !shown.has(profile.id) && matches(profile));
+  const abilityOptions = { showInpaint: view.prefs?.inpainting !== false, showRapid: view.prefs?.rapidAll !== false };
+  const abilitiesOf = (profile: Profile) => modelAbilities(profile, abilityOptions);
+  // The key under the list names only the marks the list shows.
+  const legend = profiles.map(abilitiesOf).reduce((all, one) => ({ edits: all.edits || one.edits, inpaints: all.inpaints || one.inpaints, rapid: all.rapid || one.rapid }), { edits: false, inpaints: false, rapid: false });
   const row = (profile: Profile) => (
     <div key={profile.id} className="phone-row-wrap">
       <button type="button" className={cn('phone-row', profile.id === model && 'is-current')} onClick={() => { pickModel(profile.id); onClose(); }}>
-        <span>{profile.displayName || profile.label}<small className={cn(setupNote(profile) && 'is-setup')}>{setupNote(profile) || familyLabel(profile)}</small></span>
+        <span><span className="phone-model-name"><span>{profile.displayName || profile.label}</span><PhoneAbilities {...abilitiesOf(profile)} /></span><small className={cn(setupNote(profile) && 'is-setup')}>{setupNote(profile) || familyLabel(profile)}</small></span>
         {profile.id === model ? <Check size={18} className="phone-row-end" /> : null}
       </button>
       {modelMenu ? (
@@ -765,7 +822,37 @@ function WorkflowSheet({ view, open, onClose }: { view: Record<string, any>; ope
       {rest.some((profile) => !profile.id.startsWith('custom:')) ? <><h3 className="phone-section">{starred.length || recent.length ? 'All models' : ''}</h3><div className="phone-group">{rest.filter((profile) => !profile.id.startsWith('custom:')).map(row)}</div></> : null}
       {rest.some((profile) => profile.id.startsWith('custom:')) ? <><h3 className="phone-section">Your workflows</h3><div className="phone-group">{rest.filter((profile) => profile.id.startsWith('custom:')).map(row)}</div></> : null}
       {needle && !starred.length && !rest.length ? <p className="phone-empty">Nothing matches “{query.trim()}”.</p> : null}
+      {legend.edits || legend.inpaints || legend.rapid ? (
+        <p className="phone-ability-key">
+          {legend.rapid ? <span className="is-rapid"><Zap size={13} aria-hidden="true" /> Rapid, up to twice as fast</span> : null}
+          {legend.edits ? <span><ImagePlus size={13} aria-hidden="true" /> Edits your pictures</span> : null}
+          {legend.inpaints ? <span><Brush size={13} aria-hidden="true" /> Repaints a part you paint over</span> : null}
+        </p>
+      ) : null}
     </Sheet>
+  );
+}
+
+/**
+ * RTX upscale under the shapes, for video models on an NVIDIA card: the tier
+ * every new video is sharpened to as it finishes. Choosing one doesn't close
+ * the sheet; it is a setting for the runs to come, not a size to pick.
+ */
+function PhoneRtxTiers({ value, onChange }: { value: AutoUpscale; onChange: (tier: AutoUpscale) => void }) {
+  return (
+    <section className="phone-rtx" aria-labelledby="phone-rtx-label">
+      <h3 className="phone-section" id="phone-rtx-label">RTX upscale</h3>
+      <div className="phone-group phone-rtx-card">
+        <div className="phone-seg" role="radiogroup" aria-labelledby="phone-rtx-label">
+          {rtxVideoTiers.map((tier) => (
+            <button key={tier.value} type="button" role="radio" aria-checked={value === tier.value} className={cn(value === tier.value && 'active')} onClick={() => onChange(tier.value)}>{tier.label}<HapticTarget /></button>
+          ))}
+        </div>
+        <p className="phone-note">{value === 'none'
+          ? 'Videos stay at the size they’re made. Your NVIDIA card can sharpen each one to 2K or 4K in seconds as it finishes.'
+          : `Each new video is sharpened to ${value.toUpperCase()} as it finishes, in seconds. It cleans up what’s there rather than adding detail. The original is kept.`}</p>
+      </div>
+    </section>
   );
 }
 
@@ -783,8 +870,10 @@ function SizeSheet({ view, open, onClose }: { view: Record<string, any>; open: b
   const {
     aspectOptions, aspectPickerValue, aspectValue, defaultAspectSize, applyAspect, mode, currentProfile, customSize, sizeTier, sizeMax, customLimits,
     chooseSizeTier, applyCustomRatio, setCustomDimensions, savedSizes, saveCustomSize, renameSavedSize, removeSavedSize, pickSavedSize,
-    sizeTiers, sizeArea, megapixelControl
+    sizeTiers, sizeArea, megapixelControl, prefs, setPrefs
   } = view;
+  const rtxOffered = useRtxOffered();
+  const rtxShown = mode === 'video' && prefs?.smartUpscale !== false && rtxOffered;
   const saved = (savedSizes || []) as SavedSize[];
   const tier: SizeTier = customSize ? 'custom' : sizeTier || 'none';
   const tiers: SizeTier[] = sizeTiers || (mode === 'image' ? ['none', '2k', 'custom'] : ['none', 'custom']);
@@ -851,6 +940,7 @@ function SizeSheet({ view, open, onClose }: { view: Record<string, any>; open: b
       </div>
       {/* Under the shapes, as on the desktop: how big they're all drawn. */}
       {megapixelControl ? <div className="phone-size-mp"><MegapixelField current={(shown.width * shown.height) / MEGAPIXEL} control={megapixelControl} custom={custom} /></div> : null}
+      {rtxShown ? <PhoneRtxTiers value={videoTierOf(prefs)} onChange={(tier) => { haptic('tap'); chooseVideoTier(tier, setPrefs); }} /> : null}
       {saved.length ? (
         <>
           <div className="phone-size-saved-head">

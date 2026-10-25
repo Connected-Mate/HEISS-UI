@@ -89,6 +89,13 @@ version opens with a `> ` summary line, which the update pill shows.
   main model can be stood in for by one of the same family you have.
 
 ### Changed
+- **The phone gets 1.0's new parts made for it.** Prompt enhance writes the
+  new prompt in word by word with the heat round the Create card, says what
+  it's doing, and has a plain Stop; its button names what it will do
+  ("Describe the picture", "Write the motion"). The size sheet has RTX
+  upscale (None, 2K, 4K) for video models on an NVIDIA card, and the Create
+  sheet's size row shows it. The model sheet marks which models have Rapid,
+  edit pictures or inpaint, with a short key under the list.
 - Visual workflows are converted with subgraphs, bypassed and muted nodes,
   Primitive nodes and KJNodes Set/Get resolved, and with ComfyUI's own page
   when Playwright is installed.
