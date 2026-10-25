@@ -96,7 +96,7 @@ export async function apiJson<T>(url: string, options?: RequestInit): Promise<T>
   // The browser's own wording ("Failed to fetch", "Load failed") means nothing to people.
   const response = await apiFetch(url, options).catch((error) => {
     if (error?.name === "AbortError") throw error;
-    throw new Error("Can’t reach HEISS UI. Make sure it’s running, then try again.");
+    throw new UnreachableError();
   });
   noteServerClock(response, sentAt);
   // A server started before an update answers new routes with the app page.
@@ -109,6 +109,14 @@ export async function apiJson<T>(url: string, options?: RequestInit): Promise<T>
     throw new ApiError(message, response.status, typeof data?.reason === "string" ? data.reason : "");
   }
   return data as T;
+}
+
+/** The request never got an answer: HEISS UI isn't running, or the network between here and it is down. */
+export class UnreachableError extends Error {
+  constructor() {
+    super("Can’t reach HEISS UI. Make sure it’s running, then try again.");
+    this.name = "UnreachableError";
+  }
 }
 
 /** A failed API call that keeps the HTTP status and the server's reason code, so callers can explain it. */

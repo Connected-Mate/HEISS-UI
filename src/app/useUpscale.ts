@@ -201,7 +201,8 @@ type UpscaleOptions = {
   gallery: GalleryItem[];
   prefs: Preferences;
   showToast: ShowToast;
-  loadGalleryDelta: () => void;
+  /** Catches the gallery up; a failure is left to the next poll. */
+  loadGalleryDelta: () => unknown;
   patchGalleryItems: (update: (item: GalleryItem) => GalleryItem) => void;
   setPrefs: (patch: Partial<Preferences>) => void;
 };
@@ -210,7 +211,9 @@ type UpscaleOptions = {
 const VERIFY_BEAT_MS = 1500;
 const READY_BEAT_MS = 1400;
 
-export function useUpscale({ gallery, prefs, showToast, loadGalleryDelta, patchGalleryItems, setPrefs }: UpscaleOptions) {
+export function useUpscale({ gallery, prefs, showToast, loadGalleryDelta: loadDelta, patchGalleryItems, setPrefs }: UpscaleOptions) {
+  // The gallery's own poll catches up if this one doesn't get through.
+  const loadGalleryDelta = useCallback(() => { Promise.resolve(loadDelta()).catch(() => null); }, [loadDelta]);
   const [status, setStatus] = useState<UpscaleStatus | null>(null);
   const [install, setInstall] = useState<UpscaleInstall>(null);
   const [busyIds, setBusyIds] = useState<Set<string>>(() => new Set());

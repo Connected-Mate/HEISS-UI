@@ -14,7 +14,7 @@ export function CopyRow({ text, label, block, showToast }: { text: string; label
   const { copied, copyWith } = useCopyFeedback();
   const copy = () => copyWith(async () => {
     const ok = await copyText(text);
-    if (!ok) showToast('Copy failed', 'error');
+    if (!ok) showToast('Couldn’t copy', 'error');
     return ok;
   });
   return (

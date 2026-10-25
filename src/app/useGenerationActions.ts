@@ -24,7 +24,7 @@ export function useGenerationActions(view: any) {
     frames, fps, generateDisabled, generatePostingRef, height, loadGallery, loadGalleryDelta, loras, missingRequiredReference, mode,
     model, negative, prefs, hiddenSpace, hidden, prompt, sampler, scheduler, seed, rapid, rapidGuidance, setActive, setGallery,
     upsertGalleryItems, removeGalleryItems, removeGalleryItemsWhere, patchGalleryItems, setStatus, setZenSelectedId, showToast, startImage, startImageId, startImageName, steps, cfg,
-    referenceAssets, inpaint, sizeTier, sizeMax, sizeArea = 0, sizeStep = 16, textEncoder, textEncoders, vae, clipType, weightDtype, width, visibleGallery, outputDir, generateDisabledReason, comfyOffline, comfyRestarting, openModelSetup, retryComfyStatus, refreshModels
+    referenceAssets, inpaint, sizeTier, sizeMax, sizeArea = 0, sizeStep = 16, textEncoder, textEncoders, vae, clipType, weightDtype, width, visibleGallery, outputDir, generateDisabledReason, comfyOffline, heissUnreachable, comfyRestarting, openModelSetup, retryComfyStatus, refreshModels
   } = view;
   const galleryUpsert = upsertGalleryItems || ((items: GalleryItem[]) => setGallery((current: GalleryItem[]) => dedupeGalleryItems([...items, ...current])));
   const galleryRemove = removeGalleryItems || ((keys: string[]) => setGallery((current: GalleryItem[]) => current.filter((item: GalleryItem) => !keys.includes(item.id) && !keys.includes(item.url) && (!item.jobId || !keys.includes(item.jobId)))));
@@ -111,7 +111,7 @@ export function useGenerationActions(view: any) {
       return;
     }
     if (comfyOffline) {
-      showToast("ComfyUI is offline, so nothing was sent. Start it, then try again.", "error", retryComfyStatus ? { action: { label: "Check again", onClick: retryComfyStatus } } : undefined);
+      showToast(heissUnreachable ? "Can’t reach HEISS UI, so nothing was sent." : "ComfyUI is offline, so nothing was sent. Start it, then try again.", "error", retryComfyStatus ? { action: { label: "Check again", onClick: retryComfyStatus } } : undefined);
       return;
     }
     if (!retry && !prompt.trim()) {
@@ -269,10 +269,13 @@ export function useGenerationActions(view: any) {
           }
           if (job.status === "error") {
             const message = job.error || "Generation failed";
-            galleryPatch((item: GalleryItem) => item.jobId === jobId ? { ...item, status: "error", optimistic: false, filename: message } : item);
+            // The failure comes along now, so the tile and "See why" have its fixes before the next gallery update.
+            const failure = job.failure;
+            const failedWith = (item: GalleryItem): GalleryItem => ({ ...item, status: "error", optimistic: false, filename: failure?.title || message, ...(failure ? { failure } : {}) });
+            galleryPatch((item: GalleryItem) => item.jobId === jobId ? failedWith(item) : item);
             const failed = firstItemOf.get(jobId);
-            showToast(message, "error", failed ? { action: { label: "See why", onClick: () => setActive({ ...failed, status: "error", optimistic: false, filename: message }) } } : undefined);
-            setStatus(message);
+            showToast(failure?.title || message, "error", failed ? { action: { label: failure?.hint ? "How to fix" : "See why", onClick: () => setActive(failedWith(failed)) } } : undefined);
+            setStatus(failure?.title || message);
             return job;
           }
           if (job.status === "done") {
@@ -307,7 +310,8 @@ export function useGenerationActions(view: any) {
           }
         }
       }));
-      await (loadGalleryDelta ? loadGalleryDelta() : loadGallery());
+      // The run is done either way; a missed update is caught by the gallery's own poll.
+      await Promise.resolve(loadGalleryDelta ? loadGalleryDelta() : loadGallery()).catch(() => null);
       if (prefs.zenMode && prefs.followLatest && !toHidden) {
         const data = await apiJson<GalleryPayload>(`/api/gallery?type=${encodeURIComponent(runMode)}&limit=80`).catch(() => null);
         const outputs = payloadItems(data).filter((item: GalleryItem) => item.status !== "canceled");

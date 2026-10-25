@@ -106,6 +106,7 @@ function comfyStatusLabel(status: any) {
     const detail = [status.device, status.latencyMs ? `${status.latencyMs}ms` : "", status.version ? `v${status.version}` : ""].filter(Boolean).join(" · ");
     return `ComfyUI connected${detail ? ` · ${detail}` : ""}`;
   }
+  if (status?.unreachable) return "Can’t reach HEISS UI";
   return `ComfyUI offline${status?.url ? ` · ${status.url}` : ""}${status?.error ? ` · ${status.error}` : ""}`;
 }
 
@@ -546,6 +547,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
               known={Boolean(comfyStatus?.checked)}
               offline={Boolean(comfyOffline) || Boolean(comfyStatus?.restarting)}
               restarting={Boolean(comfyStatus?.restarting)}
+              unreachable={Boolean(comfyStatus?.unreachable)}
               device={comfyStatus?.device}
               retrying={Boolean(comfyRetrying)}
               onRetry={retryComfyStatus}
@@ -689,6 +691,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
               modelMenu={modelMenu}
               currentProfile={currentProfile}
               comfyOffline={Boolean(comfyOffline)}
+              heissUnreachable={Boolean(comfyOffline && comfyStatus?.unreachable)}
               comfyRestarting={Boolean(comfyStatus?.restarting)}
               onFindModels={thisComputer ? modelFolders?.openDialog : undefined}
               onGetModels={thisComputer ? openGetModels : undefined}
@@ -827,6 +830,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
               modelMenu={modelMenu}
               currentProfile={currentProfile}
               comfyOffline={Boolean(comfyOffline)}
+              heissUnreachable={Boolean(comfyOffline && comfyStatus?.unreachable)}
               comfyRestarting={Boolean(comfyStatus?.restarting)}
               onFindModels={thisComputer ? modelFolders?.openDialog : undefined}
               onGetModels={thisComputer ? openGetModels : undefined}

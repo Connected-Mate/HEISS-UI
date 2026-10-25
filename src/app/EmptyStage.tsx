@@ -28,11 +28,13 @@ const MORPH_AT = 420;
 /** "Connected" stays readable a little longer than the scene takes. */
 const CONNECTED_COPY_MS = 1500;
 
-export function EmptyStage({ known, offline, restarting = false, device, retrying, onRetry, onOpenConnection, comfyUrl, nearby = [], onNoComfy, noModels = false, onFindModels, starter }: {
+export function EmptyStage({ known, offline, restarting = false, unreachable = false, device, retrying, onRetry, onOpenConnection, comfyUrl, nearby = [], onNoComfy, noModels = false, onFindModels, starter }: {
   known: boolean;
   offline: boolean;
   /** ComfyUI is down because it was asked to restart: the same scene, calmer words. */
   restarting?: boolean;
+  /** HEISS UI itself isn't answering, so ComfyUI's state is unknown: the way out is HEISS, not ComfyUI. */
+  unreachable?: boolean;
   device?: string;
   retrying: boolean;
   onRetry: () => void;
@@ -108,7 +110,7 @@ export function EmptyStage({ known, offline, restarting = false, device, retryin
           {showPlug ? <OfflineMark key={`plug-${offlineRun}`} className="stage-layer" connectedAt={connectedAt} /> : null}
           {showCanvas ? <EmptyMark className="stage-layer" /> : null}
         </div>
-        <div className="stage-copy" key={`${copy}${restarting ? "-restarting" : ""}`}>
+        <div className="stage-copy" key={`${copy}${restarting ? "-restarting" : unreachable ? "-unreachable" : ""}`}>
           {copy === 'offline' && restarting ? (
             <>
               <h2>Restarting ComfyUI</h2>
@@ -118,6 +120,14 @@ export function EmptyStage({ known, offline, restarting = false, device, retryin
             <>
               <h2>Looking for ComfyUI…</h2>
               {where ? <p>Checking <code className="stage-code">{where}</code>{ports.length ? <> and port {ports.join(', ')}</> : null}.</p> : null}
+            </>
+          ) : copy === 'offline' && unreachable ? (
+            <>
+              <h2>{retrying ? 'Looking for HEISS UI…' : 'Can’t reach HEISS UI'}</h2>
+              <p>{thisComputer ? 'Start HEISS UI again, and this page reconnects by itself.' : 'Make sure it’s running on its computer and you’re on the same network. This page reconnects by itself.'}</p>
+              <div className="empty-actions">
+                <button className="reconnect-btn primary" onClick={onRetry} disabled={retrying} aria-busy={retrying || undefined}><RefreshCw size={13} className={cn(retrying && 'spin')} /> {retrying ? 'Checking…' : 'Check again'}</button>
+              </div>
             </>
           ) : copy === 'offline' ? (
             <>
