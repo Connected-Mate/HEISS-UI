@@ -14,6 +14,7 @@ import { characterMeta, clampText, clientJobUuid, formatElapsed, generationDetai
 import { useGalleryColumnCount } from './app/gallery';
 import { normalizeLoras, sameBaseModel } from './app/loras';
 import { arrangeReferences, referenceRoleFor, referenceRoleOffered, withReference, withoutReferences } from './app/referenceSlots';
+import { loadModelMemory, recalledSettings, rememberSettings, saveModelMemory } from './app/modelMemory';
 import { deleteLoraStack, loraFamilyKey, loraFavorites, loraRecents, loraStacks, recordLoraRecents, rememberActiveLoras, rememberedLoraStrength, rememberLoraStrengths, renameLoraStack, saveLoraStack, startLoraSync, subscribeLoraLibrary, subscribeLoraSync, toggleLoraFavorite, updateLoraStack, type LoraSnapshot, type LoraSyncStatus } from './app/lora-storage';
 import { useConfirmation } from './app/useConfirmation';
 import { StudioView } from './app/StudioView';
@@ -706,6 +707,18 @@ function App() {
     };
   }, [mode, prompt, negative, model, textEncoder, textEncoders, vae, clipType, weightDtype, width, height, steps, cfg, denoise, inpaintStrength, inpaintFeather, seed, rapidSeed, count, frames, fps, sampler, scheduler, loras, customSize, startImageId, startImageName, referenceAssets, advanced, showDetails, showGenerationSettings, showNegativePrompt, zenGalleryOpen, zenControls, zenSelectedId, hiddenSpace]);
 
+  // Each model keeps the settings it was last left with, for the next switch back or the next visit.
+  // Not on the render a switch lands in: those values are the new model's own (or what it remembered).
+  const memoryModel = useRef(model);
+  useEffect(() => {
+    if (memoryModel.current !== model) { memoryModel.current = model; return; }
+    if (!model) return;
+    const id = window.setTimeout(() => {
+      saveModelMemory(rememberSettings(loadModelMemory(), model, { steps, cfg, sampler, scheduler, denoise, inpaintStrength, ...(mode === "video" ? { frames, fps } : {}) }));
+    }, 400);
+    return () => window.clearTimeout(id);
+  }, [model, mode, steps, cfg, sampler, scheduler, denoise, inpaintStrength, frames, fps]);
+
   useEffect(() => {
     if (!active) return;
     const activeItem = active;
@@ -1144,6 +1157,16 @@ function App() {
       setFrames(Number(profile.defaults.frames || prefs.defaultVideoFrames));
       setFps(Number(profile.defaults.fps || profile.constraints?.fps?.default || prefs.defaultFps));
     }
+    // What this model was last run with, over its defaults (modelMemory.js).
+    const last = recalledSettings(loadModelMemory(), profile);
+    if (last.steps !== undefined) setSteps(last.steps);
+    if (last.cfg !== undefined) setCfg(last.cfg);
+    if (last.sampler) setSampler(last.sampler);
+    if (last.scheduler) setScheduler(last.scheduler);
+    if (last.denoise !== undefined) setDenoise(last.denoise);
+    if (last.inpaintStrength !== undefined) setInpaintStrength(last.inpaintStrength);
+    if (last.frames !== undefined) setFrames(last.frames);
+    if (last.fps !== undefined) setFps(last.fps);
     if (!nextReferenceInput) {
       setReferenceAssets([]);
       setStartImage("");

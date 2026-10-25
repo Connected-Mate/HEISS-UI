@@ -434,6 +434,8 @@ export function useGenerationActions(view: any) {
     localStorage.removeItem("heiss-ui-prefs");
     localStorage.removeItem("j-ai-studio-draft");
     localStorage.removeItem("j-ai-studio-prefs");
+    // What each model was last run with (modelMemory.js): back to their defaults too.
+    localStorage.removeItem("heiss-ui-model-settings");
     clearLoraLibrary();
     // The server keeps its own copy of LoRA strengths and stacks; clear it too,
     // or the next load would restore everything the dialog said was cleared.
