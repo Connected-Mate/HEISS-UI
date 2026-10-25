@@ -618,15 +618,15 @@ export function modelAbilities(profile: Profile, { showInpaint = true, showRapid
   };
 }
 
-function ModelAbilities({ profile, showInpaint = true, showRapid = true, onHover }: { profile: Profile; showInpaint?: boolean; showRapid?: boolean; onHover?: (hovering: boolean) => void }) {
+/** What a model can do beyond drawing, as small icons on its row; the menu shows no tooltips, so each says it to screen readers. */
+function ModelAbilities({ profile, showInpaint = true, showRapid = true }: { profile: Profile; showInpaint?: boolean; showRapid?: boolean }) {
   const { edits, inpaints, rapid } = modelAbilities(profile, { showInpaint, showRapid });
   if (!edits && !inpaints && !rapid) return null;
   return (
-    // While one of these speaks, the row's own name tooltip stays shut.
-    <span className="model-abilities" onPointerEnter={() => onHover?.(true)} onPointerLeave={() => onHover?.(false)}>
-      {edits ? <Tip content="Edits from reference images" side="top"><span className="model-ability" aria-label="Edits from reference images"><ImagePlus size={13} strokeWidth={1.75} /></span></Tip> : null}
-      {inpaints ? <Tip content="Inpainting: paint over part of an image to change only that" side="top"><span className="model-ability" aria-label="Inpainting"><Brush size={13} strokeWidth={1.75} /></span></Tip> : null}
-      {rapid ? <Tip content="Rapid: up to twice as fast" side="top"><span className="model-ability" aria-label="Rapid"><Zap size={13} strokeWidth={1.75} /></span></Tip> : null}
+    <span className="model-abilities">
+      {edits ? <span className="model-ability" aria-label="Edits from reference images"><ImagePlus size={13} strokeWidth={1.75} /></span> : null}
+      {inpaints ? <span className="model-ability" aria-label="Inpainting"><Brush size={13} strokeWidth={1.75} /></span> : null}
+      {rapid ? <span className="model-ability" aria-label="Rapid"><Zap size={13} strokeWidth={1.75} /></span> : null}
     </span>
   );
 }
@@ -668,7 +668,6 @@ function MenuLoras({ loras, onOpen }: { loras: ModelMenuLoras; onOpen: () => voi
 
 export function ModelPicker({ value, profiles, showInpaint = true, showRapid = true, onChange, compact = false, badges = {}, density = "full", emptyHint = "", onFindModels, onGetModels, strayCount = 0, menu, loras }: { value: string; profiles: Profile[]; showInpaint?: boolean; showRapid?: boolean; onChange: (value: string) => void; compact?: boolean; badges?: Record<string, string>; density?: ControlDensity; emptyHint?: string; onFindModels?: () => void; onGetModels?: () => void; strayCount?: number; menu?: ModelMenuState; loras?: ModelMenuLoras }) {
   const hardware = useHardware();
-  const [abilityRow, setAbilityRow] = React.useState("");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(-1);
@@ -803,10 +802,10 @@ export function ModelPicker({ value, profiles, showInpaint = true, showRapid = t
                     const starred = favorites.has(profile.id);
                     // Without a menu (favorites and recents as sections), its Favorite / Recent / Workflow word stays as a pill.
                     const badge = menu ? "" : badges[profile.id] || "";
-                    const { size, fits } = sizeNote(profile, hardware);
+                    const { size } = sizeNote(profile, hardware);
                     return (
                       <div key={`${section.id}:${profile.id}`} className={cn("model-row", starred && "is-starred")}>
-                        <Tip content={`${profile.displayName || profile.label}${setupNote(profile) ? ` · ${setupDetail(profile)}` : fits ? " · fits this computer" : ""}`} forceOpen={abilityRow === `${section.id}:${profile.id}` ? false : undefined}><button
+                        <button
                             type="button"
                             role="option"
                             aria-selected={profile.id === value}
@@ -822,8 +821,8 @@ export function ModelPicker({ value, profiles, showInpaint = true, showRapid = t
                                 <em>{profile.description || familyLabel(profile)}{size ? <span className="model-size"> · {size}</span> : null}</em>
                               )}
                             </span>
-                            <span className="model-tags"><ModelAbilities profile={profile} showInpaint={showInpaint} showRapid={showRapid} onHover={(hovering) => setAbilityRow(hovering ? `${section.id}:${profile.id}` : "")} />{badge ? <span className="model-badge">{badge}</span> : null}</span>
-                          </button></Tip>
+                            <span className="model-tags"><ModelAbilities profile={profile} showInpaint={showInpaint} showRapid={showRapid} />{badge ? <span className="model-badge">{badge}</span> : null}</span>
+                          </button>
                         {menu ? (
                           <button type="button" className="model-star" aria-pressed={starred} aria-label={starred ? `Remove ${profile.displayName || profile.label} from favorites` : `Add ${profile.displayName || profile.label} to favorites`} onClick={() => menu.toggleFavorite(profile.id)}>
                             <Star size={13} fill={starred ? "currentColor" : "none"} />

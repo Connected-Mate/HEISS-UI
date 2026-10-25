@@ -284,8 +284,8 @@
   mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent);
   transition: --fade-top var(--motion-base) var(--motion-ease), --fade-bottom var(--motion-base) var(--motion-ease);
 }
-.model-menu-list:is([data-more="above"], [data-more="both"]) { --fade-top: 28px; }
-.model-menu-list:is([data-more="below"], [data-more="both"]) { --fade-bottom: 28px; }
+.model-menu-list:is([data-more="above"], [data-more="both"]) { --fade-top: 14px; }
+.model-menu-list:is([data-more="below"], [data-more="both"]) { --fade-bottom: 14px; }
 @property --fade-top { syntax: "<length>"; inherits: false; initial-value: 0px; }
 @property --fade-bottom { syntax: "<length>"; inherits: false; initial-value: 0px; }
 @media (prefers-reduced-motion: reduce) { .model-menu-list { transition: none; } }
