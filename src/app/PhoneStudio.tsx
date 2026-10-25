@@ -653,6 +653,8 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
             <>
               <button type="button" className="phone-compose-recent" onClick={() => { haptic('tap'); enhance.undo(); }}><Undo2 size={15} /> Undo<HapticTarget /></button>
               <button type="button" className="phone-compose-recent" onClick={() => { haptic('tap'); enhance.again(); }}><RotateCcw size={15} /> Try again<HapticTarget /></button>
+              {/* Keep the new prompt and put the row away, as the desktop island's ×. */}
+              <button type="button" className="phone-compose-recent phone-enhance-close" aria-label="Keep it" onClick={() => { haptic('tap'); enhance.dismiss(); }}><X size={16} /><HapticTarget /></button>
             </>
           ) : (
             <>

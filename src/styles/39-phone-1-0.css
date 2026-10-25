@@ -42,6 +42,13 @@
   box-shadow: inset 0 0 0 1px rgb(255 154 82 / .35);
   color: #ffe0c7;
 }
+/* After Undo and Try again: a round × that keeps the new prompt and puts the row away. */
+.phone-enhance-close {
+  flex: none;
+  justify-content: center;
+  width: 36px;
+  padding: 0;
+}
 .phone-compose-recent {
   transition: background-color var(--motion-fast) var(--motion-ease),
     transform var(--motion-instant) var(--motion-ease);
