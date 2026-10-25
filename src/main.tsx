@@ -9,7 +9,7 @@ import "./styles.css";
 import { useModelFolders } from './app/useModelFolders';
 import type { AspectPreset, AutoUpscale, PreviousExit, SavedSize, ComfyStatus, GalleryItem, Health, LoraSelection, MediaInput, Mode, Models, OutputFolderReport, Paths, Preferences, Profile, InpaintMask, ReferenceAsset, ReferenceInpaint, ReferenceRole, ReferenceRoleControl, SelectedReferenceAsset, TouchGesture, UpdatePrefs, UpdateStatus, WorkflowPreferences, WorkflowSummary } from './app/types';
 import { fallbackAspectPresets } from './app/constants';
-import { ApiError, apiJson, copyImage, copyText, loadDraft, loadPrefs, referenceAssetFromGallery, resolveReferenceAssets } from './app/api';
+import { apiJson, copyImage, copyText, loadDraft, loadPrefs, referenceAssetFromGallery, resolveReferenceAssets, UnreachableError } from './app/api';
 import { characterMeta, clampText, clientJobUuid, formatElapsed, generationDetailEntries, settingMax, textLength, titleFromPrompt } from './app/format';
 import { useGalleryColumnCount } from './app/gallery';
 import { normalizeLoras, sameBaseModel } from './app/loras';
@@ -289,10 +289,11 @@ function App() {
     let cancelled = false;
     let attempt = 0;
     let timer = 0;
-    const load = () => loadGallery().catch(() => {
+    // Not reaching HEISS UI at all is said by the stage (the status check fails too).
+    const load = () => loadGallery().then(() => toast.dismiss("gallery-load"), (error) => {
       if (cancelled) return;
       attempt += 1;
-      if (attempt === 1) showToast("Couldn’t load the gallery. Trying again…", "error");
+      if (attempt === 1 && !(error instanceof UnreachableError)) showToast("Couldn’t load the gallery. Trying again…", "warning", { id: "gallery-load", duration: Infinity });
       timer = window.setTimeout(load, Math.min(15000, 2000 * attempt));
     });
     load();
@@ -415,11 +416,12 @@ function App() {
     const offLibrary = subscribeLoraLibrary(() => setLoraSnapshotRevision((value) => value + 1));
     const offSync = subscribeLoraSync((sync: LoraSyncStatus) => {
       if (sync.failing && sync.pending > 0 && !loraSyncFailing.current) {
+        // Nothing is lost, so a warning; the line that it synced takes its place.
         showToast(sync.locked
           ? "LoRA changes are saved on this device. Sign in again to sync them."
-          : "Can’t reach HEISS UI. LoRA changes are saved on this device and sync when it’s back.", "error");
+          : "Can’t reach HEISS UI. LoRA changes are saved on this device and sync when it’s back.", "warning", { id: "lora-sync", duration: Infinity });
       } else if (!sync.failing && loraSyncFailing.current && !sync.pending) {
-        showToast("LoRA changes synced", "success");
+        showToast("LoRA changes synced", "success", { id: "lora-sync" });
       }
       if (!sync.failing || sync.pending > 0) loraSyncFailing.current = sync.failing && sync.pending > 0;
     });
@@ -932,7 +934,7 @@ function App() {
         const { found: _found, ...status } = data;
         setComfyStatusIfChanged({ ...status, checking: false, checked: true });
       })
-      .catch((error) => setComfyStatusIfChanged({ connected: false, checking: false, checked: true, unreachable: !(error instanceof ApiError), error: error instanceof Error ? error.message : "Connection failed" }))
+      .catch((error) => setComfyStatusIfChanged({ connected: false, checking: false, checked: true, unreachable: error instanceof UnreachableError, error: error instanceof Error ? error.message : "Connection failed" }))
       .finally(() => { comfyStatusRequestRef.current = null; });
     comfyStatusRequestRef.current = request;
     return request;
@@ -1012,7 +1014,7 @@ function App() {
     if (active && movable.some((item) => item.id === active.id)) setActive(null);
     removeGalleryItems(movable.map((item) => item.id));
     const result = await hidden.unhide(movable);
-    if (!result) loadGallery();
+    if (!result) loadGallery().catch(() => null);
     else toast.success("Moved to gallery", { group: "unhide", count: movable.length, plural: (count) => `Moved ${count} images to gallery` });
   }
 
@@ -1781,7 +1783,7 @@ function App() {
 
   const generationActions = useGenerationActions({
     workflowSettings: currentWorkflowSettings,
-    active, canUseStartImage, confirmAction, count, currentProfile, denoise, frames, fps, generateDisabled, generatePostingRef, height, loadGallery, loadGalleryDelta, loras, missingRequiredReference, mode, model, negative, prefs, hiddenSpace, hidden, prompt, referenceAssets: composerReferenceAssets, inpaint: activeInpaintMask ? { mask: activeInpaintMask.dataUrl, strength: inpaintStrength, feather: inpaintFeather } : null, sizeTier, sizeMax, sizeArea, sizeStep: customLimits.width.step, sampler, scheduler, seed, setActive, setGallery, upsertGalleryItems, removeGalleryItems, removeGalleryItemsWhere, patchGalleryItems, setStatus, setZenSelectedId, showToast, startImage, startImageId, startImageName, steps, cfg, textEncoder, textEncoders, vae, clipType, weightDtype, width, visibleGallery, outputDir: paths.outputDir, generateDisabledReason, comfyOffline: Boolean(comfyStatus.checked && !comfyStatus.connected && !comfyStatus.checking), comfyRestarting: Boolean(comfyStatus.restarting),
+    active, canUseStartImage, confirmAction, count, currentProfile, denoise, frames, fps, generateDisabled, generatePostingRef, height, loadGallery, loadGalleryDelta, loras, missingRequiredReference, mode, model, negative, prefs, hiddenSpace, hidden, prompt, referenceAssets: composerReferenceAssets, inpaint: activeInpaintMask ? { mask: activeInpaintMask.dataUrl, strength: inpaintStrength, feather: inpaintFeather } : null, sizeTier, sizeMax, sizeArea, sizeStep: customLimits.width.step, sampler, scheduler, seed, setActive, setGallery, upsertGalleryItems, removeGalleryItems, removeGalleryItemsWhere, patchGalleryItems, setStatus, setZenSelectedId, showToast, startImage, startImageId, startImageName, steps, cfg, textEncoder, textEncoders, vae, clipType, weightDtype, width, visibleGallery, outputDir: paths.outputDir, generateDisabledReason, comfyOffline: Boolean(comfyStatus.checked && !comfyStatus.connected && !comfyStatus.checking), heissUnreachable: Boolean(comfyStatus.unreachable), comfyRestarting: Boolean(comfyStatus.restarting),
     openModelSetup: () => setWorkflowGalleryOpen(true),
     retryComfyStatus,
     refreshModels
@@ -1866,7 +1868,7 @@ function App() {
     recents: loraRecentList,
     loadStack: (stack: LoraSnapshot) => setLorasWithMemory(stack.loras),
     saveStack: (name: string) => { const stack = saveLoraStack(loraFamily, name, loras); bumpLoraLibrary(); return stack; },
-    updateStack: (id: string) => { updateLoraStack(loraFamily, id, loras); bumpLoraLibrary(); showToast('Stack updated', 'success'); },
+    updateStack: (id: string) => { updateLoraStack(loraFamily, id, loras); bumpLoraLibrary(); },
     renameStack: (id: string, name: string) => { renameLoraStack(loraFamily, id, name); bumpLoraLibrary(); },
     deleteStack: async (stack: LoraSnapshot) => {
       if (!await confirmAction({ title: `Delete ${stack.name}?`, description: 'The LoRAs stay installed and in use.', action: 'Delete', destructive: true })) return false;

@@ -268,7 +268,7 @@ export function ComfyManagerNote({ info, refresh, className }: { info: ManagerIn
         ? <>Restart HEISS UI to use this.</>
         : info?.connected
         ? <>Needs ComfyUI-Manager. Start ComfyUI with <code>--enable-manager</code>, or restart it yourself.</>
-        : info?.error ? <>Couldn’t check ComfyUI: {info.error}</>
+        : info?.error ? <>{/HEISS UI/.test(info.error) ? info.error : `Couldn’t check ComfyUI: ${info.error}`}</>
         : <>ComfyUI is offline.</>}{' '}
       <button type="button" className="comfy-restart-link" onClick={() => refresh()}>Check again</button>
     </p>

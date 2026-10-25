@@ -395,12 +395,12 @@ export function WorkflowGallery({ view }: { view: any }) {
   const agentCopy = useCopyFeedback();
   const copyAgent = (text: string, key: string) => agentCopy.copyWith(async () => {
     const ok = await copyText(text);
-    if (!ok) showToast("Copy failed", "error");
+    if (!ok) showToast("Couldn’t copy", "error");
     return ok;
   }, key);
   const copyMissing = (nodes: string[]) => nodesCopy.copyWith(async () => {
     const ok = await copyText(nodes.join("\n"));
-    if (!ok) showToast("Copy failed", "error");
+    if (!ok) showToast("Couldn’t copy", "error");
     return ok;
   });
 
