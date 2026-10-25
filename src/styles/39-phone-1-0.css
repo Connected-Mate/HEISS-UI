@@ -19,7 +19,7 @@
   background: #1f1f1f;
 }
 .phone-compose .enhance-rim-glow-layer { filter: blur(9px) saturate(1.2); }
-.phone-compose .enhance-bloom { display: none; }
+.phone-compose .enhance-ambient { inset: -4px; filter: blur(14px); }
 /* The person's words wait underneath; the ghost on top shows what is being written. */
 .phone-compose.is-enhance-live textarea,
 .phone-compose.is-enhance-live textarea::placeholder {

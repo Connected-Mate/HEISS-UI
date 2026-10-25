@@ -62,7 +62,7 @@ function EnhanceHero({ stage }: { stage: Stage }) {
   return (
     <div className="upscale-hero-wrap enhance-hero" data-stage={stage} aria-hidden="true">
       <div className={cn('enhance-hero-card', writing && 'is-writing', shown === 0 && 'is-idea')}>
-        {writing ? <EnhanceAura phase="writing" pulse={shown} /> : null}
+        {writing ? <EnhanceAura phase="writing" pulse={shown} idle="fuse" /> : null}
         <p>
           {shown === 0
             ? <span className="enhance-hero-idea">{DEMO_IDEA}</span>

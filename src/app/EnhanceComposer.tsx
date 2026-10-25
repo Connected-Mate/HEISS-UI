@@ -104,15 +104,16 @@ export function enhanceProgress(timing: EnhanceTiming | null | undefined, words:
 }
 
 /**
- * The rim: heat traced along the prompt's edge. Once the server says how long
- * the run should take, it fills from the top-left corner round the whole edge
- * over that time, at an even pace along the outline (an SVG stroke, so the
- * corners and the long sides move alike): a faint ember line under it, the
- * trail behind cooling in steps, a white-hot tip with a bloom. Words arriving
- * stoke it. With nothing expected (queued, the Settings preview) it runs as a
- * fuse round the edge. Done, it closes the ring and flares.
+ * The rim: a quiet warm line traced along the prompt's edge, with a soft glow
+ * behind the glass. Once the server says how long the run should take, the
+ * line fills from the top-left corner round the edge over that time, at an
+ * even pace along the outline (an SVG stroke, so corners and long sides move
+ * alike), easing gently and never going back. Until then it rests: just the
+ * faint edge and the glow breathing. Done, the rest of the ring warms in and
+ * the shell fades. `idle="fuse"` is for the demos, which have no clock: a slow
+ * fuse runs round the edge instead.
  */
-export function EnhanceAura({ phase, pulse, timing = null, words = 0 }: { phase: EnhancePhase; pulse: number; timing?: EnhanceTiming | null; words?: number }) {
+export function EnhanceAura({ phase, pulse, timing = null, words = 0, idle = 'calm' }: { phase: EnhancePhase; pulse: number; timing?: EnhanceTiming | null; words?: number; idle?: 'calm' | 'fuse' }) {
   const reduced = useReducedMotion();
   const node = useRef<HTMLDivElement | null>(null);
   const svg = useRef<SVGSVGElement | null>(null);
@@ -120,14 +121,19 @@ export function EnhanceAura({ phase, pulse, timing = null, words = 0 }: { phase:
   const [box, setBox] = useState({ w: 0, h: 0, r: 0 });
   const heat = useRef(0);
   const seen = useRef(pulse);
+  // Where the line has got to, as a share of the edge. Kept across re-measures: the prompt grows
+  // a line at a time as the words come, and the line must carry on from where it was, not start over.
+  const shown = useRef(0);
+  const loop = useRef(0);
   // The loop reads the latest of these without restarting.
-  const live = useRef({ phase, timing, words });
-  live.current = { phase, timing, words };
+  const live = useRef({ phase, timing, words, idle });
+  live.current = { phase, timing, words, idle };
 
   useEffect(() => {
     const grown = pulse - seen.current;
     seen.current = pulse;
-    if (grown > 0) heat.current = Math.min(1, heat.current + 0.14 + grown * 0.012);
+    // Words warm it a little; they don't make it flash.
+    if (grown > 0) heat.current = Math.min(1, heat.current + 0.05 + grown * 0.003);
   }, [pulse]);
 
   // The outline follows the prompt's own box and corner radius.
@@ -155,39 +161,46 @@ export function EnhanceAura({ phase, pulse, timing = null, words = 0 }: { phase:
     if (!measure) return;
     const length = measure.getTotalLength();
     if (!length) return;
-    let shown = 0;
-    let loop = 0;
     let before = performance.now();
     let frame = 0;
+    // From and to as shares of the edge, so a re-measured outline picks up exactly where the last one was.
     const draw = (from: number, to: number) => {
-      // A dash pattern exactly one outline long repeats seamlessly, so a fuse can run past the start corner.
+      const span = Math.max(0, to - from) * length;
       for (const path of paths) {
         const part = path.dataset.part;
-        const span = to - from;
-        const piece = part === 'tip' ? Math.min(span, length * 0.012) : part === 'warm' || part === 'flame' ? Math.min(span, length * 0.09) : span;
+        const piece = part === 'tip' ? Math.min(span, length * 0.01) : part === 'warm' || part === 'flame' ? Math.min(span, length * 0.08) : span;
+        // A dash pattern exactly one outline long repeats seamlessly, so a fuse can run past the start corner.
         path.style.strokeDasharray = `${piece} ${length - piece}`;
-        path.style.strokeDashoffset = `${-(to - piece)}`;
+        path.style.strokeDashoffset = `${-(to * length - piece)}`;
       }
-      const point = measure.getPointAtLength(((to % length) + length) % length);
+      const point = measure.getPointAtLength((((to % 1) + 1) % 1) * length);
       if (head.current) head.current.style.transform = `translate(${point.x}px, ${point.y}px)`;
     };
     const step = (now: number) => {
       const seconds = Math.min(0.05, (now - before) / 1000);
       before = now;
-      const { phase: current, timing: clock, words: written } = live.current;
-      heat.current = Math.max(0, heat.current - seconds * 0.9);
-      aura.style.setProperty('--enhance-heat', heat.current.toFixed(3));
-      const expected = current === 'done' ? 1 : enhanceProgress(clock, written, now);
-      if (expected === null) {
-        // Nothing expected yet: a fuse of a third of the edge, burning faster as the words come.
-        loop = (loop + seconds * (0.16 + heat.current * 0.5)) % 1;
-        draw(length * loop - length * 0.32, length * loop);
+      const { phase: current, timing: clock, words: written, idle: resting } = live.current;
+      heat.current = Math.max(0, heat.current - seconds * 0.6);
+      const expected = enhanceProgress(clock, written, now);
+      const waiting = expected === null && current !== 'done';
+      aura.classList.toggle('is-waiting', waiting && resting === 'calm');
+      if (waiting && resting === 'fuse') {
+        loop.current = (loop.current + seconds * (0.1 + heat.current * 0.12)) % 1;
+        draw(loop.current - 0.3, loop.current);
+      } else if (waiting) {
+        // Before ComfyUI starts the run (or a new one, after Try again): from the start.
+        shown.current = 0;
+        draw(0, 0);
+      } else if (current !== 'done' && expected !== null) {
+        // Eases toward where the run should be, slowly enough to read as steady, and never back.
+        shown.current = Math.max(shown.current, shown.current + (expected - shown.current) * (1 - Math.exp(-seconds * 1.6)));
+        draw(0, Math.min(1, shown.current));
       } else {
-        // Eases toward where the run should be, never backwards.
-        shown = Math.max(shown, shown + (expected - shown) * (1 - Math.exp(-seconds * 7)));
-        if (current === 'done' && expected - shown < 0.002) shown = 1;
-        draw(0, length * Math.min(1, shown));
+        // Done: the line stays where it got to; the rest of the ring warms in (CSS), no sweep round.
+        draw(0, Math.min(1, shown.current));
       }
+      aura.style.setProperty('--enhance-heat', heat.current.toFixed(3));
+      aura.style.setProperty('--enhance-progress', (current === 'done' ? 1 : shown.current).toFixed(3));
       frame = requestAnimationFrame(step);
     };
     frame = requestAnimationFrame(step);
@@ -198,7 +211,8 @@ export function EnhanceAura({ phase, pulse, timing = null, words = 0 }: { phase:
   const rect = { x: inset, y: inset, width: Math.max(0, box.w - inset * 2), height: Math.max(0, box.h - inset * 2), rx: Math.max(0, box.r - inset) };
   return (
     <div ref={node} className={cn('enhance-aura', reduced && 'is-still', phase === 'done' && 'is-done')} data-phase={phase}>
-      <i className="enhance-bloom" aria-hidden="true" />
+      {/* Light behind the glass, under the prompt's frosted surface (its ::before sits at -1). */}
+      <i className="enhance-ambient" aria-hidden="true" />
       {box.w ? (
         // The glow blurs as a whole SVG: a filter on a shape inside one isn't drawn everywhere (Safari).
         <svg className="enhance-rim enhance-rim-glow-layer" width={box.w} height={box.h} aria-hidden="true">
@@ -236,7 +250,7 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
     wasBusy.current = busy;
     if (!ended || reduced) return;
     setFinishing(true);
-    const timer = window.setTimeout(() => setFinishing(false), 700);
+    const timer = window.setTimeout(() => setFinishing(false), 900);
     return () => { window.clearTimeout(timer); setFinishing(false); };
   }, [busy, phase, reduced]);
 
@@ -271,7 +285,7 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
           aria-hidden="true"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: reduced ? 1 : 1.012, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }}
+          exit={{ opacity: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
           <EnhanceAura phase={finishing ? 'done' : phase} pulse={text.length} timing={timing} words={countWords(text)} />

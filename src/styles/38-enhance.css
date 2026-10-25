@@ -74,20 +74,44 @@
 }
 .enhance-rim rect { fill: none; }
 /* The fuse it burns along: a barely-there ember line round the whole edge. */
-.enhance-rim-base { stroke: rgb(255 154 82 / .08); stroke-width: 1; }
-/* Behind the line, a soft warmth on the glass, a little stronger where it is still burning. */
+.enhance-rim-base { stroke: rgb(255 154 82 / .1); stroke-width: 1; transition: stroke 600ms var(--motion-ease); }
+/* Right at the line, a soft warmth on the glass. */
 .enhance-rim-glow-layer {
   filter: blur(6px);
-  opacity: calc(.16 + var(--enhance-heat) * .16);
+  opacity: calc(.16 + var(--enhance-heat) * .06);
 }
 .enhance-rim-glow { stroke: rgb(255 140 80 / .4); stroke-width: 4; }
-.enhance-rim-flame { stroke: rgb(255 176 120 / .55); stroke-width: 5; }
+.enhance-rim-flame { stroke: rgb(255 176 120 / .5); stroke-width: 5; }
 /* What has burnt: a quiet cooled line. */
-.enhance-rim-trail { stroke: rgb(255 154 82 / .3); stroke-width: 1; }
+.enhance-rim-trail { stroke: rgb(255 154 82 / .32); stroke-width: 1; }
 /* The stretch just behind the tip, a touch warmer. */
-.enhance-rim-warm { stroke: rgb(255 192 138 / .55); stroke-width: 1.25; }
+.enhance-rim-warm { stroke: rgb(255 192 138 / .5); stroke-width: 1.25; }
 /* The tip: warm, not white. */
-.enhance-rim-tip { stroke: rgb(255 214 180 / .8); stroke-width: 1.5; }
+.enhance-rim-tip { stroke: rgb(255 214 180 / .75); stroke-width: 1.5; }
+
+/* Light behind the glass: a soft ember halo round the prompt, under its frosted
+   surface, growing gently as the run gets along. Steady, never flickering. */
+.enhance-ambient {
+  position: absolute;
+  inset: -6px;
+  z-index: -2;
+  border-radius: inherit;
+  padding: 10px;
+  background: radial-gradient(120% 140% at 50% 110%, rgb(255 140 70 / .55), rgb(255 154 82 / .25) 55%, rgb(255 154 82 / .12));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  filter: blur(16px);
+  opacity: calc(.28 + var(--enhance-progress, 0) * .22);
+  transition: opacity 600ms var(--motion-ease);
+}
+/* Waiting for ComfyUI to start it: the halo breathes, slowly. */
+.enhance-aura.is-waiting .enhance-ambient { animation: enhance-breathe 3.2s ease-in-out infinite; }
+.enhance-aura.is-waiting .enhance-head { opacity: 0; }
+@keyframes enhance-breathe {
+  0%, 100% { opacity: .2; }
+  50% { opacity: .38; }
+}
 
 /* A small soft glow where it burns. */
 .enhance-head {
@@ -97,6 +121,7 @@
   width: 0;
   height: 0;
   will-change: transform;
+  transition: opacity 400ms var(--motion-ease);
 }
 .enhance-head::before {
   content: "";
@@ -106,29 +131,13 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgb(255 214 180 / .38) 0, rgb(255 154 82 / .14) 40%, transparent 70%);
-  transform: scale(calc(.8 + var(--enhance-heat) * .2));
-}
-/* A faint warmth under the bottom edge while it works. */
-.enhance-bloom {
-  position: absolute;
-  inset: -22px;
-  z-index: -3;
-  border-radius: calc(var(--r-panel) + 22px);
-  background: radial-gradient(ellipse 55% 70% at 50% 100%, rgb(255 120 60 / .07), transparent 70%);
-  filter: blur(10px);
-  opacity: calc(.4 + var(--enhance-heat) * .3);
+  background: radial-gradient(circle, rgb(255 214 180 / .32) 0, rgb(255 154 82 / .12) 40%, transparent 70%);
 }
 
-/* Done: the ring closes with a gentle warm-up, then the shell fades out. */
-.enhance-aura.is-done .enhance-rim-glow-layer { animation: enhance-flare 700ms var(--motion-ease) both; }
-.enhance-aura.is-done .enhance-rim-trail { stroke: rgb(255 154 82 / .45); transition: stroke 300ms var(--motion-ease); }
-.enhance-aura.is-done .enhance-head { opacity: 0; transition: opacity 250ms var(--motion-ease); }
-@keyframes enhance-flare {
-  0% { opacity: .2; }
-  40% { opacity: .38; }
-  100% { opacity: 0; }
-}
+/* Done: the rest of the ring warms in where the line didn't reach, the halo with it, then the shell fades. */
+.enhance-aura.is-done .enhance-rim-base { stroke: rgb(255 154 82 / .32); }
+.enhance-aura.is-done .enhance-ambient { opacity: .5; }
+.enhance-aura.is-done .enhance-head { opacity: 0; }
 
 /* No motion: an even, steady edge rather than a tip frozen somewhere. */
 .enhance-aura.is-still .enhance-rim-base { stroke: rgb(255 154 82 / .35); }
@@ -471,7 +480,7 @@
   border-radius: inherit;
   background: var(--well);
 }
-.enhance-preview .enhance-bloom { display: none; }
+.enhance-preview .enhance-ambient { inset: -3px; filter: blur(10px); }
 .enhance-preview .enhance-rim-glow-layer { filter: blur(5px); }
 .enhance-preview-head {
   display: flex;

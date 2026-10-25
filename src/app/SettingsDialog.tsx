@@ -169,7 +169,7 @@ function EnhancePreview({ level }: { level: CreativityLevel }) {
   const writing = shown > 0 && shown < words.length;
   return (
     <div className="enhance-preview" aria-hidden="true">
-      {writing ? <EnhanceAura phase="writing" pulse={shown} /> : null}
+      {writing ? <EnhanceAura phase="writing" pulse={shown} idle="fuse" /> : null}
       <div className="enhance-preview-head"><span>{STYLE_IDEA}</span><EmberGlyph size={12} lit={writing} /></div>
       <p>{shown ? <EnhanceWords text={words.slice(0, shown).join(' ')} cursor={writing} /> : null}</p>
     </div>
