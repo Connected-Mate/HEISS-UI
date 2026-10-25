@@ -4,18 +4,17 @@ import { cn } from './format';
 import { Tip } from './components';
 import { usePresence } from './usePresence';
 import { useDismiss } from './useDismiss';
+import { RowReset } from './SizeMenu';
 import type { ControlDensity } from './components';
 
 /* ---------------------------------------------------------------------------
    Steps and Images, folded into the size menu (components.tsx AspectPicker)
    so the composer bar keeps one button for "what comes out": its shape, its
-   steps and how many. They sit under the shapes, nearest the button:
-
-   - Images: one sliding thumb over 1 · 2 · 3 · 4…, like Resolution above.
-     Hovering a count stacks that many frames in the size preview.
-   - Steps: a row like Megapixels: what it is on the left (and Reset once it
-     isn't the model's own), a − value + pill on the right that takes typing,
-     the arrow keys, and a hold on either end.
+   steps and how many. They sit under the shapes, nearest the button, as two
+   rows of one kind: the name on the left in the shapes' own type, and a
+   − value + pill on the right that takes typing, the arrow keys, and a hold
+   on either end. Steps puts a small Reset arrow before its pill once it
+   isn't the model's own.
 
    A workflow that takes no size gets RunPicker instead: the same two in a
    small menu of their own.
@@ -32,13 +31,6 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 /** What the run settings add to a size, in words: "30 steps · 2 images". */
 export function runWords(run?: RunControl) {
   return [run?.steps ? plural(run.steps.value, 'step') : '', run?.count && run.count.value > 1 ? plural(run.count.value, 'image') : ''].filter(Boolean).join(' · ');
-}
-
-/** The counts Images offers as tabs; more than eight reads better as a stepper. */
-function countOptions(count: RunNumber) {
-  const options: number[] = [];
-  for (let n = count.min; n <= count.max && options.length <= 8; n += count.step || 1) options.push(n);
-  return options.length <= 8 ? options : null;
 }
 
 /** Repeats a step while a button is held: one at once, then quickly after a beat. */
@@ -112,73 +104,24 @@ function RunStepper({ label, number }: { label: string; number: RunNumber }) {
   );
 }
 
-/** Images as tabs: one thumb sliding between the counts. */
-function CountTabs({ count, options, onPreview }: { count: RunNumber; options: number[]; onPreview?: (value: number | null) => void }) {
-  const index = Math.max(0, options.indexOf(count.value));
-  return (
-    <div
-      className="aspect-upscale-tabs run-count-tabs"
-      role="radiogroup"
-      aria-label="Images per run"
-      style={{ '--tab-index': index, '--tab-count': options.length } as React.CSSProperties}
-      onPointerLeave={() => onPreview?.(null)}
-      onKeyDown={(event) => {
-        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-        event.preventDefault();
-        event.stopPropagation();
-        const next = options[Math.max(0, Math.min(options.length - 1, index + (event.key === 'ArrowRight' ? 1 : -1)))];
-        count.onChange(next);
-        requestAnimationFrame(() => event.currentTarget.querySelector<HTMLButtonElement>(`[data-count="${next}"]`)?.focus());
-      }}
-    >
-      <i aria-hidden="true" />
-      {options.map((n) => (
-        <button
-          key={n}
-          type="button"
-          role="radio"
-          data-count={n}
-          aria-checked={n === count.value}
-          aria-label={plural(n, 'image')}
-          tabIndex={n === count.value ? 0 : -1}
-          className={cn(n === count.value && 'is-active')}
-          onPointerEnter={(event) => { if (event.pointerType !== 'touch') onPreview?.(n); }}
-          onClick={() => count.onChange(n)}
-        >{n}</button>
-      ))}
-    </div>
-  );
-}
-
-/** The block under the shapes: Images, then Steps. */
-export function RunFields({ run, onPreviewCount }: { run: RunControl; onPreviewCount?: (value: number | null) => void }) {
+/** The block under the shapes: Images, then Steps, one row each. */
+export function RunFields({ run }: { run: RunControl }) {
   const { steps, count } = run;
   if (!steps && !count) return null;
-  const options = count ? countOptions(count) : null;
-  const stepsChanged = Boolean(steps && steps.default && steps.value !== steps.default);
   return (
     <div className="run-fields">
       {count ? (
-        options ? (
-          <div className="run-count">
-            <div className="aspect-upscale-head"><span>Images</span><small>{count.value === 1 ? 'per run' : `${count.value} at once`}</small></div>
-            <CountTabs count={count} options={options} onPreview={onPreviewCount} />
-          </div>
-        ) : (
-          <div className="run-row">
-            <span className="size-mp-label">Images<small>per run</small></span>
-            <RunStepper label="Images" number={count} />
-          </div>
-        )
+        <div className="run-row">
+          <span className="size-mp-label">Images</span>
+          <RunStepper label="Images" number={count} />
+        </div>
       ) : null}
       {steps ? (
         <div className="run-row">
-          <span className="size-mp-label">
-            Steps
-            {stepsChanged
-              ? <button type="button" className="size-mp-reset" onClick={() => steps.onChange(steps.default!)}>Reset to {steps.default}</button>
-              : <small>{steps.default ? 'as the model draws' : 'more is slower, finer'}</small>}
-          </span>
+          <span className="size-mp-label">Steps</span>
+          {steps.default && steps.value !== steps.default
+            ? <RowReset label={`Reset to ${steps.default}`} onReset={() => steps.onChange(steps.default!)} />
+            : null}
           <RunStepper label="Steps" number={steps} />
         </div>
       ) : null}

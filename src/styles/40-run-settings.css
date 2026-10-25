@@ -3,8 +3,8 @@
 
    One button for what comes out: the size's shape and ratio, then its steps
    past a hairline, then "×2" once a run makes more than one. Its menu keeps
-   Images and Steps under the shapes, in the size menu's own well, pill and
-   sliding thumb; the preview window deals one frame per image.
+   Images and Steps under the shapes as two rows of one kind, each with the
+   same − value + pill; the preview window deals one frame per image.
 
    LoRAs ride on the model button as a small ember count, and the model menu
    ends on a card that lists them and opens the LoRA list.
@@ -51,43 +51,30 @@
 
 /* --- In the menu -------------------------------------------------------- */
 
+/* Past one hairline, as far from it as the tabs are from theirs; the pills end
+   where the tabs' well ends, the names start where the shapes' names do. */
 .run-fields {
   display: grid;
-  gap: 0;
-  margin-top: 6px;
-  padding-top: 8px;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 0 4px;
   box-shadow: inset 0 1px 0 var(--surface-border);
 }
-.run-count { display: grid; padding: 2px 4px 0; }
-.run-count .aspect-upscale-head { justify-content: space-between; padding-bottom: 7px; }
-.run-count .aspect-upscale-head small {
-  color: hsl(var(--muted-foreground) / .8);
-  font-size: 11px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  animation: saveSwap var(--motion-slow) var(--motion-spring) both;
-}
-.run-count-tabs button { min-height: 28px; font-family: var(--font-mono); font-size: 12px; }
-/* A count above one is chosen in white: ember is for size here, as on the button. */
-.run-count-tabs button.is-active:not([data-tier="none"]) { color: hsl(var(--foreground)); }
-
 .run-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px 4px 2px 10px;
+  gap: 6px;
+  padding: 0 4px 0 13px;
 }
-.run-row .size-mp-reset { margin-left: -4px; }
 
-/* − value +, in the well: the ends are round buttons, the middle a field. */
+/* − value +, in the well, inset by the tabs' 3px: the ends are round buttons, the middle a field. */
 .run-stepper {
   flex: none;
   display: grid;
-  grid-template-columns: 30px 38px 30px;
+  grid-template-columns: 28px 36px 28px;
   align-items: center;
-  height: 32px;
-  padding: 0 1px;
+  height: 34px;
+  padding: 3px;
   border-radius: var(--r-pill);
   background: var(--well);
   box-shadow: inset 0 1px 2px rgb(0 0 0 / .5);
@@ -97,8 +84,8 @@
 .run-stepper button {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: 0;
   border-radius: var(--r-pill);
@@ -125,7 +112,10 @@
   box-shadow: none;
   background: transparent;
   color: hsl(var(--foreground));
-  font: 500 13px/1 var(--font-mono);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -133,8 +123,7 @@
 
 /* The small menu of a workflow with no size: only the block, no line above it. */
 .aspect-menu.size-menu.run-menu { width: min(256px, calc(100vw - 24px)); }
-.run-menu .run-fields { margin-top: 0; padding-top: 2px; box-shadow: none; }
-.run-menu .run-row:first-child { padding-top: 4px; }
+.run-menu .run-fields { margin-top: 0; padding: 4px 0; box-shadow: none; }
 
 /* --- The preview's deck: one card per image behind the frame ---------------- */
 
@@ -249,7 +238,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .size-frame.is-card, .run-stepper button, .model-menu-loras-head em svg { transition: none; }
-  .run-count .aspect-upscale-head small { animation: none; }
 }
 
 /* The count on the front card's corner, popping in as it changes. */

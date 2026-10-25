@@ -363,59 +363,62 @@ html.is-size-scrubbing * { cursor: ew-resize !important; user-select: none !impo
   .size-menu .size-saved-row .aspect-option { grid-template-columns: 30px minmax(0, 1fr) auto; }
 }
 
-/* Megapixels (Settings › Generation), under the shapes: what it is on the left, the count on
-   the right as one pill whose MP is the drag handle, so it reads "2.5 MP". */
+/* Megapixels (Settings › Generation), under the shapes: a row like Images and Steps
+   (40-run-settings.css), the count on the right as one pill whose MP is the drag handle,
+   so it reads "2.5 MP". With Images and Steps under it, the three share one hairline. */
 .size-mp {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 6px;
-  padding: 10px 4px 2px 6px;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 4px 4px 13px;
   box-shadow: inset 0 1px 0 var(--surface-border);
 }
-.size-mp-label { display: grid; justify-items: start; gap: 2px; min-width: 0; font-size: 12.5px; font-weight: 550; color: hsl(var(--foreground)); }
-.size-mp-label small { font-size: 11px; font-weight: 500; color: hsl(var(--muted-foreground)); animation: saveSwap var(--motion-slow) var(--motion-spring) both; }
+.size-mp:has(+ .run-fields) { padding-bottom: 0; }
+.size-mp + .run-fields { margin-top: 0; padding-top: 2px; box-shadow: none; }
+/* A row's name: one line, in the shapes' own type. */
+.size-mp-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; color: hsl(var(--foreground)); }
+/* Reset, just before the field once it's changed: a round arrow, ember under the pointer. */
 .size-mp-reset {
-  height: 16px;
-  margin-left: -4px;
-  padding: 0 4px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--r-pill);
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
   cursor: pointer;
   animation: saveSwap var(--motion-slow) var(--motion-spring) both;
-  transition: color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
+  transition: color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease), scale var(--motion-base) var(--motion-spring);
 }
-.size-mp-reset:hover { color: var(--ember); background: rgb(255 154 82 / .08); }
+@media (hover: hover) { .size-mp-reset:hover { color: var(--ember); background: rgb(255 154 82 / .1); } }
+.size-mp-reset:active { scale: .86; transition-duration: var(--motion-instant); }
 .size-mp-reset:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .size-mp .size-mp-field {
   flex: none;
-  width: 96px;
-  height: 32px;
+  width: 98px;
+  height: 34px;
   margin: 0;
   padding: 0 0 0 12px;
   border-radius: 999px;
 }
 .size-mp .size-mp-field input,
 .size-mp .size-mp-field input:focus,
-.size-mp .size-mp-field input:focus-visible { padding: 0 4px 0 0; text-align: right; }
+.size-mp .size-mp-field input:focus-visible { padding: 0 4px 0 0; font-family: inherit; font-weight: 600; text-align: right; }
 .size-mp .size-mp-field .size-field-key { width: 30px; padding-right: 4px; }
 
 /* The phone's sheet: its own block under the shapes, at thumb size. */
 .phone-size-mp { padding: 2px 4px 10px; }
 .phone-size-mp .size-mp { margin-top: 0; padding: 12px 6px 4px 8px; box-shadow: none; }
 .phone-size-mp .size-mp-label { font-size: 15px; }
-.phone-size-mp .size-mp-label small,
-.phone-size-mp .size-mp-reset { font-size: 13px; }
-.phone-size-mp .size-mp-reset { height: 22px; }
+.phone-size-mp .size-mp-reset { width: 32px; height: 32px; }
 .phone-size-mp .size-mp .size-mp-field { width: 116px; height: 42px; }
 .phone-size-mp .size-mp-field input { font-size: 16px; }
 .phone-size-mp .size-mp .size-mp-field .size-field-key { width: 42px; }
-/* Reset at thumb size: the hit area grows, the word doesn't. */
+/* Reset at thumb size: the hit area grows past the arrow. */
 .phone-size-mp .size-mp-reset { position: relative; }
-.phone-size-mp .size-mp-reset::after { content: ""; position: absolute; inset: -11px -8px; }
+.phone-size-mp .size-mp-reset::after { content: ""; position: absolute; inset: -6px; }
+@media (prefers-reduced-motion: reduce) { .size-mp-reset { animation: none; transition: none; } }

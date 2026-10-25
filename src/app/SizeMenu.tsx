@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Link2, Pencil, Trash2, Unlink2 } from 'lucide-react';
+import { Check, Link2, Pencil, RotateCcw, Trash2, Unlink2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { aspectIconStyle, cn } from './format';
 import { Tip } from './components';
@@ -13,7 +13,7 @@ import type { AspectPreset, NativeSupport, SavedSize } from './types';
    - SizePreview: a window of its own beside the menu, there from the first
      hover until the menu closes, with the frame the picture will fill gliding between shapes:
      the size chosen, or the row under the pointer while one is.
-   - SizeTabs: Default · 2K · Custom, one sliding thumb.
+   - SizeTabs: Native · 2K · Custom, one sliding thumb.
    - LinkedSizeFields: Custom's width and height. Linked they read as one
      field and keep the shape; the link in the middle splits them. Each takes
      typing, arrow keys, or a drag on its W/H label, like a design tool.
@@ -98,7 +98,7 @@ export function sizeMenuModel({ value, options, currentSize, defaultSize, tier, 
   return { custom, picked, shown, rows, savedMatch, ownSize, isActive, savedRow, label, badge, what, captionFor, note };
 }
 
-const tierLabels: Record<SizeTier, string> = { none: "Default", "2k": "2K", custom: "Custom" };
+const tierLabels: Record<SizeTier, string> = { none: "Native", "2k": "2K", custom: "Custom" };
 
 /**
  * The frame on its own window beside the menu. The window is the stage: the
@@ -318,7 +318,7 @@ function SizeField({ axis, value, limits, onStart, onChange }: {
 
 /** Megapixels in the size menu (Settings › Generation): the target, its limit, and how to change or clear it. */
 export type MegapixelControl = {
-  /** The count Default draws every shape at; null leaves each model at its own size. */
+  /** The count Native draws every shape at; null leaves each model at its own size. */
   target: number | null;
   max: number;
   onChange: (value: number) => void;
@@ -326,9 +326,18 @@ export type MegapixelControl = {
 };
 const MIN_MP = 0.25;
 
+/** Reset, between a row's name and its field once the field isn't the model's own: a small round arrow. */
+export function RowReset({ label, onReset }: { label: string; onReset: () => void }) {
+  return (
+    <Tip content={label}>
+      <button type="button" className="size-mp-reset" aria-label={label} onClick={onReset}><RotateCcw size={12} strokeWidth={2.2} /></button>
+    </Tip>
+  );
+}
+
 /**
  * The size menu's Megapixels, under the shapes: how big every shape is drawn. Type it, step
- * it with the arrow keys (Shift: whole megapixels) or drag its MP label. In Default it scales
+ * it with the arrow keys (Shift: whole megapixels) or drag its MP label. In Native it scales
  * every shape; in Custom, the size you have, keeping its shape. Reset hands each model back
  * its own size.
  */
@@ -368,10 +377,8 @@ export function MegapixelField({ current, control, custom }: {
   });
   return (
     <div className="size-mp">
-      <span className="size-mp-label">
-        Megapixels
-        {set ? <button type="button" className="size-mp-reset" onClick={control.onReset}>Reset</button> : <small>{custom ? "this size" : "as the model draws"}</small>}
-      </span>
+      <span className="size-mp-label">Megapixels</span>
+      {set ? <RowReset label="Reset to the model’s size" onReset={control.onReset} /> : null}
       <div className={cn("size-field size-mp-field", dragging && "is-dragging")} onClick={(event) => { if (event.target === event.currentTarget) input.current?.focus(); }}>
         <input
           ref={input}

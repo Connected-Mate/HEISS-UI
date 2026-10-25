@@ -862,12 +862,12 @@ function PhoneRtxTiers({ value, onChange }: { value: AutoUpscale; onChange: (tie
 
 /**
  * The size menu as a sheet: the frame the picture will fill on a stage at the
- * top (it stays in view while the shapes scroll), Default · 2K · Custom,
+ * top (it stays in view while the shapes scroll), Native · 2K · Custom,
  * Custom's linked width and height, the shapes, and the sizes you saved.
  *
  * There is no hover on a phone, so a finger resting on a row shows its frame
  * on the stage, and the saved sizes' Rename and Remove wait behind Edit
- * rather than hiding under a pointer. Picking from Default or 2K closes the
+ * rather than hiding under a pointer. Picking from Native or 2K closes the
  * sheet, as the desktop menu closes; in Custom a shape keeps the area.
  */
 function SizeSheet({ view, open, onClose }: { view: Record<string, any>; open: boolean; onClose: () => void }) {

@@ -220,7 +220,7 @@ export type ComposerBarProps = {
   aspectValue: string;
   defaultAspectSize: string;
   applyAspect: (value: string) => void;
-  /** The size menu's tab (Default · 2K · Custom), and what Custom may be. */
+  /** The size menu's tab (Native · 2K · Custom), and what Custom may be. */
   sizeTier?: SizeTier;
   /** The tabs on offer: 2K, or Megapixels in its place (Settings › Generation). */
   sizeTiers?: SizeTier[];

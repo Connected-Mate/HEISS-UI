@@ -358,7 +358,7 @@ function triggerShapeStyle(width: number, height: number): React.CSSProperties {
 /**
  * The size menu. A live frame on the left shows the shape and size a picture
  * will come out at (the row under the pointer while one is); beside it,
- * Default · 2K · Custom, Custom's linked width and height, and the shapes.
+ * Native · 2K · Custom, Custom's linked width and height, and the shapes.
  *
  * Default and 2K use the model's preset shapes, 2K drawn with the long side
  * at 2048. Custom is any width and height; a shape row there keeps the area
@@ -406,9 +406,7 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
   // The preview window opens the first time the menu is hovered or worked from the keyboard,
   // then stays like the menu itself: it goes when the menu closes (picking a size closes it).
   const [peek, setPeek] = useState(false);
-  // An Images count under the pointer: the preview deals that many frames until it leaves.
-  const [hoveredCount, setHoveredCount] = useState<number | null>(null);
-  useEffect(() => { if (!open) { setHovered(null); setPeek(false); setHoveredCount(null); } }, [open]);
+  useEffect(() => { if (!open) { setHovered(null); setPeek(false); } }, [open]);
 
   const { custom, picked, shown, rows, savedMatch, ownSize, isActive, savedRow, label, badge, what, captionFor, note } = sizeMenuModel({ value, options, currentSize, defaultSize, tier, native, sizeMax, limits, savedSizes, targetArea, offerTwoK: tiers.includes("2k") });
   const previewRow = hovered;
@@ -417,7 +415,6 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
   const rtxLabel = onVideoUpscaleChange && (videoUpscale === "2k" || videoUpscale === "4k") ? `, RTX upscale to ${videoUpscale.toUpperCase()}` : "";
   const steps = run?.steps?.value;
   const count = run?.count?.value || 1;
-  const previewCount = hoveredCount ?? count;
   const runLabel = runWords(run) ? ` · ${runWords(run)}` : "";
 
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -482,7 +479,7 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
           onPointerEnter={(event) => { if (event.pointerType !== "touch") setPeek(true); }}
           onFocusCapture={(event) => { if ((event.target as HTMLElement).matches(":focus-visible, input")) setPeek(true); }}
         >
-          <SizePreview size={previewSize} label={previewLabel} sub={`${previewSize.width} × ${previewSize.height}`} accent={!previewRow && (tier !== "none" || targetArea > 0)} shown={peek} count={previewCount} />
+          <SizePreview size={previewSize} label={previewLabel} sub={`${previewSize.width} × ${previewSize.height}`} accent={!previewRow && (tier !== "none" || targetArea > 0)} shown={peek} count={count} />
           <div className="size-menu-side">
             <div className="aspect-upscale">
               <div className="aspect-upscale-head">
@@ -533,7 +530,7 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
                     key={item.id}
                     saved={item}
                     active={savedMatch?.id === item.id}
-                    // From Default or 2K it switches to Custom and closes, like any pick there; in Custom it stays open.
+                    // From Native or 2K it switches to Custom and closes, like any pick there; in Custom it stays open.
                     onPick={() => { onPickSaved(item); if (!custom) setOpen(false); }}
                     onRename={(name) => onRenameSize?.(item.id, name)}
                     onRemove={() => { setHovered(null); onRemoveSize?.(item.id); }}
@@ -544,7 +541,7 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
             </div>
             {/* Under every shape: how big they're all drawn. */}
             {megapixel ? <MegapixelField current={(shown.width * shown.height) / MEGAPIXEL} control={megapixel} custom={custom} /> : null}
-            {run ? <RunFields run={run} onPreviewCount={setHoveredCount} /> : null}
+            {run ? <RunFields run={run} /> : null}
           </div>
         </div>
       ) : null}

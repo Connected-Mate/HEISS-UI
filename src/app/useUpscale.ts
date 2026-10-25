@@ -94,7 +94,7 @@ export const upscaleEfforts = [
 
 /** The size menu's preset tabs; Custom is the size menu's own (customSize). */
 export const autoUpscaleTiers: { value: AutoUpscale; label: string }[] = [
-  { value: "none", label: "Default" },
+  { value: "none", label: "Native" },
   { value: "2k", label: "2K" }
 ];
 
