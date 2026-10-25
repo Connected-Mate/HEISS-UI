@@ -407,7 +407,7 @@ html.is-size-scrubbing * { cursor: ew-resize !important; user-select: none !impo
 }
 .size-mp .size-mp-field input,
 .size-mp .size-mp-field input:focus,
-.size-mp .size-mp-field input:focus-visible { padding: 0 4px 0 0; font-family: inherit; font-weight: 600; text-align: right; }
+.size-mp .size-mp-field input:focus-visible { min-height: 0; padding: 0 4px 0 0; font-family: inherit; font-weight: 600; text-align: right; }
 .size-mp .size-mp-field .size-field-key { width: 30px; padding-right: 4px; }
 
 /* The phone's sheet: its own block under the shapes, at thumb size. */

@@ -105,6 +105,8 @@
   width: 100%;
   min-width: 0;
   height: 100%;
+  /* Every input is 36px at least (01-base.css); in the 28px row that pushed the row down and the − value + with it. */
+  min-height: 0;
   padding: 0;
   border: 0;
   border-radius: 0;
