@@ -25,7 +25,7 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease);
 }
 .workflow-card:hover { background: rgb(255 255 255 / .06); }
 .workflow-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -45,7 +45,7 @@
 .workflow-card-info { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .workflow-card-info strong { font-size: 13.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .workflow-card-info > span { font-size: 12px; color: hsl(var(--muted-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.workflow-card-arrow { flex: none; color: hsl(var(--muted-foreground)); transition: transform var(--dur-fast); }
+.workflow-card-arrow { flex: none; color: hsl(var(--muted-foreground)); transition: transform var(--motion-fast) var(--motion-ease); }
 .workflow-card:hover .workflow-card-arrow { transform: translateX(2px); color: hsl(var(--foreground)); }
 
 /* ------------------------------------------------------------------ Tabs */
@@ -69,7 +69,7 @@
   font-size: 13px;
   font-weight: 550;
   cursor: pointer;
-  transition: color var(--dur-fast);
+  transition: color var(--motion-fast) var(--motion-ease);
 }
 .sidebar-subtab:hover { color: hsl(var(--foreground)); }
 .sidebar-subtab.active { color: #fff; }
@@ -129,7 +129,7 @@
   font-size: 11.5px;
   font-weight: 550;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .lora-head-action:hover { background: var(--control-hover); color: #fff; }
 
@@ -144,7 +144,7 @@
   border-radius: var(--r-pill);
   background: var(--control-fill);
   box-shadow: inset 0 0 0 1px var(--surface-border);
-  transition: background var(--dur-fast), box-shadow var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
 .lora-chip:hover { background: var(--control-hover); }
 .lora-chip.is-active { background: var(--action); box-shadow: none; }
@@ -163,7 +163,7 @@
   cursor: pointer;
 }
 .lora-chip-name { min-width: 0; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lora-chip-load em { min-width: 12px; text-align: center; transition: opacity var(--dur-fast); font-style: normal; font-size: 11px; font-weight: 600; color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
+.lora-chip-load em { min-width: 12px; text-align: center; transition: opacity var(--motion-fast) var(--motion-ease); font-style: normal; font-size: 11px; font-weight: 600; color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
 .lora-chip.is-active .lora-chip-load { color: var(--action-ink); }
 .lora-chip.is-active .lora-chip-load em { color: rgb(10 10 10 / .5); }
 /* Modified: a small ember square, the same status marker used everywhere. */
@@ -184,7 +184,7 @@
   color: hsl(var(--muted-foreground));
   opacity: 0;
   cursor: pointer;
-  transition: opacity var(--dur-fast), background var(--dur-fast);
+  transition: opacity var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease);
 }
 .lora-chip:hover .lora-chip-load em,
 .lora-chip:focus-within .lora-chip-load em { opacity: 0; }
@@ -209,7 +209,7 @@
   font-size: 12px;
   font-weight: 550;
   cursor: pointer;
-  transition: background var(--dur-fast), border-color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
 }
 .lora-save-chip span { font-weight: 500; color: hsl(var(--muted-foreground)); }
 .lora-save-chip:hover { background: var(--control-fill); border-color: rgb(255 255 255 / .3); }
@@ -227,7 +227,7 @@
   font-size: 12px;
   font-weight: 550;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .lora-text-action:hover { background: var(--control-hover); color: #fff; }
 .lora-text-action.is-strong { color: hsl(var(--foreground)); }
@@ -280,7 +280,7 @@
   backdrop-filter: blur(18px) saturate(1.4);
   box-shadow: inset 0 0 0 1px var(--surface-border);
   list-style: none;
-  transition: background var(--dur-fast), box-shadow var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
 .lora-card:hover { background: var(--surface-grain), rgb(44 44 44 / .66); }
 .lora-card.has-warning { box-shadow: inset 0 0 0 1px rgb(255 154 82 / .24); }
@@ -303,7 +303,7 @@
   opacity: 0;
   cursor: grab;
   touch-action: none;
-  transition: opacity var(--dur-fast), color var(--dur-fast);
+  transition: opacity var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .lora-card:hover .lora-grip,
 .lora-grip:focus-visible { opacity: 1; }
@@ -327,7 +327,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
-  transition: background var(--dur-fast), opacity var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), opacity var(--motion-fast) var(--motion-ease);
 }
 .lora-name:hover { background: var(--control-hover); }
 .lora-remove {
@@ -342,7 +342,7 @@
   color: hsl(var(--muted-foreground));
   opacity: 0;
   cursor: pointer;
-  transition: opacity var(--dur-fast), background var(--dur-fast), color var(--dur-fast);
+  transition: opacity var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .lora-card:hover .lora-remove,
 .lora-remove:focus-visible { opacity: 1; }
@@ -368,14 +368,14 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   cursor: copy;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .lora-trigger:hover { background: var(--control-hover); color: hsl(var(--foreground)); }
 .lora-trigger:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .lora-trigger.is-copied { color: hsl(var(--foreground)); background: rgb(255 255 255 / .12); }
 
 /* Strength: a slim slider and a value that reads as text until you edit it. */
-.lora-strength { display: flex; align-items: center; gap: 8px; transition: opacity var(--dur-fast); }
+.lora-strength { display: flex; align-items: center; gap: 8px; transition: opacity var(--motion-fast) var(--motion-ease); }
 .lora-strength input[type="range"] {
   flex: 1;
   min-width: 0;
@@ -405,7 +405,7 @@
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgb(0 0 0 / .5);
-  transition: scale 120ms;
+  transition: scale var(--motion-fast) var(--motion-ease);
 }
 .lora-strength input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: #fff; }
 .lora-strength input[type="range"]:hover::-webkit-slider-thumb,
@@ -426,7 +426,7 @@
   text-align: center;
   font-variant-numeric: tabular-nums;
   cursor: text;
-  transition: background var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease);
 }
 .lora-strength-value:hover { background: var(--control-fill); }
 .lora-strength-value:focus { outline: none; background: var(--well); color: #fff; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .18); }
@@ -442,7 +442,7 @@
   box-shadow: inset 0 0 0 1px var(--surface-border);
   font-size: 12px;
   color: hsl(var(--muted-foreground));
-  animation: set-page-in var(--dur-base) var(--ease-out);
+  animation: set-page-in var(--motion-base) var(--motion-ease);
 }
 .lora-undo span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lora-undo button { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: var(--control-fill); color: hsl(var(--foreground)); font-size: 12px; font-weight: 550; cursor: pointer; }
@@ -489,7 +489,7 @@
 }
 .lora-picker-heading span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lora-picker-heading em { font-style: normal; font-variant-numeric: tabular-nums; opacity: .7; }
-.lora-picker-heading svg { transition: transform var(--dur-fast); }
+.lora-picker-heading svg { transition: transform var(--motion-fast) var(--motion-ease); }
 .lora-picker-heading svg.is-collapsed { transform: rotate(-90deg); }
 .lora-picker-heading.is-static { cursor: default; }
 .lora-picker-heading:not(.is-static):hover { color: hsl(var(--foreground)); }
@@ -557,7 +557,7 @@
 }
 
 /* The composer's LoRA count opens the LoRA tab. */
-button.lora-pill { cursor: pointer; transition: background var(--dur-fast); }
+button.lora-pill { cursor: pointer; transition: background var(--motion-fast) var(--motion-ease); }
 button.lora-pill:hover { background: #151515; }
 button.lora-pill:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
@@ -595,12 +595,12 @@ button.lora-pill:focus-visible { outline: none; box-shadow: var(--focus-ring); }
   padding: 10px;
   border-radius: var(--r-item);
   background: rgb(0 0 0 / .26);
-  transition: background var(--dur-base);
+  transition: background var(--motion-base) var(--motion-ease);
 }
 .model-setup-item.is-landed, .model-setup-item.is-installed { background: rgb(0 0 0 / .14); }
 .model-setup-item.is-installed .model-setup-copy strong { color: hsl(var(--muted-foreground)); }
 /* The set is complete: the same card, cooled from ember to the tick's green, for a moment. */
-.model-setup.is-ready { background: rgb(169 226 184 / .07); box-shadow: inset 0 0 0 1px rgb(169 226 184 / .22); animation: model-setup-ready 420ms var(--ease-out, ease-out); }
+.model-setup.is-ready { background: rgb(169 226 184 / .07); box-shadow: inset 0 0 0 1px rgb(169 226 184 / .22); animation: model-setup-ready 420ms var(--motion-ease); }
 .model-setup.is-ready::before { background: radial-gradient(220px 90px at 0% 0%, rgb(169 226 184 / .12), transparent 70%); }
 .model-setup.is-ready .model-setup-head strong { color: #a9e2b8; }
 .model-setup.is-ready .model-setup-dot.is-landed { background: #a9e2b8; }
@@ -616,7 +616,7 @@ button.lora-pill:focus-visible { outline: none; box-shadow: var(--focus-ring); }
   border-radius: var(--r-pill);
   box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .22);
   color: #111;
-  transition: background var(--dur-base), box-shadow var(--dur-base);
+  transition: background var(--motion-base) var(--motion-ease), box-shadow var(--motion-base) var(--motion-ease);
 }
 .model-setup-dot.is-downloading, .model-setup-dot.is-queued { box-shadow: inset 0 0 0 1.5px var(--ember); }
 .model-setup-dot.is-downloading { background: radial-gradient(circle, var(--ember) 0 3px, transparent 3.5px); animation: model-setup-pulse 1.6s ease-in-out infinite; }
@@ -639,11 +639,11 @@ button.lora-pill:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .model-setup-meta { font-size: 11.5px; color: hsl(var(--muted-foreground)); }
 /* Other builds of a part: one quiet line until opened, then each with its size and publisher. */
 .model-setup-versions { margin: -2px 0 0 26px; min-width: 0; }
-.model-setup-versions-toggle { display: inline-flex; align-items: center; gap: 4px; padding: 2px 0; border: 0; background: none; font: inherit; font-size: 11.5px; color: hsl(var(--muted-foreground)); cursor: pointer; transition: color var(--dur-fast); }
+.model-setup-versions-toggle { display: inline-flex; align-items: center; gap: 4px; padding: 2px 0; border: 0; background: none; font: inherit; font-size: 11.5px; color: hsl(var(--muted-foreground)); cursor: pointer; transition: color var(--motion-fast) var(--motion-ease); }
 .model-setup-versions-toggle:hover { color: hsl(var(--foreground)); }
 .model-setup-versions-toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
 .model-setup-versions-toggle em { font-style: normal; font-variant-numeric: tabular-nums; opacity: .7; }
-.model-setup-versions-toggle svg { transition: transform var(--dur-fast); }
+.model-setup-versions-toggle svg { transition: transform var(--motion-fast) var(--motion-ease); }
 .model-setup-versions.is-open .model-setup-versions-toggle svg { transform: rotate(180deg); }
 .model-setup-versions ul { display: grid; gap: 4px; margin: 6px 0 0; padding: 0; list-style: none; }
 .model-setup-versions li { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px 4px 6px 8px; border-radius: var(--r-item); background: rgb(255 255 255 / .03); }
@@ -714,7 +714,7 @@ button.lora-pill:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 }
 .rapid-row-copy { min-width: 0; display: grid; gap: 1px; cursor: default; }
 .rapid-row-copy strong { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 550; }
-.rapid-row-copy strong svg { color: hsl(var(--muted-foreground)); transition: color var(--dur-fast); }
+.rapid-row-copy strong svg { color: hsl(var(--muted-foreground)); transition: color var(--motion-fast) var(--motion-ease); }
 .rapid-row.is-on .rapid-row-copy strong svg { color: var(--ember); }
 .rapid-row-copy small { font-size: 12px; color: hsl(var(--muted-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rapid-row-setup { flex: none; }

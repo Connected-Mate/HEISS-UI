@@ -81,7 +81,7 @@
   color: hsl(var(--foreground));
   text-align: left;
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  transition: background var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
 .starter-version:hover { background: var(--control-hover); }
 .starter-version.is-selected {
@@ -189,7 +189,7 @@
   grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)) auto;
   gap: 8px;
   pointer-events: none;
-  transition: bottom var(--dur-fast) var(--ease-out);
+  transition: bottom var(--motion-fast) var(--motion-ease);
 }
 .prompt-idea {
   display: flex;
@@ -211,9 +211,9 @@
   cursor: pointer;
   pointer-events: auto;
   /* Opacity lives on the glass itself; on a parent it would kill the blur. */
-  animation: prompt-idea-in 440ms var(--ease-out) both;
+  animation: prompt-idea-in 440ms var(--motion-ease) both;
   animation-delay: calc(var(--i, 0) * 50ms + 80ms);
-  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), translate var(--dur-fast) var(--ease-out);
+  transition: color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), translate var(--motion-fast) var(--motion-ease);
 }
 .prompt-idea > span {
   display: -webkit-box;
@@ -233,7 +233,7 @@
   color: hsl(var(--muted-foreground));
 }
 .prompt-idea.is-surprise:hover { color: hsl(var(--foreground)); }
-.prompt-idea.is-surprise svg { flex: none; transition: rotate 360ms var(--ease-out); }
+.prompt-idea.is-surprise svg { flex: none; transition: rotate var(--motion-slow) var(--motion-ease); }
 .prompt-idea.is-surprise:hover svg { rotate: -20deg; }
 /* At 760px and below the docks rise to sit on the prompt box (17-deck.css); the ideas go above them. */
 @media (max-width: 760px) {

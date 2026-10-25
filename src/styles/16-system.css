@@ -280,7 +280,7 @@
   text-decoration: none;
   cursor: pointer;
   pointer-events: auto;
-  transition: background var(--dur-fast), box-shadow var(--dur-fast), color var(--dur-fast), opacity 220ms var(--ease-out);
+  transition: background var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), opacity var(--motion-base) var(--motion-ease);
 }
 .tile-upscale:hover,
 .tile-hover-actions .tile-icon:hover,
@@ -323,7 +323,7 @@
   stroke: #fff;
   stroke-width: 2;
   stroke-linecap: round;
-  transition: stroke-dasharray 400ms var(--ease-out);
+  transition: stroke-dasharray 400ms var(--motion-ease);
 }
 /* Following the clock: one even sweep per second's tick, not a jump. */
 .tile-upscale.is-timed .tile-upscale-ring circle { transition: stroke-dasharray 1s linear; }
@@ -349,7 +349,7 @@
 .comfy-status-dot.is-restarting span {
   background: hsl(38 92% 60%);
   box-shadow: 0 0 0 4px hsl(38 92% 60% / 0.14), 0 0 14px hsl(38 92% 60% / 0.26);
-  animation: comfyStatusPulse 1.2s var(--ease-soft) infinite;
+  animation: comfyStatusPulse 1.2s var(--motion-soft) infinite;
 }
 .zen-prompt-actions .generate.is-restarting {
   width: auto;

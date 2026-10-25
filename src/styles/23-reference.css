@@ -44,10 +44,10 @@
   backdrop-filter: blur(10px) saturate(1.4);
   box-shadow: inset 0 0 0 1px var(--surface-border);
   cursor: pointer;
-  transition: max-width 480ms var(--ease-out), background var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast), scale 100ms;
+  transition: max-width 480ms var(--motion-ease), background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), scale var(--motion-instant) var(--motion-ease);
 }
 .ref-add.is-expanded { max-width: 240px; }
-.ref-add > svg { flex: none; margin: 0 12.5px; transition: rotate 320ms var(--ease-out); }
+.ref-add > svg { flex: none; margin: 0 12.5px; transition: rotate var(--motion-slow) var(--motion-ease); }
 .ref-add.is-open > svg { rotate: 45deg; }
 .ref-add-label { display: inline-flex; margin-left: -4px; }
 .ref-add-label > span {
@@ -57,7 +57,7 @@
   padding-right: 14px;
   opacity: 0;
   filter: blur(3px);
-  transition: opacity 200ms var(--ease-out), filter 200ms var(--ease-out);
+  transition: opacity var(--motion-base) var(--motion-ease), filter var(--motion-base) var(--motion-ease);
 }
 .ref-add.is-expanded .ref-add-label > span { opacity: 1; filter: none; transition-delay: 120ms; }
 .ref-add-label em {
@@ -78,7 +78,7 @@
 /* Each chip stacks on its own, and the one whose menu is open sits over its
    neighbours, so their thumbnails can't cover its × (until the menu has wiped shut). */
 /* The deck's room (padding-left) grows and shrinks with it, rather than snapping. */
-.ref-selected { position: relative; z-index: 0; display: block; height: 44px; transition: z-index 0s 420ms, padding-left 320ms var(--ease-out); }
+.ref-selected { position: relative; z-index: 0; display: block; height: 44px; transition: z-index 0s var(--motion-ease) 420ms, padding-left var(--motion-slow) var(--motion-ease); }
 .ref-selected.is-hover,
 .ref-selected.is-intro,
 .ref-selected:focus-within,
@@ -98,7 +98,7 @@
   box-shadow: 0 0 0 1px rgb(255 255 255 / .16), 0 4px 12px rgb(0 0 0 / .35);
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: scale 200ms var(--ease-out), box-shadow var(--dur-fast);
+  transition: scale var(--motion-base) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
 .ref-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ref-selected.is-hover .ref-thumb { scale: 1.04; box-shadow: 0 0 0 1px rgb(255 255 255 / .32), 0 6px 16px rgb(0 0 0 / .4); }
@@ -122,7 +122,7 @@
   opacity: 0;
   pointer-events: none;
   clip-path: inset(0 0 0 calc(100% - 50px) round 18px);
-  transition: clip-path 420ms var(--ease-out), opacity 160ms var(--ease-out);
+  transition: clip-path 420ms var(--motion-ease), opacity var(--motion-fast) var(--motion-ease);
 }
 /* Hover is set from script with a short delay each way (ReferenceSlot), so the
    menu neither flickers on a pass nor snaps shut on a wobble off its edge. */
@@ -130,7 +130,7 @@
 .ref-selected.is-intro .ref-menu,
 .ref-selected:focus-within .ref-menu,
 .ref-selected.is-open .ref-menu { opacity: 1; pointer-events: auto; clip-path: inset(0 0 0 0 round 18px); }
-.ref-menu > * { opacity: 0; translate: 8px 0; transition: opacity 200ms var(--ease-out), translate 360ms var(--ease-out); }
+.ref-menu > * { opacity: 0; translate: 8px 0; transition: opacity var(--motion-base) var(--motion-ease), translate var(--motion-slow) var(--motion-ease); }
 .ref-selected.is-hover .ref-menu > *,
 .ref-selected.is-intro .ref-menu > *,
 .ref-selected:focus-within .ref-menu > *,
@@ -156,7 +156,7 @@
   opacity: 0;
   scale: .6;
   pointer-events: none;
-  transition: opacity 160ms var(--ease-out), scale 260ms var(--spring), background-color 140ms var(--ease-out), color 140ms var(--ease-out);
+  transition: opacity var(--motion-fast) var(--motion-ease), scale var(--motion-slow) var(--motion-spring), background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .ref-selected.is-hover .ref-thumb-remove,
 .ref-selected:focus-within .ref-thumb-remove { opacity: 1; scale: 1; pointer-events: auto; }
@@ -165,6 +165,7 @@
 .ref-thumb-remove:focus-visible { outline: none; box-shadow: 0 0 0 2px rgb(24 24 24), var(--focus-ring); }
 @media (hover: none) {
   .ref-thumb-remove { opacity: 1; scale: 1; pointer-events: auto; }
+  .ref-thumb-remove:active { scale: var(--press-scale); }
 }
 /* Edit: this very image is what changes, so the thumbnail says so at rest with a brighter ring and EDIT. */
 .ref-selected.is-edit .ref-thumb { box-shadow: 0 0 0 1.5px rgb(255 255 255 / .55), 0 4px 12px rgb(0 0 0 / .35); }
@@ -184,7 +185,7 @@
   background: var(--control-fill);
   color: hsl(var(--foreground));
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast), scale 100ms;
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), scale var(--motion-instant) var(--motion-ease);
 }
 .ref-menu-paint > svg { flex: none; margin: 0 10.5px; }
 .ref-menu-paint:hover { background: var(--control-hover); }
@@ -192,7 +193,7 @@
 .ref-menu-paint.is-active { background: var(--action); color: var(--action-ink); }
 .ref-menu-paint.is-masked:not(.is-active) > svg { color: var(--ember); }
 /* The one-time intro: a label slides out of the brush, then back in. */
-.ref-menu-paint-label { display: grid; grid-template-columns: 0fr; transition: grid-template-columns 420ms var(--ease-out); }
+.ref-menu-paint-label { display: grid; grid-template-columns: 0fr; transition: grid-template-columns 420ms var(--motion-ease); }
 .ref-menu-paint-label > span {
   min-width: 0;
   overflow: hidden;
@@ -201,7 +202,7 @@
   font-weight: 550;
   white-space: nowrap;
   opacity: 0;
-  transition: opacity 200ms var(--ease-out), padding 420ms var(--ease-out);
+  transition: opacity var(--motion-base) var(--motion-ease), padding 420ms var(--motion-ease);
 }
 .ref-selected.is-intro .ref-menu-paint { background: var(--action); color: var(--action-ink); }
 .ref-selected.is-intro .ref-menu-paint-label { grid-template-columns: 1fr; }
@@ -222,11 +223,11 @@
   color: #1a0d04;
   box-shadow: 0 0 0 2px rgb(24 24 24);
   pointer-events: none;
-  animation: ref-pop 420ms var(--ease-out);
+  animation: ref-pop 420ms var(--motion-ease);
 }
 
 /* A freshly dropped or uploaded image pops into place. */
-.ref-selected.is-new .ref-thumb { animation: ref-pop 620ms var(--ease-out); }
+.ref-selected.is-new .ref-thumb { animation: ref-pop 620ms var(--motion-ease); }
 @keyframes ref-pop {
   0% { scale: .4; opacity: 0; }
   55% { scale: 1.12; opacity: 1; }
@@ -275,7 +276,7 @@
   font-size: 12.5px;
   font-weight: 550;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .reference-tabs button:hover { color: hsl(var(--foreground)); }
 .reference-tabs button.active { background: var(--selected); color: #fff; }
@@ -308,13 +309,13 @@
   border-radius: var(--r-media);
   background: var(--well);
   cursor: pointer;
-  transition: scale 160ms var(--ease-out), box-shadow var(--dur-fast);
+  transition: scale var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
-.reference-tile-select img { width: 100%; height: 100%; object-fit: cover; display: block; transition: scale 300ms var(--ease-out); }
+.reference-tile-select img { width: 100%; height: 100%; object-fit: cover; display: block; transition: scale var(--motion-slow) var(--motion-ease); }
 .reference-tile-select:hover img { scale: 1.05; }
 .reference-tile-select:active { scale: .97; }
 .reference-tile.is-selected .reference-tile-select { box-shadow: 0 0 0 2px #fff; }
-.reference-tile.is-new .reference-tile-select { animation: ref-pop 620ms var(--ease-out); }
+.reference-tile.is-new .reference-tile-select { animation: ref-pop 620ms var(--motion-ease); }
 .reference-tile-check {
   position: absolute;
   top: 6px;
@@ -343,7 +344,7 @@
   color: #fff;
   opacity: 0;
   cursor: pointer;
-  transition: opacity var(--dur-fast), background var(--dur-fast);
+  transition: opacity var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease);
 }
 .reference-tile:hover .reference-tile-delete,
 .reference-tile-delete:focus-visible { opacity: 1; }
@@ -377,7 +378,7 @@
     rgb(14 14 14 / .74);
   pointer-events: none;
 }
-.composer-drop { opacity: 0; transition: opacity 180ms var(--ease-out); }
+.composer-drop { opacity: 0; transition: opacity var(--motion-base) var(--motion-ease); }
 .composer-drop.is-active { opacity: 1; }
 .composer-drop::before,
 .reference-drop::before {
@@ -401,7 +402,7 @@
   color: #fff;
   font-size: 13.5px;
   transform: translateY(6px) scale(.96);
-  transition: transform 320ms var(--ease-out), opacity 320ms var(--ease-out);
+  transition: transform var(--motion-slow) var(--motion-ease), opacity var(--motion-slow) var(--motion-ease);
 }
 .composer-drop.is-active .drop-badge,
 .reference-drop .drop-badge { transform: none; }
@@ -415,12 +416,12 @@
   background: #fff;
   color: var(--action-ink);
   box-shadow: 0 6px 20px rgb(0 0 0 / .4);
-  animation: drop-bob 1.1s var(--ease-soft) infinite alternate;
+  animation: drop-bob 1.1s var(--motion-soft) infinite alternate;
 }
 @keyframes drop-bob { to { translate: 0 -4px; } }
 
 /* Landing: the badge shrinks off toward the reference chip and the layer fades. */
-.composer-drop.is-landing { opacity: 1; animation: drop-fade 520ms var(--ease-out) forwards; }
+.composer-drop.is-landing { opacity: 1; animation: drop-fade 520ms var(--motion-ease) forwards; }
 .composer-drop.is-landing .drop-badge { transform: translate(38%, -70%) scale(.4); opacity: 0; transition-duration: 460ms; }
 @keyframes drop-fade { 0%, 35% { opacity: 1; } 100% { opacity: 0; } }
 
@@ -494,7 +495,7 @@
   border-radius: var(--r-pill);
   background: var(--selected);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08);
-  transition: transform 260ms var(--spring, cubic-bezier(.3, 1.3, .5, 1));
+  transition: transform var(--motion-slow) var(--motion-spring);
   pointer-events: none;
 }
 .ref-menu-role.is-ref > i { transform: translateX(100%); }
@@ -510,7 +511,7 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: color 160ms var(--ease-out), scale 180ms var(--spring);
+  transition: color var(--motion-fast) var(--motion-ease), scale var(--motion-base) var(--motion-spring);
 }
 .ref-menu-role button:hover { color: hsl(var(--foreground)); }
 .ref-menu-role button:active { scale: .96; }
@@ -523,7 +524,7 @@
   grid-template-columns: auto auto;
   align-items: center;
   overflow: hidden;
-  transition: opacity 220ms var(--ease-out), translate 360ms var(--ease-out);
+  transition: opacity var(--motion-base) var(--motion-ease), translate var(--motion-slow) var(--motion-ease);
 }
 /* Its width tweens from script (ReferenceSlot), between its measured width and this. */
 .ref-selected .ref-menu > .ref-menu-paint-slot.is-hidden { width: 0; opacity: 0; pointer-events: none; }
@@ -545,7 +546,7 @@
   pointer-events: none;
   opacity: 0;
   scale: .6;
-  transition: opacity 160ms var(--ease-out), scale 260ms var(--spring);
+  transition: opacity var(--motion-fast) var(--motion-ease), scale var(--motion-slow) var(--motion-spring);
 }
 .ref-role-badge.is-on { opacity: 1; scale: 1; }
 
@@ -571,7 +572,7 @@
   box-shadow: 0 0 0 1px rgb(255 255 255 / .14), 0 3px 8px rgb(0 0 0 / .35);
   filter: brightness(.78);
   pointer-events: none;
-  transition: transform 360ms var(--ease-out), opacity 200ms var(--ease-out), filter 320ms var(--ease-out);
+  transition: transform var(--motion-slow) var(--motion-ease), opacity var(--motion-base) var(--motion-ease), filter var(--motion-slow) var(--motion-ease);
 }
 .ref-deck-card.is-1 { transform: translateX(-9px) scale(.9); }
 .ref-deck-card.is-2 { z-index: 0; transform: translateX(-17px) scale(.8); filter: brightness(.55); }
@@ -600,13 +601,13 @@
 .ref-stack-thumb {
   background: var(--well);
   box-shadow: 0 0 0 1px rgb(255 255 255 / .14);
-  transition: box-shadow var(--dur-fast), scale 100ms;
+  transition: box-shadow var(--motion-fast) var(--motion-ease), scale var(--motion-instant) var(--motion-ease);
 }
 .ref-stack-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ref-stack-thumb:hover { box-shadow: 0 0 0 1px rgb(255 255 255 / .36); }
 .ref-stack-thumb:active { scale: .95; }
 .ref-stack-item.is-open .ref-stack-thumb { box-shadow: 0 0 0 2px #fff; }
-.ref-stack-item.is-new .ref-stack-thumb { animation: ref-pop 620ms var(--ease-out); }
+.ref-stack-item.is-new .ref-stack-thumb { animation: ref-pop 620ms var(--motion-ease); }
 .ref-stack-thumb:focus-visible,
 .ref-stack-add:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 /* Inside the strip's clip, so it sits on the thumbnail's own corner. */
@@ -627,7 +628,7 @@
   cursor: pointer;
   opacity: 0;
   scale: .6;
-  transition: opacity 160ms var(--ease-out), scale 260ms var(--spring), background-color 140ms var(--ease-out);
+  transition: opacity var(--motion-fast) var(--motion-ease), scale var(--motion-slow) var(--motion-spring), background-color var(--motion-fast) var(--motion-ease);
 }
 .ref-stack-item:hover .ref-stack-remove,
 .ref-stack-item:focus-within .ref-stack-remove { opacity: 1; scale: 1; }
@@ -636,7 +637,7 @@
 .ref-stack-add {
   background: transparent;
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .18);
-  transition: background var(--dur-fast), color var(--dur-fast), scale 100ms;
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), scale var(--motion-instant) var(--motion-ease);
 }
 .ref-stack-add:hover { background: var(--control-hover); color: hsl(var(--foreground)); }
 .ref-stack-add:active { scale: .95; }
@@ -652,6 +653,7 @@
 
 @media (hover: none) {
   .ref-stack-remove { opacity: 1; scale: 1; }
+  .ref-stack-remove:active { scale: var(--press-scale); }
 }
 @media (prefers-reduced-motion: reduce) {
   .ref-deck-card { transition: none; }
@@ -664,7 +666,7 @@
 .ref-selected.is-edit .ref-deck-card { filter: grayscale(1) brightness(.62); }
 /* On the elements themselves, not under .is-edit, so the colour fades back as well as out. */
 .ref-stack-thumb img,
-.composer-reference-slots .ref-thumb img { transition: filter 320ms var(--ease-out); }
+.composer-reference-slots .ref-thumb img { transition: filter var(--motion-slow) var(--motion-ease); }
 .ref-selected.is-edit .ref-stack-thumb:is(:hover, :focus-visible) img,
 .ref-selected.is-edit .ref-stack-item.is-open .ref-stack-thumb img { filter: none; }
 /* The same in a row (phone, touch): beside the picture being edited, the others are greyed. */

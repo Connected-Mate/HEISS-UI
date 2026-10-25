@@ -64,7 +64,16 @@
   --z-toast: 200;
   --z-tooltip: 250;
 
-  /* Motion */
-  --dur-fast: 140ms;
-  --dur-base: 220ms;  /* easing: --ease-out, defined in 01-base */
+  /* Motion. The only motion vocabulary in the app: every transition and one-shot
+     animation picks a duration and a curve from here, never a raw value.
+     Loops and staged sequences (loading shimmers, celebrations) keep their own timing. */
+  --motion-instant: 90ms;   /* press feedback */
+  --motion-fast: 140ms;     /* hover tints, exits */
+  --motion-base: 200ms;     /* state changes, overlay enters */
+  --motion-slow: 320ms;     /* layout moves, panels */
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);    /* everything interactive */
+  --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);    /* things leaving */
+  --motion-soft: cubic-bezier(0.32, 0.72, 0, 1);   /* staged sequences */
+  --motion-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+  --press-scale: 0.96;
 }

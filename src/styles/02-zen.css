@@ -4,7 +4,7 @@
   position: fixed; inset: 0; overflow: hidden;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
-  animation: appIn 500ms var(--ease-soft) both;
+  animation: appIn 500ms var(--motion-soft) both;
 }
 .zen-stage {
   position: absolute; inset: 0; display: grid; place-items: center;
@@ -29,7 +29,7 @@
   display: block;
   transform: translate(var(--pan-x, 0), var(--pan-y, 0)) scale(var(--zoom, 1));
   transform-origin: center;
-  transition: transform 80ms var(--ease-soft);
+  transition: transform var(--motion-instant) var(--motion-soft);
 }
 .zen-output.is-zoomed img, .zen-output.is-zoomed video,
 .zen-output.is-dragging img, .zen-output.is-dragging video { transition: none; }
@@ -52,7 +52,7 @@
   position: fixed; bottom: 18px; left: 18px; z-index: 13;
   display: grid; place-items: center;
   cursor: pointer;
-  transition: border-color 200ms var(--ease-out), background 200ms var(--ease-out), transform 260ms var(--ease-out), box-shadow 260ms var(--ease-out);
+  transition: border-color var(--motion-base) var(--motion-ease), background var(--motion-base) var(--motion-ease), transform var(--motion-slow) var(--motion-ease), box-shadow var(--motion-slow) var(--motion-ease);
 }
 .zen-control-button:hover { border-color: hsl(var(--border-strong)); box-shadow: 0 4px 14px rgb(0 0 0 / 0.3); }
 
@@ -65,7 +65,7 @@
   display: inline-flex;
   align-items: center;
   color: hsl(var(--foreground));
-  transition: left 260ms var(--ease-out);
+  transition: left var(--motion-slow) var(--motion-ease);
 }
 .zen-zoom-dock .icon-button:hover { background: hsl(var(--accent)); color: hsl(var(--foreground)); border: 0; }
 .zen-zoom-dock .icon-button:disabled { opacity: 0.35; cursor: not-allowed; background: transparent; }
@@ -74,14 +74,14 @@
   font-size: 12px; font-weight: 500;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  transition: background 120ms var(--ease-out);
+  transition: background var(--motion-fast) var(--motion-ease);
 }
 
 .zen-gallery-restore {
   position: fixed; top: 12px; left: 12px; z-index: 12;
   display: grid; place-items: center;
   cursor: pointer;
-  transition: border-color 200ms var(--ease-out), background 200ms var(--ease-out), transform 260ms var(--ease-out), box-shadow 260ms var(--ease-out);
+  transition: border-color var(--motion-base) var(--motion-ease), background var(--motion-base) var(--motion-ease), transform var(--motion-slow) var(--motion-ease), box-shadow var(--motion-slow) var(--motion-ease);
 }
 .zen-gallery-restore:hover { border-color: hsl(var(--border-strong)); box-shadow: 0 4px 14px rgb(0 0 0 / 0.3); }
 
@@ -94,7 +94,7 @@
   flex-direction: column;
   gap: 12px;
   opacity: 0; transform: translateX(-8px); filter: blur(3px); pointer-events: none;
-  transition: opacity 240ms var(--ease-out), transform 280ms var(--ease-out), filter 240ms var(--ease-out);
+  transition: opacity var(--motion-base) var(--motion-ease), transform var(--motion-slow) var(--motion-ease), filter var(--motion-base) var(--motion-ease);
 }
 .zen-controls.open { opacity: 1; transform: translateX(0); filter: blur(0); pointer-events: auto; }
 
@@ -114,7 +114,7 @@
   transform: translateX(-50%);
   display: grid; gap: 6px;
   padding: 8px 8px 8px 14px;
-  transition: border-color 320ms var(--ease-out), box-shadow 320ms var(--ease-out);
+  transition: border-color var(--motion-slow) var(--motion-ease), box-shadow var(--motion-slow) var(--motion-ease);
 }
 .zen-prompt textarea {
   min-height: 44px;
@@ -158,7 +158,7 @@
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  transition: max-height 220ms var(--ease-out), opacity 180ms var(--ease-out), margin 180ms var(--ease-out), padding 180ms var(--ease-out);
+  transition: max-height var(--motion-base) var(--motion-ease), opacity var(--motion-base) var(--motion-ease), margin var(--motion-base) var(--motion-ease), padding var(--motion-base) var(--motion-ease);
   padding: 0 4px;
   margin-top: 0;
   border-top: 1px solid hsl(var(--border) / 0);
@@ -320,7 +320,7 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out), color 160ms var(--ease-out);
+  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .negative-toggle:hover {
   background: hsl(var(--accent));
@@ -349,7 +349,7 @@
   background: hsl(var(--muted-foreground));
   opacity: 0.8;
 }
-.negative-toggle svg { transition: transform 160ms var(--ease-out); }
+.negative-toggle svg { transition: transform var(--motion-fast) var(--motion-ease); }
 .negative-toggle svg.flip { transform: rotate(180deg); }
 
 .zen-inline-settings .number-picker { height: 40px; }
@@ -395,7 +395,7 @@
   background: hsl(var(--input));
   user-select: none;
   touch-action: none;
-  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out);
+  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease);
 }
 .number-picker:hover { border-color: hsl(var(--border-strong)); }
 .number-picker:focus-within { border-color: hsl(var(--ring)); }
@@ -428,13 +428,13 @@
   background: transparent;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background 120ms var(--ease-out), color 120ms var(--ease-out), transform 80ms var(--ease-out);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), transform var(--motion-instant) var(--motion-ease);
 }
 .number-picker-btn:hover:not(:disabled) {
   background: hsl(var(--accent));
   color: hsl(var(--foreground));
 }
-.number-picker-btn:active:not(:disabled) { transform: scale(0.92); }
+
 .number-picker-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .number-picker-value {
   display: inline-flex;
@@ -451,7 +451,7 @@
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   cursor: text;
-  transition: background 120ms var(--ease-out);
+  transition: background var(--motion-fast) var(--motion-ease);
 }
 .number-picker-value:hover { background: hsl(var(--accent) / 0.6); }
 .number-picker-input {
@@ -484,5 +484,6 @@
 .zen-prompt .aspect-menu,
 .zen-prompt .model-menu {
   top: auto; bottom: calc(100% + 6px);
-  animation: popUp 180ms var(--spring);
+  --surface-shift: 6px;
+  transform-origin: bottom center;
 }

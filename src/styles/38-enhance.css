@@ -17,14 +17,14 @@
 /* ------------------------------------------------------------ The button */
 
 .enhance-toggle svg {
-  transition: transform 420ms cubic-bezier(.34, 1.56, .64, 1), color 200ms var(--ease-out), filter 200ms var(--ease-out);
+  transition: transform 420ms cubic-bezier(.34, 1.56, .64, 1), color var(--motion-base) var(--motion-ease), filter var(--motion-base) var(--motion-ease);
 }
 .enhance-toggle:hover svg {
   color: #ffd2b0;
   transform: rotate(14deg) scale(1.12);
   filter: drop-shadow(0 0 6px rgb(255 154 82 / .55));
 }
-.enhance-toggle:active svg { transform: rotate(-8deg) scale(.92); transition-duration: 90ms; }
+.enhance-toggle:active svg { transform: rotate(-8deg) scale(.92); transition-duration: var(--motion-instant); }
 .enhance-toggle.is-busy {
   color: #ffe0c7;
   border-color: rgb(255 154 82 / .45);
@@ -59,7 +59,7 @@
   border-radius: inherit;
   filter: blur(18px) saturate(1.25);
   opacity: 1;
-  transition: opacity 600ms var(--ease-out);
+  transition: opacity 600ms var(--motion-ease);
 }
 .enhance-aura[data-phase="queued"] .enhance-glow,
 .enhance-aura[data-phase="loading"] .enhance-glow { animation: enhance-breathe 2.4s ease-in-out infinite; }
@@ -189,7 +189,7 @@
   color: hsl(var(--foreground) / .86);
   font: inherit;
   cursor: pointer;
-  transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .enhance-island button:hover { background: rgb(255 255 255 / .08); color: hsl(var(--foreground)); }
 .enhance-island button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -303,7 +303,7 @@
   border-radius: 8px;
   background: rgb(255 255 255 / .06);
   color: hsl(var(--muted-foreground));
-  transition: color 300ms var(--ease-out), background 300ms var(--ease-out);
+  transition: color var(--motion-slow) var(--motion-ease), background var(--motion-slow) var(--motion-ease);
 }
 .enhance-hero-card.is-writing .enhance-hero-spark { color: #ffd2b0; background: rgb(255 154 82 / .16); }
 .enhance-hero-card.is-writing .enhance-hero-spark svg { animation: enhance-spark 1.6s cubic-bezier(.45, 0, .55, 1) infinite; }
@@ -323,7 +323,7 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 140ms var(--ease-out), border-color 140ms var(--ease-out);
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
 }
 .enhance-choice:first-child button { border-radius: var(--r-item) var(--r-item) 4px 4px; }
 .enhance-choice:last-child button { border-radius: 4px 4px var(--r-item) var(--r-item); }

@@ -1,6 +1,7 @@
 import "./app/domGuard";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { MotionConfig } from "framer-motion";
 import { RefreshCw } from "lucide-react";
 import { showToastTone as showToast, toast } from "./app/toast";
 import "./styles.css";
@@ -1380,6 +1381,15 @@ function App() {
       return rest;
     });
   }, [currentProfile]);
+  // Use settings on a picture: its More settings replace the workflow's current ones (none recorded: as saved).
+  const replaceWorkflowSettings = useCallback((profileId: string, values: Record<string, string | number | boolean> = {}) => {
+    setWorkflowSettingValues((current) => {
+      const { [profileId]: _old, ...rest } = current;
+      const next = Object.keys(values).length ? { ...rest, [profileId]: values } : rest;
+      saveWorkflowSettingValues(next);
+      return next;
+    });
+  }, []);
   const toggleModelFavoriteRef = useRef<(id: string) => void>(() => undefined);
   const modelMenu = useMemo(() => ({
     favorites: workflowPreferences.favorites || [],
@@ -1749,7 +1759,7 @@ function App() {
   const { generate, cancelJob, cancelQueue, clearGallery, clearFailedItems, resetAllSettings, clearAllCache, openOutputFolder, deleteItem, deleteItems } = generationActions;
 
   const viewerActions = useViewerControls({
-    draft: { prompt, negative, seed, rapidSeed, mode, model, width, height, steps, cfg, count, loras }, active, deleteItem, doneGallery: zenGallery, generate, generateDisabled, height, lastTapRef, lastTouchRef, mode, models, prefs, setActive, setCfg, setClipType, setCount, setCustomSize, setDenoise, setFps, setFrames, setHeight, setIsDraggingViewer, setLoras: setLorasWithMemory, setMode, setModel, setNegative, setPrompt, setSampler, setScheduler, setSeed, setRapidSeed, setShowDetails, setStartImage, setStartImageId, setStartImageName, setSteps, setTextEncoder, setTextEncoders, setVae, setViewerPan, setViewerZoom, setWeightDtype, setWidth, setZenSelectedId, showToast, touchGestureRef, viewerDragEndRef, viewerDragRef, viewerPan, viewerZoom, visibleGallery, width, zenItem, zenStripDragRef, zenStripRef, viewerGallery
+    draft: { prompt, negative, seed, rapidSeed, mode, model, width, height, steps, cfg, count, loras }, active, deleteItem, doneGallery: zenGallery, generate, generateDisabled, height, lastTapRef, lastTouchRef, mode, models, prefs, setActive, setCfg, setClipType, setCount, setCustomSize, setDenoise, setFps, setFrames, setHeight, setIsDraggingViewer, setLoras: setLorasWithMemory, setMode, setModel, setNegative, setPrompt, setSampler, setScheduler, setSeed, setRapidSeed, setShowDetails, setStartImage, setStartImageId, setStartImageName, setSteps, setTextEncoder, setTextEncoders, setVae, setViewerPan, setViewerZoom, setWeightDtype, setWidth, replaceWorkflowSettings, setZenSelectedId, showToast, touchGestureRef, viewerDragEndRef, viewerDragRef, viewerPan, viewerZoom, visibleGallery, width, zenItem, zenStripDragRef, zenStripRef, viewerGallery
   });
   const { resetViewer, openItem, applyAllSettings, applyLoras, moveZen, moveViewer, goLatestZen, submitZenPrompt, startZenStripDrag, dragZenStrip, stopZenStripDrag, selectZenItem, zoomViewer, wheelViewer, clickViewer, startViewerDrag, dragViewer, stopViewerDrag, startViewerTouch, moveViewerTouch, endViewerTouch } = viewerActions;
 
@@ -1878,4 +1888,5 @@ function App() {
 // Other devices sign in before the studio loads (DeviceGate.tsx).
 // A render error anywhere shows the crash screen (with Reload and Report) instead of a blank page.
 // One tooltip provider for the whole app holds the shared hover delay and lets neighbours open at once.
-createRoot(document.getElementById("root")!).render(<TooltipProvider><CrashBoundary><DeviceGate><App /></DeviceGate></CrashBoundary></TooltipProvider>);
+// reducedMotion="user": every framer-motion transform respects the OS setting, not just the components that check it.
+createRoot(document.getElementById("root")!).render(<MotionConfig reducedMotion="user"><TooltipProvider><CrashBoundary><DeviceGate><App /></DeviceGate></CrashBoundary></TooltipProvider></MotionConfig>);

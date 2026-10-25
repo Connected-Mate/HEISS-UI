@@ -1,6 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { surfaceMotion } from "@/lib/springs";
 import { Brush, Check, Image as ImageIcon, Images, LoaderCircle, LockKeyhole, Plus, Trash2, Upload, X } from "lucide-react";
 import { cn } from "./format";
 import { Tip } from "./components";
@@ -188,10 +189,10 @@ function ReferencePopover({ input, selected, anchor, popRef, dropActive, dropped
       aria-label={`Choose ${label}`}
       aria-busy={upload.busy || Boolean(selectingId) || undefined}
       data-open-surface
-      initial={{ opacity: 0, y: 10, scale: 0.97, filter: "blur(4px)" }}
-      animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-      exit={{ opacity: 0, y: 8, scale: 0.98, filter: "blur(3px)" }}
-      transition={spring}
+      initial={surfaceMotion.initial}
+      animate={surfaceMotion.animate}
+      exit={surfaceMotion.exit}
+      transition={surfaceMotion.transition}
     >
       <header className="reference-popover-head">
         <div className="reference-tabs" role="tablist" aria-label="Reference image sources">

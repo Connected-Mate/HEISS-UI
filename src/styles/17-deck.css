@@ -78,8 +78,8 @@
   white-space: nowrap;
   cursor: pointer;
   transition-property: background-color, color, scale;
-  transition-duration: var(--motion-base, 180ms);
-  transition-timing-function: var(--motion-ease, cubic-bezier(.2, 0, 0, 1));
+  transition-duration: var(--motion-base);
+  transition-timing-function: var(--motion-ease);
 }
 .dock-chip:hover:not(:disabled) { background: rgb(42 42 42 / .94); }
 .dock-chip:disabled { opacity: .6; cursor: progress; }

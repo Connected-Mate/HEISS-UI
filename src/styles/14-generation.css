@@ -84,7 +84,7 @@
    separate multiplier so beginning the reveal cannot jump back to full opacity. */
 .generation-mosaic > .image-gen-shader {
   filter: opacity(var(--generation-shader-strength, 1));
-  transition: filter 320ms ease;
+  transition: filter var(--motion-slow) var(--motion-ease);
 }
 
 /* An inpaint run: the original picture, with the painted crop resolving in place. */

@@ -20,8 +20,9 @@
   background: var(--scrim);
   -webkit-backdrop-filter: var(--scrim-blur);
   backdrop-filter: var(--scrim-blur);
-  animation: modal-fade var(--dur-fast) ease-out;
+  animation: scrimIn var(--motion-base) var(--motion-ease);
 }
+.modal-scrim[data-state="closed"] { animation: scrimOut var(--motion-fast) var(--motion-ease-in) forwards; }
 
 /* ----------------------------------------------------------------- Sheet */
 
@@ -39,14 +40,13 @@
   color: hsl(var(--foreground));
   outline: none;
   -webkit-font-smoothing: antialiased;
-  animation: modal-in var(--dur-base) var(--ease-out);
+  animation: surfaceIn var(--motion-base) var(--motion-ease);
 }
+.modal[data-state="closed"] { animation: surfaceOut var(--motion-fast) var(--motion-ease-in) forwards; }
 .modal-alert { width: min(420px, 100%); }
 .modal-wide { width: min(1040px, 100%); height: min(720px, calc(100dvh - 48px)); }
 .modal-sheet { width: min(960px, 100%); height: min(664px, calc(100dvh - 48px)); }
 
-@keyframes modal-fade { from { opacity: 0; } }
-@keyframes modal-in { from { opacity: 0; transform: translateY(6px) scale(.985); } }
 
 /* ------------------------------------------------------------------ Head */
 
@@ -97,7 +97,7 @@
   background: transparent;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .modal-close:hover:not(:disabled) { background: var(--control-hover); color: #fff; }
 .modal-close:disabled { opacity: .4; cursor: default; }
@@ -184,7 +184,7 @@
   font-weight: 550;
   white-space: nowrap;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast), scale 100ms;
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), scale var(--motion-instant) var(--motion-ease);
 }
 .btn:hover:not(:disabled) { background: var(--control-hover); }
 .btn:active:not(:disabled) { scale: .97; }

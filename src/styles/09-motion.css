@@ -2,15 +2,7 @@
    One vocabulary of durations, easings and press feedback so every control in
    the app moves the same way. Loaded last so it can normalise earlier layers. */
 
-:root {
-  --motion-instant: 90ms;
-  --motion-fast: 140ms;
-  --motion-base: 200ms;
-  --motion-slow: 320ms;
-  /* Single easing for interactive state changes; --ease-soft stays for staged sequences. */
-  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
-  --press-scale: 0.96;
-}
+/* Tokens live in 00-tokens.css. */
 
 /* ---------------------------------------------------------------------------
    1. One press gesture everywhere
@@ -22,20 +14,21 @@ button:not(:disabled) {
   transition-timing-function: var(--motion-ease);
   transition-duration: var(--motion-base);
 }
-button:not(:disabled):active {
+/* :where() keeps this at single-class weight so a component's own `scale` wins. */
+:where(button:not(:disabled)):active {
   scale: var(--press-scale);
   transition-duration: var(--motion-instant);
 }
+/* A button with its own press amount sets `scale`, which replaces this one; a
+   button whose press is carried by a child stays put so the two never compound. */
+.run-stack:active,
+.mf-folder:active:not(:disabled),
+.mf-notice-main:active,
+.size-link:active,
+.enhance-toggle:active {
+  scale: 1;
+}
 
-.mode-tabs button:active,
-.aspect-trigger:active,
-.aspect-option:active,
-.number-picker-btn:active:not(:disabled) {
-  transform: none;
-}
-.generate:active:not(:disabled) {
-  transform: translateY(0);
-}
 
 /* ---------------------------------------------------------------------------
    2. One transition contract for the composer controls
@@ -182,15 +175,26 @@ button:not(:disabled):active {
 .zen-inline-settings > *:nth-child(n + 5) { animation-delay: 120ms; }
 .zen-prompt-actions > .generate { animation-delay: 145ms; }
 
-/* Menus open from the control they belong to. */
+/* One way in and out for every floating surface: menus, dialogs, popovers
+   (framer-driven ones use surfaceMotion in src/lib/springs.ts). A surface
+   rises from the control it belongs to: --surface-shift is +6px when it opens
+   upward and -6px when it drops down. Scrims only fade. */
 @keyframes surfaceIn {
-  from { opacity: 0; transform: translateY(6px) scale(0.97); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; transform: translateY(var(--surface-shift, 6px)) scale(0.98); }
 }
+@keyframes surfaceOut {
+  to { opacity: 0; transform: translateY(var(--surface-shift, 6px)) scale(0.98); }
+}
+@keyframes scrimIn { from { opacity: 0; } }
+@keyframes scrimOut { to { opacity: 0; } }
+
 .model-menu,
 .aspect-menu {
   animation: surfaceIn var(--motion-base) var(--motion-ease) both;
-  transform-origin: bottom center;
+}
+[data-open-surface]:is(.aspect-menu, .model-menu).is-closing {
+  animation: surfaceOut var(--motion-fast) var(--motion-ease-in) both;
+  pointer-events: none;
 }
 
 /* ---------------------------------------------------------------------------

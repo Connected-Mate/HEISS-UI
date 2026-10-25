@@ -44,7 +44,7 @@
   font-weight: 550;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .wf-filters button:hover { color: hsl(var(--foreground)); }
 .wf-filters button.active { background: var(--selected); box-shadow: none; color: #fff; }
@@ -76,7 +76,7 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease);
 }
 .wf-card:hover { background: rgb(255 255 255 / .035); }
 .wf-card.active { background: rgb(255 255 255 / .06); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1); }
@@ -91,7 +91,7 @@
   background: var(--well);
 }
 .wf-thumb img,
-.wf-detail-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 400ms var(--ease-out); }
+.wf-detail-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 400ms var(--motion-ease); }
 .wf-card:hover .wf-thumb img { transform: scale(1.03); }
 
 /* No output yet: a quiet 2x2 mosaic, echoing the generation preview. */
@@ -178,7 +178,7 @@
   background: transparent;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast), scale 120ms;
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), scale var(--motion-fast) var(--motion-ease);
 }
 .wf-heart:hover:not(:disabled) { background: var(--control-hover); color: #fff; }
 .wf-heart.active { color: #ff9f8f; }
@@ -252,7 +252,7 @@
   background: rgb(255 255 255 / .02);
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background var(--dur-fast), border-color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
 }
 .wf-dropzone:hover:not(:disabled) { background: rgb(255 255 255 / .04); border-color: rgb(255 255 255 / .3); }
 .wf-dropzone strong { font-size: 13.5px; font-weight: 550; color: hsl(var(--foreground)); }
@@ -336,7 +336,7 @@
 .wf-recent { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
 .wf-recent-tile { display: grid; gap: 6px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; min-width: 0; }
 .wf-recent-tile:disabled { cursor: progress; opacity: .6; }
-.wf-recent-thumb { display: grid; place-items: center; aspect-ratio: 1; overflow: hidden; border-radius: var(--r-media); background: var(--well); color: hsl(var(--muted-foreground)); box-shadow: inset 0 0 0 1px var(--surface-border); transition: box-shadow var(--dur-fast); }
+.wf-recent-thumb { display: grid; place-items: center; aspect-ratio: 1; overflow: hidden; border-radius: var(--r-media); background: var(--well); color: hsl(var(--muted-foreground)); box-shadow: inset 0 0 0 1px var(--surface-border); transition: box-shadow var(--motion-fast) var(--motion-ease); }
 .wf-recent-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .wf-recent-tile:hover:not(:disabled) .wf-recent-thumb, .wf-recent-tile:focus-visible .wf-recent-thumb { box-shadow: inset 0 0 0 2px rgb(255 255 255 / .5); }
 .wf-recent-copy { display: grid; gap: 1px; min-width: 0; }
@@ -361,7 +361,7 @@
 .wf-question { display: grid; gap: 8px; }
 .wf-question h5 { margin: 0; font-size: 13px; font-weight: 550; }
 .wf-question-options { display: grid; gap: 6px; }
-.wf-question-option { display: grid; gap: 3px; padding: 10px 12px; border: 0; border-radius: calc(var(--r-item) - 2px); background: var(--well); color: inherit; text-align: left; cursor: pointer; box-shadow: inset 0 0 0 1px var(--surface-border); transition: box-shadow var(--dur-fast), background var(--dur-fast); }
+.wf-question-option { display: grid; gap: 3px; padding: 10px 12px; border: 0; border-radius: calc(var(--r-item) - 2px); background: var(--well); color: inherit; text-align: left; cursor: pointer; box-shadow: inset 0 0 0 1px var(--surface-border); transition: box-shadow var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease); }
 .wf-question-option:hover { background: rgb(255 255 255 / .04); }
 .wf-question-option.active { box-shadow: inset 0 0 0 2px rgb(255 255 255 / .7); }
 .wf-question-title { font-size: 11px; font-weight: 600; color: hsl(var(--muted-foreground)); }

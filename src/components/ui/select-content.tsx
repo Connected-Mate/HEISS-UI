@@ -4,7 +4,8 @@ import { forwardRef, useRef, useEffect, useState, useCallback, type ReactNode } 
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { springs } from "@/lib/springs";
+import { springs, surfaceMotion } from "@/lib/springs";
+import { usePresence } from "@/app/usePresence";
 import { useProximityHover } from "@/hooks/use-proximity-hover";
 import { useShape } from "@/lib/shape-context";
 import { SelectContentContext, useSelectContext } from "./select";
@@ -17,6 +18,7 @@ export interface SelectContentProps {
 export const SelectContent = forwardRef<HTMLDivElement, SelectContentProps>(
   ({ className, children }, ref) => {
     const { open, setOpen, value, triggerRef } = useSelectContext();
+    const presence = usePresence(open);
     const shape = useShape();
     const containerRef = useRef<HTMLDivElement>(null);
     const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null);
@@ -151,7 +153,7 @@ export const SelectContent = forwardRef<HTMLDivElement, SelectContentProps>(
     );
 
     // Render hidden when closed so items can register labels
-    if (!open) {
+    if (!presence.mounted) {
       return (
         <div hidden aria-hidden="true">
           {children}
@@ -183,9 +185,9 @@ export const SelectContent = forwardRef<HTMLDivElement, SelectContentProps>(
           }}
         >
           <motion.div
-            initial={{ opacity: 0, y: -4, scaleY: 0.96 }}
-            animate={{ opacity: 1, y: 0, scaleY: 1 }}
-            transition={springs.fast}
+            initial={surfaceMotion.initial}
+            animate={presence.closing ? surfaceMotion.exit : surfaceMotion.animate}
+            transition={surfaceMotion.transition}
             style={{ transformOrigin: "top center" }}
           >
           <div

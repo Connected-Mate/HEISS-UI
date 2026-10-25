@@ -49,7 +49,7 @@
   border-radius: inherit;
   background: radial-gradient(120px 60px at 34px 50%, rgb(255 154 82 / .16), transparent 70%);
   pointer-events: none;
-  transition: background var(--dur-base);
+  transition: background var(--motion-base) var(--motion-ease);
 }
 .activity.is-done::before { background: radial-gradient(120px 60px at 34px 50%, rgb(255 240 222 / .14), transparent 70%); }
 .activity.is-error::before { background: radial-gradient(120px 60px at 34px 50%, rgb(255 110 90 / .14), transparent 70%); }
@@ -100,7 +100,7 @@ button.activity-main { cursor: pointer; }
 /* Expanded, Dynamic Island style: the glass widens a little on a spring and
    grows a row of round buttons under the words, which stay where they are.
    The height follows by itself (Activities.tsx measures the body). */
-.activity { transition: width 520ms var(--spring); }
+.activity { transition: width 520ms var(--motion-spring); }
 .activity.is-expanded { width: min(400px, calc(100vw - 12px)); }
 .activity.is-wide.is-expanded { width: min(440px, calc(100vw - 12px)); }
 .activity-body { flex-wrap: wrap; }
@@ -124,10 +124,10 @@ button.activity-main { cursor: pointer; }
   background: rgb(255 255 255 / .09);
   color: #f2f2f2;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
 }
 .activity-control:hover { background: rgb(255 255 255 / .16); color: #fff; }
-.activity-control:active { transform: scale(.92); }
+.activity-control:active { scale: .92; }
 .activity-control:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .activity-control.is-danger:hover { background: rgb(255 110 90 / .2); color: #ff8b78; }
 .activity-control-hint {
@@ -140,7 +140,7 @@ button.activity-main { cursor: pointer; }
   font-size: 11.5px;
   white-space: nowrap;
   cursor: pointer;
-  transition: color var(--dur-fast);
+  transition: color var(--motion-fast) var(--motion-ease);
 }
 .activity-control-hint:hover { color: #fff; }
 .activity-control-hint:focus-visible { outline: none; border-radius: 6px; box-shadow: var(--focus-ring); }
@@ -150,7 +150,7 @@ button.activity-main { cursor: pointer; }
 }
 
 /* Paused: the arrow keeps its fill but stops glowing and twinkling. Canceled: it dims as well. */
-.model-dl-glyph { display: grid; place-items: center; transition: opacity var(--dur-base), filter var(--dur-base); }
+.model-dl-glyph { display: grid; place-items: center; transition: opacity var(--motion-base) var(--motion-ease), filter var(--motion-base) var(--motion-ease); }
 .model-dl-glyph.is-paused .udw-arrow { filter: saturate(.55); }
 .model-dl-glyph.is-paused :is(.udw-twinkle, .udw-spark) { animation-play-state: paused; }
 .model-dl-glyph.is-canceled { opacity: .45; filter: grayscale(1); }
@@ -180,7 +180,7 @@ button.activity-main { cursor: pointer; }
   inset: 0;
   background: linear-gradient(115deg, transparent 32%, rgb(255 154 82 / .3) 50%, transparent 68%) 0 0 / 260% 100%;
   mix-blend-mode: screen;
-  animation: activity-sweep 2.4s var(--ease-soft) infinite;
+  animation: activity-sweep 2.4s var(--motion-soft) infinite;
 }
 @keyframes activity-sweep { from { background-position: 130% 0; } to { background-position: -130% 0; } }
 .activity-heat { width: 22px; height: 22px; }
@@ -198,7 +198,7 @@ button.activity-main { cursor: pointer; }
   z-index: calc(10 - var(--fan));
   box-shadow: 0 2px 8px rgb(0 0 0 / .4);
   transform: translateX(calc((var(--fan) - var(--mid)) * 4px)) rotate(calc((var(--fan) - var(--mid)) * 9deg));
-  animation: activity-deal 560ms var(--ease-out) calc(var(--fan) * 70ms) backwards;
+  animation: activity-deal 560ms var(--motion-ease) calc(var(--fan) * 70ms) backwards;
 }
 @keyframes activity-deal { from { opacity: 0; transform: translateY(6px) scale(.8); } }
 
@@ -219,10 +219,10 @@ button.activity-main { cursor: pointer; }
   letter-spacing: -.01em;
   white-space: nowrap;
   cursor: pointer;
-  transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+  transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
 }
 .island-action:hover { background: #fff; }
-.island-action:active { transform: scale(.96); }
+.island-action:active { scale: .96; }
 .island-action:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 .island-close {
@@ -238,7 +238,7 @@ button.activity-main { cursor: pointer; }
   background: transparent;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast), opacity var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), opacity var(--motion-fast) var(--motion-ease);
 }
 .island-close:hover { background: var(--control-hover); color: #fff; }
 .island-close:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -253,7 +253,7 @@ button.activity-main { cursor: pointer; }
   width: min(380px, calc(100vw - 24px));
   translate: -50% 0;
   pointer-events: none;
-  transition: top var(--dur-base) var(--ease-out);
+  transition: top var(--motion-base) var(--motion-ease);
 }
 /* The list is the hover area: as tall as the stack, gaps included, so moving
    between fanned-out toasts never folds them. */
@@ -271,7 +271,7 @@ button.activity-main { cursor: pointer; }
   overflow: hidden;
   /* Tighter than the pills': fanned out, the one above must not darken the one below. */
   box-shadow: 0 6px 18px rgb(0 0 0 / .3), inset 0 1px 0 rgb(255 255 255 / .06);
-  transition: border-color var(--dur-base) var(--ease-out);
+  transition: border-color var(--motion-base) var(--motion-ease);
 }
 .toast-island.is-success { --tone: #7fd49a; --tone-well: rgb(127 212 154 / .14); --tone-glow: rgb(127 212 154 / .1); }
 .toast-island.is-warning { --tone: var(--ember); --tone-well: var(--ember-soft); --tone-glow: rgb(255 154 82 / .12); }
@@ -294,7 +294,7 @@ button.activity-main { cursor: pointer; }
   gap: 11px;
   min-height: 48px;
   padding: 8px 8px 8px 9px;
-  transition: opacity var(--dur-base) var(--ease-out);
+  transition: opacity var(--motion-base) var(--motion-ease);
 }
 /* Behind the front toast: only the glass shows until the stack fans out. */
 .toast-body.is-tucked { opacity: 0; }
@@ -308,7 +308,7 @@ button.activity-main { cursor: pointer; }
   height: 32px;
   border-radius: 50%;
   background: var(--tone-well);
-  transition: transform var(--dur-base) var(--ease-out);
+  transition: transform var(--motion-base) var(--motion-ease);
 }
 .toast-glyph.is-custom { width: auto; min-width: 32px; padding: 0 10px; border-radius: var(--r-pill); background: rgb(255 255 255 / .06); }
 .toast-island:hover .toast-glyph { transform: scale(1.07); }
@@ -318,7 +318,7 @@ button.activity-main { cursor: pointer; }
   fill: var(--tone);
   transform-box: fill-box;
   transform-origin: center;
-  animation: toast-cell-in 380ms var(--ease-out) backwards;
+  animation: toast-cell-in 380ms var(--motion-ease) backwards;
 }
 @keyframes toast-cell-in {
   0% { opacity: 0; transform: scale(.1); }
@@ -326,7 +326,7 @@ button.activity-main { cursor: pointer; }
   100% { transform: scale(1); }
 }
 /* The trash lid lifts and lands; the lock's shackle clicks shut. */
-.toast-cells-lid { transform-box: fill-box; transform-origin: 0 100%; animation: toast-lid 640ms var(--ease-out) 180ms backwards; }
+.toast-cells-lid { transform-box: fill-box; transform-origin: 0 100%; animation: toast-lid 640ms var(--motion-ease) 180ms backwards; }
 @keyframes toast-lid {
   0% { transform: translateY(-1.4px) rotate(-30deg); }
   55% { transform: translateY(0) rotate(5deg); }
@@ -346,7 +346,7 @@ button.activity-main { cursor: pointer; }
   80% { transform: translateX(1px); }
 }
 .toast-cells.is-bang,
-.toast-cells.is-check { animation: toast-glow 1.1s 280ms ease-out; }
+.toast-cells.is-check { animation: toast-glow 1.1s 280ms var(--motion-ease); }
 @keyframes toast-glow { 30% { filter: drop-shadow(0 0 4px var(--tone)); } }
 
 /* Time left on an undo: a thin ring around the glyph that runs down and
@@ -399,7 +399,7 @@ button.activity-main { cursor: pointer; }
    lights up once, so the eye lands on it (see revealDownload). */
 
 .model-setup-item.is-revealed,
-.starter-card.is-revealed { animation: download-reveal 2.2s var(--ease-out); }
+.starter-card.is-revealed { animation: download-reveal 2.2s var(--motion-ease); }
 @keyframes download-reveal {
   0%, 35% { box-shadow: 0 0 0 1.5px rgb(255 154 82 / .85), 0 0 22px rgb(255 154 82 / .28); }
   100% { box-shadow: 0 0 0 1.5px rgb(255 154 82 / 0), 0 0 22px rgb(255 154 82 / 0); }

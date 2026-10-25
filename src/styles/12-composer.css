@@ -130,7 +130,7 @@
   background: #090909;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background var(--motion-base, 180ms) var(--motion-ease, ease), color 160ms ease, box-shadow 160ms ease;
+  transition: background var(--motion-base) var(--motion-ease), color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
 .composer-more i {
   font-style: normal;

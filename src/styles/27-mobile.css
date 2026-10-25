@@ -123,7 +123,7 @@
     background: rgb(0 0 0 / .6);
     opacity: 0;
     transform: none;
-    transition: opacity 160ms var(--ease-out);
+    transition: opacity var(--motion-fast) var(--motion-ease);
   }
   .tile-overlay:not(.is-menu-open) .tile-hover-actions > * { pointer-events: none; }
   .tile-overlay.is-menu-open .tile-hover-actions { opacity: 1; }

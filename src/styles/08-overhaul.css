@@ -30,7 +30,6 @@
 }
 
 body { background: #0a0a0a; }
-button:not(:disabled):active { scale: .96; }
 
 .app-shell {
   background: #0a0a0a;

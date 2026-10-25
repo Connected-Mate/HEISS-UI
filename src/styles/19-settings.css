@@ -34,7 +34,7 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .set-nav-item svg { flex: none; opacity: .75; }
 .set-nav-item:hover { background: var(--control-hover); color: hsl(var(--foreground)); }
@@ -61,7 +61,7 @@
   flex-direction: column;
   gap: 22px;
   padding: 22px 26px 32px;
-  animation: set-page-in var(--dur-base) var(--ease-out);
+  animation: set-page-in var(--motion-base) var(--motion-ease);
 }
 @keyframes set-page-in { from { opacity: 0; transform: translateY(4px); } }
 .set-page-head h3 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.025em; }
@@ -120,7 +120,7 @@
 }
 .set-chip > span { min-width: 0; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .set-chip > small { flex: none; font-size: 11px; color: hsl(var(--muted-foreground)); }
-.set-chip.is-more { background: transparent; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14); color: hsl(var(--muted-foreground)); cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast); }
+.set-chip.is-more { background: transparent; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14); color: hsl(var(--muted-foreground)); cursor: pointer; transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
 .set-chip.is-more:hover { background: rgb(255 255 255 / .06); color: hsl(var(--foreground)); }
 .set-chip.is-more:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .set-suggest { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -177,7 +177,7 @@
   background: transparent;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .set-folder-tool:hover { background: var(--control-hover); color: hsl(var(--foreground)); }
 .set-folder-tool:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -195,7 +195,7 @@
   color: hsl(var(--foreground));
   text-align: left;
   cursor: pointer;
-  transition: background var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease);
 }
 .set-folder-pick:hover:not(:disabled) { background: var(--control-hover); }
 .set-folder-pick:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -205,7 +205,7 @@
 .set-value { font-size: 13px; font-variant-numeric: tabular-nums; color: hsl(var(--foreground)); padding-right: 6px; }
 
 .set-progress { height: 6px; border-radius: var(--r-pill); background: var(--well); overflow: hidden; }
-.set-progress > div { height: 100%; border-radius: inherit; background: var(--ember); transition: width 300ms var(--ease-out); }
+.set-progress > div { height: 100%; border-radius: inherit; background: var(--ember); transition: width var(--motion-slow) var(--motion-ease); }
 .set-row.is-stacked .set-row-control > .btn { align-self: flex-start; }
 
 /* Status: a square dot and a word, never colour alone. */
@@ -231,7 +231,7 @@
   background: var(--well);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1);
   cursor: pointer;
-  transition: background var(--dur-base) var(--ease-out), box-shadow var(--dur-base);
+  transition: background var(--motion-base) var(--motion-ease), box-shadow var(--motion-base) var(--motion-ease);
 }
 .switch-thumb {
   position: absolute;
@@ -241,7 +241,7 @@
   height: 20px;
   border-radius: 50%;
   background: #8a8a8a;
-  transition: transform var(--dur-base) var(--ease-out), background var(--dur-base);
+  transition: transform var(--motion-base) var(--motion-ease), background var(--motion-base) var(--motion-ease);
 }
 .switch[aria-checked="true"] { background: var(--action); box-shadow: none; }
 .switch[aria-checked="true"] .switch-thumb { transform: translateX(16px); background: var(--action-ink); }
@@ -275,11 +275,11 @@
   font-weight: 550;
   white-space: nowrap;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .segmented button:hover { color: hsl(var(--foreground)); }
 .segmented button.active { background: var(--selected); color: #fff; }
-.segmented button svg { flex: none; opacity: .75; transition: opacity var(--dur-fast); }
+.segmented button svg { flex: none; opacity: .75; transition: opacity var(--motion-fast) var(--motion-ease); }
 .segmented button.active svg { opacity: 1; }
 .segmented button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
@@ -335,7 +335,7 @@
   border-radius: 50%;
   background: var(--control-fill);
   color: hsl(var(--muted-foreground));
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .set-drawer-knob .set-drawer-chevron { color: inherit; }
 .set-drawer-toggle:hover .set-drawer-knob { background: var(--control-hover); color: hsl(var(--foreground)); }
@@ -345,7 +345,7 @@
 .set-drawer-toggle .set-row-text > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .set-drawer-toggle .set-kbd { font-size: 11px; }
 .set-drawer-toggle code { padding: 1px 5px; border-radius: 6px; background: var(--control-fill); color: hsl(var(--foreground)); font: 500 11.5px/1.5 var(--font-mono); }
-.set-drawer-chevron { flex: none; color: hsl(var(--muted-foreground)); transition: transform var(--dur-base) var(--ease-out), color var(--dur-fast); }
+.set-drawer-chevron { flex: none; color: hsl(var(--muted-foreground)); transition: transform var(--motion-base) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
 .set-drawer.is-open .set-drawer-chevron { transform: rotate(180deg); }
 /* The shortcut list: key and meaning on one line each, two columns. */
 .set-keys { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0 18px; margin: 0; padding: 6px 16px 10px; }
@@ -354,9 +354,9 @@
 .set-keys .set-kbd { font-size: 11px; white-space: nowrap; }
 
 /* Grid rows 0fr → 1fr slide the drawer to its content's own height. */
-.set-drawer-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-base) var(--ease-out); }
+.set-drawer-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--motion-base) var(--motion-ease); }
 .set-drawer.is-open .set-drawer-body { grid-template-rows: 1fr; }
-.set-drawer-inner { min-height: 0; overflow: hidden; opacity: 0; transition: opacity var(--dur-fast); }
+.set-drawer-inner { min-height: 0; overflow: hidden; opacity: 0; transition: opacity var(--motion-fast) var(--motion-ease); }
 .set-drawer.is-open .set-drawer-inner { opacity: 1; box-shadow: inset 0 1px 0 var(--surface-border); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -427,7 +427,7 @@
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
-  transition: background var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease);
 }
 .about-links a > svg:first-child { color: hsl(var(--muted-foreground)); }
 .about-links a span { flex: 1; }
@@ -457,7 +457,7 @@
   font-size: 13px;
   font-weight: 550;
   cursor: pointer;
-  transition: box-shadow var(--dur-fast), scale 100ms;
+  transition: box-shadow var(--motion-fast) var(--motion-ease), scale var(--motion-instant) var(--motion-ease);
 }
 .mosaic-button canvas { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; }
 .mosaic-button-label { position: relative; white-space: nowrap; text-shadow: 0 1px 6px rgb(0 0 0 / .6); }

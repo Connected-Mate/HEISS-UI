@@ -42,7 +42,7 @@
 .viewer-stage:has(.viewer-canvas.is-video) .is-zoom-control { display: none; }
 .heiss-phone-video { position: relative; flex: none; max-width: 100%; max-height: 100%; background: #0a0a0a; border-radius: var(--radius); }
 .heiss-video-controls { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; gap: 6px; align-items: center; padding: 20px 8px 8px; border-radius: 0 0 var(--radius) var(--radius); background: linear-gradient(transparent, rgb(0 0 0 / .85)); pointer-events: auto; }
-.heiss-video-button { display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; color: rgb(255 255 255 / .55); background: transparent; cursor: pointer; touch-action: manipulation; transition: color 120ms ease, background 120ms ease, scale 120ms ease; }
+.heiss-video-button { display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; color: rgb(255 255 255 / .55); background: transparent; cursor: pointer; touch-action: manipulation; transition: color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), scale var(--motion-fast) var(--motion-ease); }
 .heiss-video-button:hover { color: rgb(255 255 255 / .9); background: rgb(255 255 255 / .06); }
 .heiss-video-button:active { scale: .96; }
 .heiss-video-button:focus-visible, .heiss-video-slider:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }

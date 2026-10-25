@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { surfaceMotion } from '@/lib/springs';
 import { Search, Star, X } from 'lucide-react';
 import { cn } from './format';
 import { Sheet } from './PhoneStudio';
@@ -80,10 +81,10 @@ export function PromptHistoryPopover({ open, onClose, onPick, hiddenSpace = fals
           key="history"
           className="prompt-history"
           data-open-surface
-          initial={reduced ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.985 }}
-          animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-          exit={reduced ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.99 }}
-          transition={{ type: 'spring', duration: 0.28, bounce: 0 }}
+          initial={reduced ? { opacity: 0 } : surfaceMotion.initial}
+          animate={reduced ? { opacity: 1 } : surfaceMotion.animate}
+          exit={reduced ? { opacity: 0 } : surfaceMotion.exit}
+          transition={surfaceMotion.transition}
         >
           <HistoryPanel onClose={onClose} onPick={onPick} hiddenSpace={hiddenSpace} onError={onError} />
         </motion.div>

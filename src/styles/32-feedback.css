@@ -39,7 +39,7 @@
   cursor: pointer;
 }
 .feedback-peek:hover { color: hsl(var(--foreground)); }
-.feedback-peek svg { transition: rotate 200ms var(--ease-out); }
+.feedback-peek svg { transition: rotate var(--motion-base) var(--motion-ease); }
 .feedback-peek[aria-expanded="true"] svg { rotate: 180deg; }
 .feedback-setup-text {
   margin: 0;
@@ -128,7 +128,7 @@
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 0 0 4px rgb(255 255 255 / .06), 0 8px 24px -8px rgb(255 255 255 / .35);
-  transition: scale 100ms var(--ease-out), box-shadow var(--dur-fast);
+  transition: scale var(--motion-instant) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
 .feedback-hero-post span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #0a0a0a; color: #fff; }
 .feedback-hero-post:hover { box-shadow: 0 0 0 5px rgb(255 255 255 / .1), 0 10px 30px -8px rgb(255 255 255 / .45); }
@@ -142,9 +142,9 @@
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
-  transition: color var(--dur-fast);
+  transition: color var(--motion-fast) var(--motion-ease);
 }
-.feedback-hero-link svg { transition: translate 200ms var(--ease-out); }
+.feedback-hero-link svg { transition: translate var(--motion-base) var(--motion-ease); }
 .feedback-hero-link:hover { color: #fff; }
 .feedback-hero-link:hover svg { translate: 2px -2px; }
 .feedback-hero-link:focus-visible { outline: none; border-radius: 6px; box-shadow: var(--focus-ring); }
@@ -164,7 +164,7 @@
   transform-style: preserve-3d;
   transform-origin: 0 75%;
   transform: perspective(1100px) rotateY(38deg);
-  transition: transform 700ms var(--ease-out);
+  transition: transform 700ms var(--motion-ease);
   cursor: pointer;
 }
 .feedback-hero:hover .feedback-hero-stage { transform: perspective(1100px) rotateY(34deg) translateX(-6px); }
@@ -221,7 +221,7 @@
   color: hsl(var(--foreground));
   text-align: left;
   cursor: pointer;
-  transition: background var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease);
 }
 .set-nav-feedback:hover { background: rgb(255 154 82 / .22); }
 .set-nav-feedback:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -241,7 +241,7 @@
   font-size: 12px;
   font-weight: 550;
   text-decoration: none;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .set-nav-discord:hover { background: rgb(88 101 242 / .18); color: hsl(var(--foreground)); }
 .set-nav-discord:focus-visible { outline: none; box-shadow: var(--focus-ring); }

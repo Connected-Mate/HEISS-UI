@@ -27,7 +27,7 @@
   inset: 0;
   background: radial-gradient(closest-side at 50% 50%, rgb(255 154 82 / .26), transparent 70%);
   opacity: 0;
-  transition: opacity 700ms var(--ease-out), background 700ms;
+  transition: opacity 700ms var(--motion-ease), background 700ms var(--motion-ease);
 }
 .upscale-hero[data-stage="models"]::before { opacity: .45; }
 .upscale-hero[data-stage="downloading"]::before { opacity: 1; }
@@ -72,7 +72,7 @@
   font-size: 11.5px;
   font-weight: 550;
   color: hsl(var(--muted-foreground) / .75);
-  transition: color var(--dur-base);
+  transition: color var(--motion-base) var(--motion-ease);
 }
 /* The run between steps is a dotted line of cells. */
 .upscale-stepper li + li::before {
@@ -90,7 +90,7 @@
   height: 11px;
   border-radius: 3px;
   background: rgb(255 255 255 / .14);
-  transition: background var(--dur-base), box-shadow var(--dur-base);
+  transition: background var(--motion-base) var(--motion-ease), box-shadow var(--motion-base) var(--motion-ease);
 }
 .upscale-stepper .is-done { color: hsl(var(--foreground) / .85); }
 .upscale-stepper .is-done i { background: var(--action); color: var(--action-ink); }
@@ -100,7 +100,7 @@
 
 /* ------------------------------------------------------------------ Body */
 
-.upscale-body { animation: upscale-body-in 280ms var(--ease-out); }
+.upscale-body { animation: upscale-body-in var(--motion-slow) var(--motion-ease); }
 /* Stages that wait on their own (checking, ready) have no footer to pad the bottom. */
 .upscale-modal .modal-body:last-child { padding-bottom: 24px; }
 .upscale-body > :first-child { margin-top: 0; }
@@ -160,7 +160,7 @@
   font-size: 12px;
   font-weight: 550;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .upscale-url button:hover { background: var(--control-hover); }
 .upscale-url button.is-copied { color: #a9e2b8; }
@@ -190,7 +190,7 @@
   font-size: 12px;
   font-weight: 550;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .upscale-routes button:hover { color: hsl(var(--foreground)); }
 .upscale-routes button.is-active { background: var(--selected); color: hsl(var(--foreground)); }
@@ -261,7 +261,7 @@
   color: hsl(var(--muted-foreground));
   text-align: left;
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .upscale-efforts button:hover { background: var(--control-hover); }
 .upscale-efforts button.is-active { background: var(--selected); color: hsl(var(--foreground)); }
@@ -330,7 +330,7 @@
   background: linear-gradient(90deg, #a8381a, var(--ember) 72%, #fff1dc);
   -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 6px);
   mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 6px);
-  transition: width 800ms linear, background var(--dur-base);
+  transition: width 800ms linear, background var(--motion-base) var(--motion-ease);
 }
 .cell-bar.is-done > div { background: #f4f4f4; }
 
@@ -367,7 +367,7 @@
 .udw-arrow.is-downloading { filter: drop-shadow(0 0 3px rgb(255 154 82 / .45)); }
 .udw-scan { animation: udw-scan 900ms ease-in-out infinite; }
 @keyframes udw-scan { 0%, 100% { opacity: .45; } 40% { opacity: 1; } }
-.udw-arrow.is-ready { transform-origin: 50% 60%; animation: udw-pop 520ms var(--ease-out); filter: drop-shadow(0 0 4px rgb(255 240 222 / .45)); }
+.udw-arrow.is-ready { transform-origin: 50% 60%; animation: udw-pop 520ms var(--motion-ease); filter: drop-shadow(0 0 4px rgb(255 240 222 / .45)); }
 @keyframes udw-pop { 0% { transform: scale(.82); } 55% { transform: scale(1.08); } 100% { transform: scale(1); } }
 
 /* ------------------------------------------------------- Why it failed
@@ -419,7 +419,7 @@
   border-radius: var(--r-pill);
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .upscale-notice-close:hover { background: var(--control-hover); color: #fff; }
 .upscale-notice-close:focus-visible { outline: none; box-shadow: var(--focus-ring); }

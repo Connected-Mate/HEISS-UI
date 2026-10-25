@@ -45,7 +45,7 @@
   background: var(--selected);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1), 0 1px 3px rgb(0 0 0 / .4);
   transform: translateX(calc(var(--tab-index, 0) * 100%));
-  transition: transform 260ms var(--spring, cubic-bezier(.3, 1.3, .5, 1));
+  transition: transform var(--motion-slow) var(--motion-spring);
   pointer-events: none;
 }
 .aspect-upscale-tabs button {
@@ -59,10 +59,10 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  transition: color 160ms var(--ease-out, ease-out), transform 180ms var(--spring, ease-out);
+  transition: color var(--motion-fast) var(--motion-ease), transform var(--motion-base) var(--motion-spring);
 }
 .aspect-upscale-tabs button:hover { color: hsl(var(--foreground)); }
-.aspect-upscale-tabs button:active { transform: scale(.96); transition-duration: 60ms; }
+.aspect-upscale-tabs button:active { scale: .96; transition-duration: var(--motion-instant); }
 .aspect-upscale-tabs button.is-active { color: hsl(var(--foreground)); }
 .aspect-upscale-tabs button.is-active:not([data-tier="none"]) { color: var(--ember); }
 .aspect-upscale-tabs button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -116,7 +116,7 @@
   border-radius: 4px;
   background: rgb(255 255 255 / .08);
   color: hsl(var(--muted-foreground));
-  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out);
+  transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .aspect-upscale-tabs button.is-active .aspect-upscale-arrow { background: color-mix(in srgb, var(--ember) 18%, transparent); color: var(--ember); }
 /* The phone's chosen segment is white: the arrow takes the beta tag's darker ember. */

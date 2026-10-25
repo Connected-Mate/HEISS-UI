@@ -37,10 +37,6 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.6), 0 8px 10px -6px rgb(0 0 0 / 0.5);
 
-  --spring: cubic-bezier(0.34, 1.4, 0.5, 1);
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
-
   /* One typeface everywhere: Geist, same as the website. */
   font-family: "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -66,7 +62,6 @@ body { margin: 0; min-width: 320px; min-height: 100vh; background: hsl(var(--bac
 img { color: transparent; }
 button, input, textarea, select { font: inherit; }
 button { color: inherit; }
-button:not(:disabled) { transition-timing-function: var(--ease-out); transition-duration: 180ms; }
 /* Buttons take the ember focus ring from 22-accents.css; fields brighten their edge. */
 input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 0;
@@ -93,7 +88,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .app-shell {
   position: fixed; inset: 0; overflow: hidden;
   background: hsl(var(--background)); color: hsl(var(--foreground));
-  animation: appIn 600ms var(--ease-soft) both;
+  animation: appIn 600ms var(--motion-soft) both;
 }
 @keyframes appIn {
   from { opacity: 0; }
@@ -144,10 +139,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   color: hsl(var(--muted-foreground));
   font-size: 13px; font-weight: 500;
   cursor: pointer;
-  transition: color 200ms var(--ease-out), background 200ms var(--ease-out), box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out);
+  transition: color var(--motion-base) var(--motion-ease), background var(--motion-base) var(--motion-ease), box-shadow var(--motion-base) var(--motion-ease), transform var(--motion-base) var(--motion-ease);
 }
 .mode-tabs button:hover { color: hsl(var(--foreground)); }
-.mode-tabs button:active { transform: scale(0.97); transition-duration: 60ms; }
+.mode-tabs button:active { transition-duration: var(--motion-instant); }
 .mode-tabs button.active {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
@@ -184,7 +179,7 @@ textarea, input, select {
   min-height: 36px;
   font-weight: 400;
   font-size: 13px;
-  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+  transition: border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
 textarea { min-height: 120px; resize: vertical; line-height: 1.5; padding: 10px; }
 textarea.short { min-height: 70px; }
@@ -216,7 +211,7 @@ input.is-framed:focus-visible {
   border-radius: var(--radius);
   padding: 0 10px;
   min-width: 0;
-  transition: border-color 160ms var(--ease-out);
+  transition: border-color var(--motion-fast) var(--motion-ease);
 }
 .select:hover { border-color: hsl(var(--border-strong)); }
 .select:focus-within { border-color: hsl(var(--ring)); box-shadow: 0 0 0 3px hsl(var(--ring) / 0.18); }
@@ -233,7 +228,7 @@ input.is-framed:focus-visible {
   padding: 0 14px 0 16px !important;
   font-size: 13px !important;
   color: hsl(var(--foreground)) !important;
-  transition: background-color 160ms var(--ease-out) !important;
+  transition: background-color var(--motion-fast) var(--motion-ease) !important;
 }
 .fluid-select-trigger:hover { background: #141414 !important; }
 .fluid-select-trigger > span { min-width: 0; }
@@ -261,7 +256,7 @@ input.is-framed:focus-visible {
   padding: 6px 10px;
   cursor: pointer;
   text-align: left;
-  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out);
+  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease);
 }
 .model-trigger:hover, .model-option:hover { border-color: hsl(var(--border-strong)); background: hsl(var(--accent)); }
 .model-copy { min-width: 0; display: grid; gap: 2px; }
@@ -303,14 +298,16 @@ input.is-framed:focus-visible {
   left: 0; right: auto;
   min-width: 304px;
   top: auto; bottom: calc(100% + 6px);
-  animation: popUp 180ms var(--spring);
+  --surface-shift: 6px;
+  transform-origin: bottom center;
 }
 .model-menu {
   position: absolute; z-index: 14;
   top: calc(100% + 6px); left: 0; right: 0;
   display: grid; gap: 2px;
   padding: 4px;
-  animation: pop 180ms var(--spring);
+  --surface-shift: -6px;
+  transform-origin: top center;
 }
 .model-menu-empty { display: grid; gap: 3px; padding: 10px 12px 12px; text-align: left; }
 .model-menu-empty strong { font-size: 13px; font-weight: 600; color: hsl(var(--foreground)); }
@@ -350,10 +347,10 @@ input.is-framed:focus-visible {
   text-align: left;
   font-size: 13px;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
-  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out), transform 180ms var(--spring);
+  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), transform var(--motion-base) var(--motion-spring);
 }
 .aspect-trigger:hover, .aspect-option:hover { border-color: hsl(var(--border-strong)); background: hsl(var(--accent)); }
-.aspect-trigger:active, .aspect-option:active { transform: scale(0.97); transition-duration: 60ms; }
+.aspect-trigger:active, .aspect-option:active { transition-duration: var(--motion-instant); }
 .aspect-trigger > span:nth-child(2),
 .aspect-option > span:nth-child(2) {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -366,7 +363,8 @@ input.is-framed:focus-visible {
   width: max(100%, min(280px, calc(100vw - 32px)));
   display: grid; gap: 3px;
   padding: 6px;
-  animation: pop 180ms var(--spring);
+  --surface-shift: -6px;
+  transform-origin: top center;
 }
 .aspect-option { grid-template-columns: 30px minmax(44px, auto) minmax(80px, 1fr); border-color: transparent; background: transparent; }
 .aspect-option:hover { border-color: transparent; background: hsl(var(--accent)); }
@@ -420,7 +418,7 @@ input.is-framed:focus-visible {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   cursor: pointer;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.06) inset;
-  transition: transform 260ms var(--ease-out), box-shadow 260ms var(--ease-out), opacity 200ms var(--ease-out);
+  transition: transform var(--motion-slow) var(--motion-ease), box-shadow var(--motion-slow) var(--motion-ease), opacity var(--motion-base) var(--motion-ease);
 }
 .generate::after {
   content: "";
@@ -435,17 +433,17 @@ input.is-framed:focus-visible {
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3), 0 0 0 1px rgb(255 255 255 / 0.08) inset;
 }
-.generate:active:not(:disabled) { transform: scale(0.98) translateY(0); box-shadow: 0 1px 2px rgb(0 0 0 / 0.4); transition-duration: 80ms; }
+.generate:active:not(:disabled) { transform: translateY(0); box-shadow: 0 1px 2px rgb(0 0 0 / 0.4); transition-duration: var(--motion-instant); }
 .generate:active:not(:disabled)::after {
   opacity: 1;
   transform: translateX(120%);
-  transition: transform 520ms var(--ease-soft), opacity 260ms var(--ease-out);
+  transition: transform 520ms var(--motion-soft), opacity var(--motion-slow) var(--motion-ease);
 }
 .generate.is-working:not(.is-offline) {
   box-shadow: 0 3px 10px rgb(0 0 0 / 0.38), 0 0 0 1px rgb(255 255 255 / 0.08) inset, 0 0 24px hsl(var(--foreground) / 0.08);
 }
 .generate.is-working:not(.is-offline) svg {
-  animation: generateIconLift 1.6s var(--ease-soft) infinite;
+  animation: generateIconLift 1.6s var(--motion-soft) infinite;
 }
 .generate:disabled,
 .generate[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }

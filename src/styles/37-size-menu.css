@@ -92,7 +92,7 @@
   transform: translateX(10px) scale(.98);
   transform-origin: right center;
   pointer-events: none;
-  transition: opacity 160ms var(--ease-out), transform 260ms var(--spring);
+  transition: opacity var(--motion-fast) var(--motion-ease), transform var(--motion-slow) var(--motion-spring);
 }
 .size-peek.is-on { opacity: 1; transform: none; }
 /* Until it's measured, nothing in it has a place to glide from. */
@@ -100,7 +100,7 @@
 .size-guide {
   position: absolute;
   background: rgb(255 255 255 / .07);
-  transition: top 300ms var(--size-spring), left 300ms var(--size-spring);
+  transition: top var(--motion-slow) var(--size-spring), left var(--motion-slow) var(--size-spring);
 }
 .size-guide.is-x { left: 0; right: 0; height: 1px; }
 .size-guide.is-y { top: 0; bottom: 0; width: 1px; }
@@ -109,7 +109,7 @@
   border: 1.5px solid rgb(255 255 255 / .92);
   border-radius: 5px;
   background: rgb(255 255 255 / .03);
-  transition: left 300ms var(--size-spring), top 300ms var(--size-spring), width 300ms var(--size-spring), height 300ms var(--size-spring), border-color 200ms var(--ease-out);
+  transition: left var(--motion-slow) var(--size-spring), top var(--motion-slow) var(--size-spring), width var(--motion-slow) var(--size-spring), height var(--motion-slow) var(--size-spring), border-color var(--motion-base) var(--motion-ease);
 }
 /* 2K or Custom: the frame takes the ember, like the tag on the trigger. */
 .size-peek.is-accent .size-frame { border-color: var(--ember); }
@@ -162,7 +162,7 @@
   align-items: stretch;
   column-gap: var(--seam);
   height: 36px;
-  transition: column-gap 340ms var(--cell-spring);
+  transition: column-gap var(--motion-slow) var(--cell-spring);
 }
 /* The hover previews are for a pointer: a tap leaves :hover stuck on touch, which would hold a split preview open. */
 @media (hover: hover) { .size-fields.is-linked:not(.is-fresh):has(.size-link:hover) { --seam: 3px; --inner: 9px; --reach: 0px; } }
@@ -174,7 +174,7 @@
   min-width: 0;
   background: var(--well);
   box-shadow: inset 0 1px 2px rgb(0 0 0 / .5);
-  transition: border-radius 340ms var(--cell-spring), margin 340ms var(--cell-spring), padding 340ms var(--cell-spring), background-color 180ms var(--ease-out);
+  transition: border-radius var(--motion-slow) var(--cell-spring), margin var(--motion-slow) var(--cell-spring), padding var(--motion-slow) var(--cell-spring), background-color var(--motion-base) var(--motion-ease);
 }
 /* Each pill pads by as much as it reaches, so its W/H and digits stay put while it slides. */
 .size-field:first-child { margin-right: var(--reach); padding-right: calc(var(--reach) * -1); border-radius: var(--pill) var(--inner) var(--inner) var(--pill); }
@@ -195,7 +195,7 @@
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
-  transition: color 160ms var(--ease-out);
+  transition: color var(--motion-fast) var(--motion-ease);
 }
 /* Hover only where there is one: a tap leaves :hover stuck, which read as still dragging. */
 @media (hover: hover) { .size-field-key:hover { color: var(--ember); } }
@@ -229,7 +229,7 @@
   background: transparent;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), color 160ms var(--ease-out);
+  transition: background-color var(--motion-base) var(--motion-ease), box-shadow var(--motion-base) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .size-link:hover,
 .size-link[aria-pressed="true"] { color: hsl(var(--foreground)); }
@@ -237,7 +237,7 @@
 @media (hover: hover) { .size-fields.is-linked:not(.is-fresh) .size-link:hover { background: var(--well); box-shadow: inset 0 1px 2px rgb(0 0 0 / .5); } }
 .size-link:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .size-link-icon { display: grid; place-items: center; animation: linkTurn 420ms var(--cell-spring) both; }
-.size-link:active .size-link-icon { scale: .86; transition: scale 80ms; }
+.size-link:active .size-link-icon { scale: .86; transition: scale var(--motion-instant) var(--motion-ease); }
 @keyframes linkTurn {
   from { opacity: 0; transform: rotate(-80deg) scale(.5); }
   to { opacity: 1; transform: none; }
@@ -275,9 +275,9 @@ html.is-size-scrubbing * { cursor: ew-resize !important; user-select: none !impo
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition: color 160ms var(--ease-out), background-color 160ms var(--ease-out);
+  transition: color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
 }
-.size-save > span { display: inline-flex; align-items: center; gap: 4px; animation: saveSwap 260ms var(--spring) both; }
+.size-save > span { display: inline-flex; align-items: center; gap: 4px; animation: saveSwap var(--motion-slow) var(--motion-spring) both; }
 .size-save:not(:disabled):hover { color: var(--ember); background: rgb(255 154 82 / .08); }
 .size-save:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .size-save.is-saved { color: hsl(var(--muted-foreground) / .75); cursor: default; }
@@ -293,7 +293,7 @@ html.is-size-scrubbing * { cursor: ew-resize !important; user-select: none !impo
 .size-saved-row .aspect-option { width: 100%; }
 /* Room for Rename and Remove comes from the row's own padding, so the size moves left and the
    name, which can be long, shortens with "…" instead of running under it. */
-.size-saved-row .aspect-option { transition: padding-right 280ms var(--ease-out); }
+.size-saved-row .aspect-option { transition: padding-right var(--motion-slow) var(--motion-ease); }
 .size-saved-row:is(:hover, :focus-within):not(.is-renaming) .aspect-option { padding-right: 70px; }
 .aspect-option > .size-saved-label { display: flex; align-items: baseline; min-width: 0; overflow: hidden; }
 .size-saved-label > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -307,7 +307,7 @@ html.is-size-scrubbing * { cursor: ew-resize !important; user-select: none !impo
   opacity: 0;
   translate: 10px -50%;
   pointer-events: none;
-  transition: opacity 160ms var(--ease-out), translate 280ms var(--spring);
+  transition: opacity var(--motion-fast) var(--motion-ease), translate var(--motion-slow) var(--motion-spring);
 }
 .size-saved-row:is(:hover, :focus-within) .size-saved-actions { opacity: 1; translate: 0 -50%; pointer-events: auto; }
 .size-saved-actions button {
@@ -320,11 +320,11 @@ html.is-size-scrubbing * { cursor: ew-resize !important; user-select: none !impo
   background: transparent;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background-color 140ms var(--ease-out), color 140ms var(--ease-out), transform 160ms var(--spring);
+  transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-spring);
 }
 .size-saved-actions button:hover { background: var(--control-hover); color: hsl(var(--foreground)); }
 .size-saved-actions button.is-remove:hover { color: #ff8a80; }
-.size-saved-actions button:active { transform: scale(.9); }
+.size-saved-actions button:active { scale: .9; }
 .size-saved-actions button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 /* Renaming: the name becomes a small field in the row, the rest stays where it was. */
 .size-saved-name {
@@ -351,15 +351,6 @@ html.is-size-scrubbing * { cursor: ew-resize !important; user-select: none !impo
 .size-menu-note { display: block; font-size: 11.5px; text-wrap: pretty; }
 
 
-/* Every composer menu leaves the way it came. */
-@keyframes surfaceOut {
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateY(6px) scale(0.97); }
-}
-[data-open-surface]:is(.aspect-menu, .model-menu).is-closing {
-  animation: surfaceOut 150ms var(--motion-ease) both;
-  pointer-events: none;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .size-guide, .size-frame, .size-fields, .size-field, .size-link, .size-peek { transition: none; }
@@ -384,7 +375,7 @@ html.is-size-scrubbing * { cursor: ew-resize !important; user-select: none !impo
   box-shadow: inset 0 1px 0 var(--surface-border);
 }
 .size-mp-label { display: grid; justify-items: start; gap: 2px; min-width: 0; font-size: 12.5px; font-weight: 550; color: hsl(var(--foreground)); }
-.size-mp-label small { font-size: 11px; font-weight: 500; color: hsl(var(--muted-foreground)); animation: saveSwap 260ms var(--spring) both; }
+.size-mp-label small { font-size: 11px; font-weight: 500; color: hsl(var(--muted-foreground)); animation: saveSwap var(--motion-slow) var(--motion-spring) both; }
 .size-mp-reset {
   height: 16px;
   margin-left: -4px;
@@ -397,8 +388,8 @@ html.is-size-scrubbing * { cursor: ew-resize !important; user-select: none !impo
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  animation: saveSwap 260ms var(--spring) both;
-  transition: color 160ms var(--ease-out), background-color 160ms var(--ease-out);
+  animation: saveSwap var(--motion-slow) var(--motion-spring) both;
+  transition: color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
 }
 .size-mp-reset:hover { color: var(--ember); background: rgb(255 154 82 / .08); }
 .size-mp-reset:focus-visible { outline: none; box-shadow: var(--focus-ring); }

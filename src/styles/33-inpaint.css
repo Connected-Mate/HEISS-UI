@@ -74,7 +74,7 @@
   box-shadow: 0 0 0 1px rgb(255 255 255 / .9), 0 0 0 2px rgb(0 0 0 / .35), inset 0 0 0 1px rgb(0 0 0 / .35);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 120ms var(--ease-out), width 140ms var(--ease-out), height 140ms var(--ease-out);
+  transition: opacity var(--motion-fast) var(--motion-ease), width var(--motion-fast) var(--motion-ease), height var(--motion-fast) var(--motion-ease);
 }
 .inpaint-ring.is-eraser { box-shadow: 0 0 0 1px rgb(255 255 255 / .9), 0 0 0 2px rgb(0 0 0 / .35); background: rgb(255 255 255 / .08); }
 .inpaint-ring.is-preview { background: rgb(255 154 82 / .3); }
@@ -97,7 +97,7 @@
   white-space: nowrap;
   translate: -50% 0;
   pointer-events: none;
-  transition: opacity 260ms var(--ease-out), translate 360ms var(--ease-out), filter 260ms var(--ease-out);
+  transition: opacity var(--motion-slow) var(--motion-ease), translate var(--motion-slow) var(--motion-ease), filter var(--motion-slow) var(--motion-ease);
 }
 .inpaint-hint.is-hidden { opacity: 0; translate: -50% 6px; filter: blur(3px); }
 
@@ -131,7 +131,7 @@
   background: transparent;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast), scale 100ms;
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), scale var(--motion-instant) var(--motion-ease);
 }
 .inpaint-tool:hover:not(:disabled) { background: var(--control-hover); color: hsl(var(--foreground)); }
 .inpaint-tool:active:not(:disabled) { scale: .92; }
@@ -157,7 +157,7 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   cursor: pointer;
-  transition: background var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease);
 }
 .inpaint-zoom-reset:hover { background: var(--control-hover); }
 
@@ -189,7 +189,7 @@
   background: rgb(255 255 255 / .28);
   /* Collapsed: a 4px rod. Open: the wedge. Both shapes have the same points, so it morphs. */
   clip-path: polygon(calc(50% - 2px) 0, calc(50% + 2px) 0, calc(50% + 2px) 100%, calc(50% - 2px) 100%);
-  transition: clip-path 360ms var(--ease-out), background var(--dur-fast);
+  transition: clip-path var(--motion-slow) var(--motion-ease), background var(--motion-fast) var(--motion-ease);
 }
 .inpaint-size:hover .inpaint-size-wedge,
 .inpaint-size:focus-visible .inpaint-size-wedge,
@@ -206,11 +206,11 @@
   background: #fff;
   box-shadow: 0 1px 4px rgb(0 0 0 / .45), 0 0 0 .5px rgb(0 0 0 / .2);
   translate: -50% -50%;
-  transition: top 160ms var(--ease-out), scale 160ms var(--ease-out);
+  transition: top var(--motion-fast) var(--motion-ease), scale var(--motion-fast) var(--motion-ease);
 }
 .inpaint-size:hover .inpaint-size-thumb,
 .inpaint-size.is-dragging .inpaint-size-thumb { scale: 1.12; }
-.inpaint-size.is-dragging .inpaint-size-thumb { transition: scale 160ms var(--ease-out); }
+.inpaint-size.is-dragging .inpaint-size-thumb { transition: scale var(--motion-fast) var(--motion-ease); }
 
 /* ------------------------------------------------------------- Phone */
 
@@ -265,7 +265,7 @@
   box-shadow: inset 0 0 0 1px var(--surface-border), var(--shadow-float-sm);
   color: hsl(var(--foreground) / .85);
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .inpaint-close:hover { background: var(--surface-grain), rgb(48 48 48 / .9); color: hsl(var(--foreground)); }
 .inpaint-close:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -301,13 +301,13 @@
 .inpaint-demo .inpaint-stage { inset: 0; width: 100%; height: 100%; will-change: auto; }
 .inpaint-demo .inpaint-viewport.is-idle { cursor: default; }
 /* The paint fades out once the result is in; the result shows only inside it. */
-.inpaint-demo .inpaint-stage canvas.inpaint-demo-paint { transition: opacity 380ms var(--ease-out); }
-.inpaint-demo .inpaint-stage canvas.inpaint-demo-result { opacity: 0; transition: opacity 600ms var(--ease-out); }
+.inpaint-demo .inpaint-stage canvas.inpaint-demo-paint { transition: opacity 380ms var(--motion-ease); }
+.inpaint-demo .inpaint-stage canvas.inpaint-demo-result { opacity: 0; transition: opacity 600ms var(--motion-ease); }
 .inpaint-demo.is-done .inpaint-stage canvas.inpaint-demo-paint,
 .inpaint-demo.is-working .inpaint-stage canvas.inpaint-demo-paint { opacity: .3; }
 .inpaint-demo.is-done .inpaint-stage canvas.inpaint-demo-paint { opacity: 0; }
 .inpaint-demo.is-done .inpaint-stage canvas.inpaint-demo-result { opacity: 1; }
-.inpaint-demo.is-done.is-comparing .inpaint-stage canvas.inpaint-demo-result { opacity: 0; transition-duration: 160ms; }
+.inpaint-demo.is-done.is-comparing .inpaint-stage canvas.inpaint-demo-result { opacity: 0; transition-duration: var(--motion-fast); }
 /* While "generating": the painted crop being remade, like the gallery's inpaint preview. */
 .inpaint-demo-working {
   position: absolute;
@@ -329,7 +329,7 @@
 .inpaint-demo-prompt { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 4px 4px 4px 14px; border-radius: var(--r-pill); background: var(--well); }
 .inpaint-demo-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: hsl(var(--foreground)); }
 .inpaint-demo-text > span { margin-right: 8px; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: hsl(var(--muted-foreground)); }
-.inpaint-demo-prompt .btn.is-ready { animation: inpaint-demo-ready 1.6s var(--ease-out) 1; }
+.inpaint-demo-prompt .btn.is-ready { animation: inpaint-demo-ready 1.6s var(--motion-ease) 1; }
 @keyframes inpaint-demo-ready { 0%, 100% { box-shadow: 0 0 0 0 rgb(255 154 82 / 0); } 40% { box-shadow: 0 0 0 6px rgb(255 154 82 / .22); } }
 @media (prefers-reduced-motion: reduce) {
   .inpaint-demo-working, .inpaint-demo-prompt .btn.is-ready { animation: none; }
