@@ -250,7 +250,10 @@ function findPrompt(graph, info, reach, titles, variants) {
     const best = ranked[0];
     // The best other box: not the winner, and not its own SDXL/Flux partner field.
     const rival = ranked.find((item) => item !== best && !(item.node === best.node && sdxlPair.has(item.input) && sdxlPair.has(best.input))) || null;
-    const clear = !rival || best.score - rival.score >= 3 || best.reasons.includes("changes-between-runs") && !rival.reasons.includes("changes-between-runs");
+    // Close candidates that all hold the same text (base and refiner boxes) aren't a choice: nothing to ask.
+    const candidates = ranked.filter((item) => item.score > best.score - 6).slice(0, 4);
+    const oneText = new Set(candidates.map((item) => String(item.value ?? "").trim())).size <= 1;
+    const clear = !rival || oneText || best.score - rival.score >= 3 || best.reasons.includes("changes-between-runs") && !rival.reasons.includes("changes-between-runs");
     // Separate samplers whose best boxes hold the same text are one prompt, written to each.
     const sameText = tops.filter((item) => item.value === best.value && item.score >= best.score - 2);
     const mappings = [];
@@ -259,7 +262,6 @@ function findPrompt(graph, info, reach, titles, variants) {
       result.prompt = mappings.length === 1 ? mappings[0] : mappings;
       result.confidence = "high";
     } else {
-      const candidates = ranked.filter((item) => item.score > best.score - 6).slice(0, 4);
       result.question = {
         kind: "prompt",
         text: "Which of these is your prompt?",

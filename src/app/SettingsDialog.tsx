@@ -32,6 +32,7 @@ import { featureReady, heissNodesAction, loadHeissNodes, openHeissNodes, saveHei
 import { loadEnhanceStatus, openEnhanceSetup, saveEnhanceSettings, useEnhance } from './promptEnhance';
 import { EmberGlyph, EnhanceAura, EnhanceWords, enhanceShortcut, useEnhanceDemo } from './EnhanceComposer';
 import type { ShowToast } from './toast';
+import { InstallHistoryButton } from './InstallHistory';
 
 export const SETTINGS_SECTIONS = [
   { id: 'general', label: 'General', icon: SlidersHorizontal, description: 'Layout, keyboard, safety and reset.' },
@@ -1198,6 +1199,10 @@ export function SettingsDialog({ view, open, section, onSectionChange, onClose, 
               />
               <Row label="Workflows folder" description={paths.workflowsDir ? <code className="set-path is-oneline" title={paths.workflowsDir}><bdi>{paths.workflowsDir}</bdi></code> : <Skeleton className="skeleton-text path" />}>
                 <button className="btn is-ghost" onClick={() => { refreshModels(); refreshWorkflows(); }}><RefreshCw size={14} /> Rescan</button>
+              </Row>
+              {/* What importing workflows installed in ComfyUI, with an undo: rarely needed, so it lives here, not in the import. */}
+              <Row label="Add-ons for workflows" description="What importing workflows installed in ComfyUI, each with an undo.">
+                <InstallHistoryButton showToast={showToast} onUndone={() => { refreshModels(false); refreshWorkflows(); }} />
               </Row>
             </Group> : null}
             <Group title="Gallery">

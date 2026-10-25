@@ -105,6 +105,18 @@ version opens with a `> ` summary line, which the update pill shows.
   the repaint and the soft edge reach now follows the size of what you
   painted (after Krita AI's defaults) instead of the crop's size.
 
+- **Importing a workflow is calmer.** It happens in the Workflows window
+  itself, opening on what you ran in ComfyUI; paste a workflow with ⌘V
+  anywhere, and a pasted one is named after its model. The review says in one
+  line what it takes from you ("Takes your prompt, seed and size") and in one
+  more what it brings along. Afterwards you land on the new workflow, with
+  Use it in the toast, and its card shows its add-ons coming in.
+- **A workflow missing nodes gets them in one click** with Get add-ons, and
+  every problem reads "Needs setup" with the details underneath. A ready
+  workflow just shows what it is.
+- What importing installed now lives in Settings › Library, Add-ons for
+  workflows, each with an undo.
+
 ### Fixed
 - **Imported workflows: Try again and Use settings keep your More settings**,
   and the picture's details list the ones you changed.
@@ -119,6 +131,8 @@ version opens with a `> ` summary line, which the update pill shows.
 - **Imported workflows show only the controls they use**: no Steps, CFG,
   Seed or size that do nothing.
 - **More settings on the phone**, in Advanced settings.
+- A workflow with the same prompt in two boxes (base and refiner) no longer
+  asks which one is your prompt.
 
 ## [0.18.1] - 2026-10-19
 

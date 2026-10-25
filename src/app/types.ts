@@ -278,6 +278,8 @@ export type WorkflowSetupState = {
   snapshotId: string;
   health: { ok: boolean; comfyDown: boolean; broke: string[]; lostNodes: string[]; newFailed: string[] } | null;
   message: string;
+  /** The workflows (profile ids) it's getting add-ons for. */
+  workflowIds?: string[];
   /** How it ended was seen (OK, Keep it anyway). */
   seen?: boolean;
 };

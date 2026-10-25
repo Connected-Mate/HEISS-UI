@@ -34,12 +34,14 @@ export function workflowSetupState() {
  * said yes to). `deps`: { comfyState, restartComfy, waitForRestart, waitForIdle }.
  * waitForIdle resolves true once ComfyUI's queue is empty, false if it never was.
  */
-export function startWorkflowSetup({ packs = [], workflowName = "" }, deps) {
+export function startWorkflowSetup({ packs = [], workflowName = "", workflowIds = [] }, deps) {
   if (job?.status === "running") throw new Error("Another setup is still running.");
   if (!packs.length) throw new Error("Nothing to install.");
   job = {
     id: `setup-${Date.now()}`,
     workflowName,
+    // The workflows it's for, so their cards can show it working.
+    workflowIds,
     status: "running",
     step: "Getting ready",
     packs: packs.map((pack) => ({ key: pack.key, name: pack.name, status: "waiting", error: "" })),

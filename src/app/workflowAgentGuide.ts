@@ -28,10 +28,8 @@ export const workflowControls: Array<{ key: string; label: string; hint: string;
   { key: "weightDtype", label: "Weight type", hint: "the model loader's weight_dtype option" }
 ];
 
-export const controlLabel = (key: string) => workflowControls.find((item) => item.key === key)?.label || key;
-
 /** The LoRA picker drives exactly these nodes. */
-export const loraNodes = { "rgthree-power-v1": "Power Lora Loader (rgthree)", "rgthree-stack-v1": "Lora Loader Stack (rgthree)" } as const;
+const loraNodes = { "rgthree-power-v1": "Power Lora Loader (rgthree)", "rgthree-stack-v1": "Lora Loader Stack (rgthree)" } as const;
 
 const promptHead = `I use HEISS UI, a local studio that runs ComfyUI workflows behind a simple prompt box. Help me prepare a ComfyUI workflow for it.
 
@@ -86,13 +84,6 @@ Changing the graph (only when needed, and tell me what you changed):
 - If one value has to reach several nodes (one seed for two samplers, one prompt for two encoders), feed them from a single core node (PrimitiveInt, PrimitiveString) and connect that node's "value".
 - The workflow needs a save node (SaveImage, or a video save node), or nothing reaches the gallery.
 - Don't invent node types. Use nodes already in the workflow or core ComfyUI nodes, and name any custom node packs it needs.`;
-
-/** The prompt on its own, for a workflow the agent will be given separately. */
-export function agentPrompt() {
-  return `${promptHead}
-
-My workflow JSON follows after this message.`;
-}
 
 /** The prompt with one workflow and how HEISS UI read it, ready to paste into an agent. */
 export function agentPromptFor(item: { filename?: string; raw: unknown; preview: WorkflowImportPreview; metadata: WorkflowImportPreview["detected"] }) {

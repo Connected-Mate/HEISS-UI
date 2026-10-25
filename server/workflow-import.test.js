@@ -380,3 +380,12 @@ test("an import read while ComfyUI lacked its nodes is read again once it has th
   const full = await prepareImport({ source: "file", workflow, filename: "refiner.json" }, { info });
   assert.equal(full.provisional, false);
 });
+
+test("a pasted workflow, with no file name, is named after its main model", async () => {
+  const workflow = JSON.parse(fs.readFileSync(path.join(corpusDir, "sdxl_simple_example.json"), "utf8"));
+  const preview = await prepareImport({ source: "file", workflow, filename: "" }, { info });
+  assert.match(preview.detected.name, /sd xl base/i);
+  // Base and refiner boxes hold the same text: one prompt to both, no question.
+  assert.equal(preview.detected.question, null);
+  assert.equal([].concat(preview.detected.controls.prompt).length, 2);
+});

@@ -11,7 +11,7 @@
  */
 import { previewWorkflowImport } from "./workflow-catalog.js";
 import { convertVisualWorkflow, visualTitles } from "./workflow-convert.js";
-import { importFromHistory, unwrapWorkflow, workflowFromMedia } from "./workflow-sources.js";
+import { importFromHistory, nameFromPrompt, unwrapWorkflow, workflowFromMedia } from "./workflow-sources.js";
 import { nodePackMap, packStamps, resolveMissingNodes } from "./workflow-packs.js";
 import { missingModelRefs, modelNameList, planModels } from "./workflow-models.js";
 import { nodePacks } from "./node-packs.js";
@@ -98,7 +98,8 @@ export async function prepareImport(request, { info = {}, fetchers = {}, pageCon
   const titles = read.visual ? visualTitles(read.visual) : {};
   // The file route keeps the original file for its heissUi block; other sources have none.
   const raw = read.raw && typeof read.raw === "object" ? read.raw : { graph };
-  const preview = previewWorkflowImport(raw?.graph ? raw : { ...raw, graph }, request.filename || "", info, { graph, titles, variants: read.variants || [], name: read.name });
+  // A pasted workflow has no file name: it's named after its main model, as recent runs are.
+  const preview = previewWorkflowImport(raw?.graph ? raw : { ...raw, graph }, request.filename || "", info, { graph, titles, variants: read.variants || [], name: read.name || nameFromPrompt(graph) });
   const packs = await packPlan(preview.validation.missingNodes || [], read.visual, { map });
   // Model files: only looked up online when something is missing.
   const list = missingModelRefs(graph, info).length ? modelList || await modelNameList().catch(() => ({ files: {} })) : { files: {} };

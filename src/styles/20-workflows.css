@@ -183,6 +183,7 @@
 .wf-heart:hover:not(:disabled) { background: var(--control-hover); color: #fff; }
 .wf-heart.active { color: #ff9f8f; }
 .wf-heart:active:not(:disabled) { scale: .9; }
+.wf-detail-meta { margin: -10px 0 0; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
 .wf-detail-desc { margin: -6px 0 0; font-size: 13px; line-height: 1.6; color: hsl(var(--muted-foreground)); }
 
 .wf-health {
@@ -258,18 +259,6 @@
 .wf-dropzone strong { font-size: 13.5px; font-weight: 550; color: hsl(var(--foreground)); }
 .wf-dropzone span { font-size: 12px; }
 .wf-import .field > span { display: inline-flex; align-items: center; gap: 6px; }
-.wf-paste {
-  width: 100%;
-  min-height: 110px;
-  resize: vertical;
-  padding: 12px 14px;
-  border: 1px solid transparent;
-  border-radius: var(--r-item);
-  background: var(--well);
-  color: hsl(var(--foreground));
-  font: 500 11.5px/1.5 var(--font-mono);
-}
-.wf-paste:focus-visible { border-color: rgb(255 255 255 / .16); }
 
 .wf-review { display: grid; gap: 12px; }
 .wf-review-card { display: grid; gap: 12px; padding: 14px; border-radius: var(--r-item); background: rgb(255 255 255 / .03); box-shadow: inset 0 0 0 1px var(--surface-border); }
@@ -282,22 +271,6 @@
 .wf-mapping summary span { font-size: 11.5px; opacity: .7; }
 .wf-mapping summary:hover { color: hsl(var(--foreground)); }
 .wf-map-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-top: 10px; }
-
-/* What follows the studio and what stays as saved, side by side. */
-.wf-fit { display: grid; gap: 10px; padding: 12px; border-radius: calc(var(--r-item) - 4px); background: var(--well); }
-.wf-fit-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.wf-fit h5 { margin: 0 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
-.wf-fit ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.wf-fit-cols li { display: grid; grid-template-columns: 12px auto minmax(0, 1fr); align-items: baseline; gap: 6px; font-size: 12.5px; }
-.wf-fit-cols li svg { align-self: center; color: #8fd6a4; }
-.wf-fit-cols li strong { font-weight: 550; white-space: nowrap; }
-.wf-fit-cols li span { min-width: 0; font-size: 11.5px; color: hsl(var(--muted-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wf-fit-cols .is-off li svg { color: hsl(var(--muted-foreground) / .7); }
-.wf-fit-cols .is-off li strong { font-weight: 500; color: hsl(var(--muted-foreground)); }
-.wf-fit p { margin: 0; font-size: 12px; color: hsl(var(--muted-foreground)); }
-.wf-fit-notes { padding-top: 10px !important; border-top: 1px solid var(--surface-border); }
-.wf-fit-notes li { position: relative; padding-left: 14px; font-size: 12px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
-.wf-fit-notes li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 5px; height: 5px; background: hsl(var(--muted-foreground) / .6); }
 
 /* The AI agent hand-off: one quiet row with its copy button. */
 .wf-agent { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: var(--r-item); background: rgb(255 255 255 / .03); box-shadow: inset 0 0 0 1px var(--surface-border); }
@@ -323,8 +296,8 @@
   .wf-filters { padding: 10px 12px 12px; }
   .wf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 2px 12px 20px; }
   .wf-review-row,
-  .wf-map-grid,
-  .wf-fit-cols { grid-template-columns: 1fr; }
+  .wf-map-grid { grid-template-columns: 1fr; }
+  .wf-import-inner { padding: 16px 12px 8px; }
   .wf-agent { flex-wrap: wrap; }
 }
 
@@ -403,3 +376,12 @@
 .wf-noprompt strong { font-size: 12.5px; font-weight: 600; }
 .wf-noprompt span { grid-column: 1; color: hsl(var(--muted-foreground)); }
 .wf-noprompt .btn { grid-column: 2; grid-row: 1 / span 2; }
+
+/* The import, in the same window: the gallery steps aside for one centred column. */
+.wf-import-body { display: block !important; overflow-y: auto !important; overscroll-behavior: contain; }
+.wf-import-inner { max-width: 660px; margin: 0 auto; padding: 22px 24px 12px; }
+.workflow-gallery.is-importing > .modal-foot { padding: 14px 24px; border-top: 1px solid var(--surface-border); }
+.wf-map-title { margin: 4px 0 0; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+.wf-map-title + .wf-map-grid { padding-top: 0; }
+.wf-missing-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.wf-status svg { flex: none; }

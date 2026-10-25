@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Bot, Check, ClipboardPaste, Clock, FileJson, Film, Heart, Minus, Package, RefreshCw, Search, ShieldAlert, Trash2, Undo2, Upload, Wand2, X } from 'lucide-react';
+import { ArrowLeft, Bot, Check, Clock, FileJson, Film, Heart, Package, RefreshCw, Search, ShieldAlert, Trash2, Undo2, Upload, Wand2, X } from 'lucide-react';
 import { Modal } from './Modal';
 import type { ConfirmAction } from './useConfirmation';
 import { apiJson, copyText } from './api';
@@ -12,12 +12,12 @@ import { ModelSetup } from './ModelSetup';
 import { peekDownloadReveal } from './useModelDownloads';
 import { ComfyRestart, useComfyRestarting } from './ComfyRestart';
 import { scrollSideways, useWheelRef } from './wheel';
-import type { ControlMapping, FileSwap, ImportSourceItem, Mode, Profile, SavedWorkflowItem, WorkflowImportPreview, WorkflowPreferences, WorkflowRisk, WorkflowSetupState, WorkflowSummary } from './types';
+import type { ControlMapping, FileSwap, ImportSourceItem, Mode, Profile, ResolvedPack, SavedWorkflowItem, WorkflowImportPreview, WorkflowPreferences, WorkflowRisk, WorkflowSetupState, WorkflowSummary } from './types';
 import { useThisComputer } from './device';
 import { SafeImg } from './SafeImg';
 import type { ShowToast } from './toast';
 import { CopyIcon, useCopyFeedback } from "./CopyFeedback";
-import { agentPrompt, agentPromptFor, controlLabel, loraNodes, workflowControls } from "./workflowAgentGuide";
+import { agentPromptFor, workflowControls } from "./workflowAgentGuide";
 
 type ImportDraft = { raw: unknown; filename: string; preview: WorkflowImportPreview; metadata: WorkflowImportPreview["detected"]; approved: string[]; fileChoices: Record<string, boolean> };
 type ImportRequest = { source: "file" | "history" | "saved" | "media"; workflow?: unknown; filename?: string; promptId?: string; path?: string; media?: string };
@@ -27,16 +27,18 @@ function firstMapping(mapping?: ControlMapping | ControlMapping[]) {
   return Array.isArray(mapping) ? mapping[0] : mapping;
 }
 
-const controlNames: Record<string, string> = { prompt: "Prompt", negative: "Negative prompt", seed: "Seed", width: "Size", steps: "Steps", cfg: "Prompt strength", sampler: "Sampler", frames: "Frames", fps: "FPS", count: "Batch", model: "Model" };
+/** What an import takes from the studio, in the words the studio uses, most important first. */
+const takesWords: Array<[string, string]> = [["prompt", "prompt"], ["negative", "negative prompt"], ["seed", "seed"], ["width", "size"], ["steps", "steps"], ["cfg", "prompt strength"], ["count", "image count"], ["frames", "length"]];
 
-/** What an import gives the studio, in a line: the controls found, images, LoRAs, the rest. */
-function foundSummary(metadata: ImportDraft["metadata"]) {
-  const parts = Object.keys(controlNames).filter((key) => metadata.controls[key]).map((key) => controlNames[key]);
+/** The import's result in one sentence: "Takes your prompt, seed and size." */
+function takesLine(metadata: ImportDraft["metadata"]) {
+  const parts = takesWords.filter(([key]) => metadata.controls[key] || (key === "width" && metadata.controls.height)).map(([, word]) => word);
   const images = metadata.mediaInputs?.length || 0;
-  if (images) parts.push(images === 1 ? "an image input" : `${images} image inputs`);
+  if (images) parts.push(images === 1 ? "an image" : `${images} images`);
   if (metadata.loraStack?.node) parts.push("LoRAs");
+  const joined = parts.join(", ").replace(/, ([^,]*)$/, " and $1");
   const more = metadata.settings?.length || 0;
-  return { parts, more };
+  return { joined, more };
 }
 
 function relativeTime(value = "") {
@@ -65,6 +67,8 @@ type Filter = "all" | "favorites" | "attention";
 /** The file lines the setup panel already shows as rows (see custom-workflows.js workflowOptionIssues). */
 const missingFileIssue = /^Missing (diffusion model|checkpoint|text encoder|VAE|upscale model|file):/;
 
+/** The description every import gets when its file has none: it says nothing, so it isn't shown. */
+const defaultDescription = "Imported ComfyUI workflow";
 
 /** The workflow whose setup panel lists a file, where the download pill leads: the one it was started from, else the first that needs it. */
 function workflowNeeding(workflows: WorkflowSummary[], profiles: Profile[] = [], file: string, subject = "") {
@@ -75,79 +79,9 @@ function workflowNeeding(workflows: WorkflowSummary[], profiles: Profile[] = [],
   return (subject ? workflows.find((workflow) => workflow.id === subject || workflow.profileId === subject) : undefined) || workflows.find(needs);
 }
 
-function timeLabel(value = "") {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString([], { month: "short", day: "numeric" });
-}
-
 function selectedNodeValue(value?: ControlMapping | ControlMapping[]) {
   const mapping = firstMapping(value);
   return mapping?.node && mapping?.input ? `${mapping.node}.${mapping.input}` : "__none";
-}
-
-/** A node as people know it: its canvas title, else its type, with the id to find it. */
-function nodeName(nodes: ImportDraft["metadata"]["nodes"], id: string) {
-  const node = nodes.find((item) => item.id === id);
-  return node ? `${node.title || node.classType} #${id}` : `#${id}`;
-}
-
-/**
- * The honest summary of an import: which studio controls reach the workflow,
- * which don't (and so keep their saved values), and what was only guessed.
- */
-function ImportFit({ item }: { item: ImportDraft }) {
-  const { controls, guessed = [], nodes, kind, loraStack } = item.metadata;
-  const relevant = workflowControls.filter((control) => control.editable && !(kind === "image" && (control.key === "frames" || control.key === "fps")) && !(kind === "video" && control.key === "count"));
-  const connected = workflowControls.filter((control) => controls[control.key]);
-  const unconnected = relevant.filter((control) => !controls[control.key] && !(control.key === "startImage" && item.metadata.mediaInputs?.length));
-  const samplers = nodes.filter((node) => /Sampler/i.test(node.classType) && node.inputs.includes("steps"));
-  const encoders = nodes.filter((node) => /TextEncode/i.test(node.classType) && (node.inputs.includes("text") || node.inputs.includes("prompt")));
-  const loraLoaders = nodes.filter((node) => /lora/i.test(node.classType));
-  const rgthree = nodes.find((node) => (Object.values(loraNodes) as string[]).includes(node.classType));
-  const samplerNode = firstMapping(controls.seed)?.node || firstMapping(controls.steps)?.node;
-
-  const notes: React.ReactNode[] = [];
-  if (encoders.length > 2) notes.push(`${encoders.length} prompt nodes. Only the connected ones get your text; the others keep their saved text.`);
-  if (samplers.length > 1 && samplerNode) notes.push(`${samplers.length} samplers. Only ${nodeName(nodes, samplerNode)} follows seed, steps and CFG; the others keep their saved values.`);
-  if (loraStack?.node) notes.push(`LoRA picker connected to ${nodeName(nodes, loraStack.node)}.`);
-  else if (rgthree) notes.push(`${rgthree.classType} found, but not connected to the LoRA picker. An AI agent can connect it (see below).`);
-  else if (loraLoaders.length) notes.push("The LoRA picker only works with rgthree LoRA loaders. This workflow’s LoRAs stay as saved.");
-  else notes.push("No LoRA picker. It needs an rgthree Power Lora Loader or Lora Loader Stack in the workflow.");
-
-  return (
-    <section className="wf-fit" aria-label="Connected controls">
-      <div className="wf-fit-cols">
-        <div>
-          <h5>Follows the studio</h5>
-          {connected.length ? (
-            <ul>
-              {connected.map((control) => (
-                <li key={control.key}>
-                  <Check size={12} aria-hidden="true" />
-                  <strong>{control.label}</strong>
-                  <span>{nodeName(nodes, firstMapping(controls[control.key])?.node || "")}{guessed.includes(control.key) ? " · found" : ""}</span>
-                </li>
-              ))}
-            </ul>
-          ) : <p>Nothing connected. It runs as saved, whatever you type.</p>}
-        </div>
-        <div>
-          <h5>Stays as saved</h5>
-          {unconnected.length ? (
-            <ul className="is-off">
-              {unconnected.map((control) => <li key={control.key}><Minus size={12} aria-hidden="true" /><strong>{control.label}</strong></li>)}
-            </ul>
-          ) : <p>Every studio control is connected.</p>}
-        </div>
-      </div>
-      <ul className="wf-fit-notes">
-        {notes.map((note, index) => <li key={index}>{note}</li>)}
-        <li>Everything else runs as saved.</li>
-      </ul>
-    </section>
-  );
 }
 
 /**
@@ -171,18 +105,16 @@ function ImportRisks({ risks }: { risks: WorkflowRisk[] }) {
   );
 }
 
-/** Hands the job of fitting a workflow to an AI agent: a prompt that says what HEISS UI can and can't connect. */
-function AgentGuide({ onCopy, copied, forWorkflow }: { onCopy: () => void; copied: boolean; forWorkflow?: boolean }) {
+/** Hands the job of fixing a workflow's connections to an AI agent. */
+function AgentGuide({ onCopy, copied }: { onCopy: () => void; copied: boolean }) {
   return (
     <div className="wf-agent">
       <span className="wf-agent-icon" aria-hidden="true"><Bot size={16} /></span>
       <div className="wf-agent-text">
-        <strong>{forWorkflow ? "Let an AI agent fix the connections" : "Prepare a workflow with an AI agent"}</strong>
-        <span>{forWorkflow
-          ? "Copies a prompt with this workflow and its connections. Paste it into Claude, ChatGPT or another agent, then import the JSON it returns."
-          : "Copies a prompt that explains what can be connected. Paste it into Claude, ChatGPT or another agent with your workflow JSON, then import what it returns."}</span>
+        <strong>Let an AI agent fix the connections</strong>
+        <span>Copies a prompt with this workflow and its connections. Paste it into Claude, ChatGPT or another agent, then import the JSON it returns.</span>
       </div>
-      <button type="button" className="btn" onClick={onCopy}><CopyIcon copied={copied} size={13} /> {copied ? "Copied" : forWorkflow ? "Copy for an agent" : "Copy prompt"}</button>
+      <button type="button" className="btn" onClick={onCopy}><CopyIcon copied={copied} size={13} /> {copied ? "Copied" : "Copy for an agent"}</button>
     </div>
   );
 }
@@ -198,6 +130,11 @@ function StatusBadge({ validation }: { validation: WorkflowSummary["validation"]
   const comfyRestarting = useComfyRestarting();
   const status = workflowState(validation, comfyRestarting);
   return <span className={cn("wf-status", `is-${status.state}`)}><i aria-hidden="true" />{status.label}</span>;
+}
+
+/** A workflow whose add-ons are installing right now: said on its card and in its details. */
+function SettingUpBadge() {
+  return <span className="wf-status is-unchecked"><RefreshCw size={11} className="spin" aria-hidden="true" />Getting add-ons</span>;
 }
 
 /** The one question an import may ask: which text is the prompt, shown as the texts themselves. */
@@ -223,39 +160,9 @@ function PromptChoice({ item, onPick }: { item: ImportDraft; onPick: (mappings: 
   );
 }
 
-/**
- * The add-ons an import needs. Registry packs are just listed: they install on
- * their own. A pack from outside the registry gets a checkbox, off until ticked.
- */
-function ImportAddOns({ item, onApprove }: { item: ImportDraft; onApprove: (key: string, on: boolean) => void }) {
-  const packs = item.preview.packs?.packs || [];
-  const unresolved = item.preview.packs?.unresolved || [];
-  if (!packs.length && !unresolved.length) return null;
-  const registry = packs.filter((pack) => pack.registry);
-  const outside = packs.filter((pack) => !pack.registry);
-  return (
-    <section className="wf-addons" aria-label="Add-ons">
-      {registry.length ? (
-        <p className="wf-addons-line"><Package size={13} aria-hidden="true" /> Gets {registry.map((pack) => pack.name).join(", ")} from the ComfyUI registry when you import.</p>
-      ) : null}
-      {outside.map((pack) => (
-        <label key={pack.key} className="wf-addons-outside">
-          <input type="checkbox" checked={item.approved.includes(pack.key)} onChange={(event) => onApprove(pack.key, event.target.checked)} />
-          <span>
-            <strong>Also install {pack.name}?</strong>
-            <span>It isn’t in the ComfyUI registry; it comes straight from {pack.repository.replace(/^https:\/\//, "")}.</span>
-          </span>
-        </label>
-      ))}
-      {unresolved.length ? (
-        <p className="wf-addons-line is-quiet">Nobody publishes {unresolved.length === 1 ? "a node" : "nodes"} it uses ({unresolved.slice(0, 4).join(", ")}{unresolved.length > 4 ? "…" : ""}). It may still run if you have them in ComfyUI.</p>
-      ) : null}
-    </section>
-  );
-}
-
 const fileName = (file = "") => file.split(/[\\/]/).pop() || file;
 const swapKey = (swap: { node: string; input: string }) => `${swap.node}.${swap.input}`;
+const listWords = (words: string[]) => words.join(", ").replace(/, ([^,]*)$/, " and $1");
 
 /** What an import does about model files ComfyUI doesn't list: the file stand-ins and downloads it will use, in plain lines. */
 export function importFileDecisions(item: ImportDraft) {
@@ -278,41 +185,69 @@ export function importFileDecisions(item: ImportDraft) {
 type ModelPlanEntryOff = { node: string; key: string; lora: string };
 
 /**
- * Model files, said quietly: what's used from this computer, what downloads
- * with the import, what runs without. Only a near-name file asks, and a
- * stand-in model can be switched off.
+ * Everything an import brings with it or works around, said quietly: one line
+ * for what it gets (registry add-ons and file downloads together), one each
+ * for files used from elsewhere and LoRAs left out. Only an add-on from
+ * outside the registry and a stand-in model file ask, as a checkbox.
  */
-function ImportFiles({ item, onChoose }: { item: ImportDraft; onChoose: (key: string, on: boolean) => void }) {
+function ImportNeeds({ item, onApprove, onChoose }: { item: ImportDraft; onApprove: (key: string, on: boolean) => void; onChoose: (key: string, on: boolean) => void }) {
+  const packs = item.preview.packs?.packs || [];
+  const unresolvedNodes = item.preview.packs?.unresolved || [];
+  const registry = packs.filter((pack) => pack.registry);
+  const outside = packs.filter((pack) => !pack.registry);
   const plan = item.preview.models;
-  if (!plan) return null;
+  const downloads = plan?.downloads || [];
+  const gets = [
+    ...(registry.length ? [registry.length === 1 ? `the ${registry[0].name} add-on` : `${registry.length} add-ons (${registry.map((pack) => pack.name).join(", ")})`] : []),
+    ...downloads.map((download) => `${fileName(download.file)}${download.size ? ` (${download.size})` : ""}`)
+  ];
   const lines: React.ReactNode[] = [];
-  if (plan.swaps.length) lines.push(<p key="swaps" className="wf-found is-quiet">Uses your own {plan.swaps.length === 1 ? `copy of ${fileName(plan.swaps[0].wanted)}` : `copies of ${plan.swaps.length} files`}, filed in another folder.</p>);
-  if (plan.downloads.length) lines.push(<p key="downloads" className="wf-found is-quiet">Downloads {plan.downloads.map((download) => `${fileName(download.file)}${download.size ? ` (${download.size})` : ""}`).join(", ")} from Hugging Face when you import.</p>);
-  if (plan.skippedLoras.length || plan.loraEntriesOff.length) {
+  if (gets.length) lines.push(<p key="gets" className="wf-addons-line"><Package size={13} aria-hidden="true" /> Also gets {listWords(gets)} when you import.</p>);
+  if (plan?.swaps.length) lines.push(<p key="swaps" className="wf-found is-quiet">Uses your own {plan.swaps.length === 1 ? `copy of ${fileName(plan.swaps[0].wanted)}` : `copies of ${plan.swaps.length} files`}, filed in another folder.</p>);
+  if (plan && (plan.skippedLoras.length || plan.loraEntriesOff.length)) {
     const names = [...plan.skippedLoras.map((entry) => entry.file), ...plan.loraEntriesOff.map((entry) => entry.lora)].map(fileName);
-    lines.push(<p key="loras" className="wf-found is-quiet">Runs without {names.join(", ")}: {names.length === 1 ? "that LoRA isn’t" : "those LoRAs aren’t"} on this computer.</p>);
+    lines.push(<p key="loras" className="wf-found is-quiet">Runs without {listWords(names)}: {names.length === 1 ? "that LoRA isn’t" : "those LoRAs aren’t"} on this computer.</p>);
   }
+  const choices = plan ? [
+    ...plan.substitutes.map((swap) => ({ swap, fallback: true, text: <>Use your <strong>{fileName(swap.file)}</strong> in place of {fileName(swap.wanted)}, which isn’t here</> })),
+    ...plan.suggestions.map((swap) => ({ swap, fallback: false, text: <>Use your <strong>{fileName(swap.file)}</strong> for {fileName(swap.wanted)}? The names are close.</> }))
+  ] : [];
+  if (!lines.length && !outside.length && !choices.length && !unresolvedNodes.length && !plan?.unresolved.length) return null;
   return (
-    <>
+    <section className="wf-addons" aria-label="What it brings">
       {lines}
-      {[...plan.substitutes.map((swap) => ({ swap, fallback: true, text: <>Use your <strong>{fileName(swap.file)}</strong> in place of {fileName(swap.wanted)}, which isn’t here</> })),
-        ...plan.suggestions.map((swap) => ({ swap, fallback: false, text: <>Use your <strong>{fileName(swap.file)}</strong> for {fileName(swap.wanted)}? The names are close.</> }))].map(({ swap, fallback, text }) => (
+      {outside.map((pack) => (
+        <label key={pack.key} className="wf-addons-outside">
+          <input type="checkbox" checked={item.approved.includes(pack.key)} onChange={(event) => onApprove(pack.key, event.target.checked)} />
+          <span>
+            <strong>Also install {pack.name}?</strong>
+            <span>It isn’t in the ComfyUI registry; it comes straight from {pack.repository.replace(/^https:\/\//, "")}.</span>
+          </span>
+        </label>
+      ))}
+      {choices.map(({ swap, fallback, text }) => (
         <label key={swapKey(swap)} className="wf-addons-outside">
           <input type="checkbox" checked={item.fileChoices[swapKey(swap)] ?? fallback} onChange={(event) => onChoose(swapKey(swap), event.target.checked)} />
           <span>{text}</span>
         </label>
       ))}
-      {plan.unresolved.length ? <p className="wf-found is-quiet">Still needs {plan.unresolved.map((entry) => `${fileName(entry.file)} (models/${entry.folder})`).join(", ")}. HEISS couldn’t find {plan.unresolved.length === 1 ? "it" : "them"} to download.</p> : null}
-    </>
+      {unresolvedNodes.length ? (
+        <p className="wf-found is-quiet">Nobody publishes {unresolvedNodes.length === 1 ? "a node" : "nodes"} it uses ({unresolvedNodes.slice(0, 4).join(", ")}{unresolvedNodes.length > 4 ? "…" : ""}). It may still run if you have them in ComfyUI.</p>
+      ) : null}
+      {plan?.unresolved.length ? <p className="wf-found is-quiet">Still needs {plan.unresolved.map((entry) => `${fileName(entry.file)} (models/${entry.folder})`).join(", ")}. HEISS couldn’t find {plan.unresolved.length === 1 ? "it" : "them"} to download.</p> : null}
+    </section>
   );
 }
 
 /**
- * Add-on installs in the background: one quiet line while it works, nothing
- * once it's done, and an offer to undo only when something broke.
+ * How the last add-on setup ended, when it needs a look: an undo when an
+ * install broke something, the message when it was undone or failed, a
+ * restart when one is left to do. Progress itself shows on the workflow's card.
  */
 function SetupStrip({ setup, onUndo, onDismiss, busy }: { setup: WorkflowSetupState; onUndo: () => void; onDismiss: () => void; busy: boolean }) {
   if (setup.status === "running") {
+    // A setup for no particular card (started before cards knew): one quiet line.
+    if (setup.workflowIds?.length) return null;
     return <div className="wf-setup" role="status"><RefreshCw size={13} className="spin" aria-hidden="true" /><span>{setup.step || "Setting up"}…</span></div>;
   }
   if (setup.status === "regressed") {
@@ -339,44 +274,6 @@ function SetupStrip({ setup, onUndo, onDismiss, busy }: { setup: WorkflowSetupSt
   return null;
 }
 
-type InstallRecord = { id: string; at: string; reason: string; packs: Array<{ name: string }>; status: string; canUndo: boolean };
-
-/** Add-ons installed for workflows, newest first, each with an undo. Loaded only when opened. */
-function InstallHistory({ showToast, onUndone }: { showToast: ShowToast; onUndone: () => void }) {
-  const [items, setItems] = useState<InstallRecord[] | null>(null);
-  const [working, setWorking] = useState("");
-  const load = () => apiJson<{ installs: InstallRecord[] }>("/api/installs").then((data) => setItems(data.installs || [])).catch(() => setItems([]));
-  const undo = async (id: string) => {
-    setWorking(id);
-    try {
-      await apiJson("/api/workflows/setup/undo", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ snapshotId: id }) });
-      showToast("Undone. ComfyUI is restarting with what it had before.", "success");
-      onUndone();
-      await load();
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Couldn’t undo the install", "error");
-    } finally {
-      setWorking("");
-    }
-  };
-  return (
-    <details className="wf-mapping" onToggle={(event) => { if ((event.currentTarget as HTMLDetailsElement).open && !items) load(); }}>
-      <summary>Add-ons installed for workflows</summary>
-      {items === null ? <p className="wf-pick-hint">Loading…</p> : !items.length ? <p className="wf-pick-hint">Nothing yet.</p> : (
-        <ul className="wf-saved">
-          {items.map((item) => (
-            <li key={item.id} className="wf-install-row">
-              <span>{item.packs.map((pack) => pack.name).join(", ") || item.reason}</span>
-              <em>{item.status === "undone" ? "undone" : relativeTime(item.at)}</em>
-              {item.canUndo && item.status !== "undone" ? <button type="button" className="btn is-ghost" disabled={Boolean(working)} onClick={() => undo(item.id)}><Undo2 size={12} /> Undo</button> : null}
-            </li>
-          ))}
-        </ul>
-      )}
-    </details>
-  );
-}
-
 /** Recent runs from ComfyUI's history: the workflow behind a picture you made, one tap away. */
 function RecentRuns({ items, onPick, disabled }: { items: ImportSourceItem[]; onPick: (item: ImportSourceItem) => void; disabled: boolean }) {
   return (
@@ -395,6 +292,8 @@ function RecentRuns({ items, onPick, disabled }: { items: ImportSourceItem[]; on
     </div>
   );
 }
+
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 export function WorkflowGallery({ view }: { view: any }) {
   const comfyRestarting = useComfyRestarting();
@@ -430,7 +329,6 @@ export function WorkflowGallery({ view }: { view: any }) {
   const [selectedId, setSelectedId] = useState(revealed?.id || model || workflows.find((item) => item.kind === mode)?.id || "");
   const [importOpen, setImportOpen] = useState(false);
   const [importStep, setImportStep] = useState<"choose" | "review">("choose");
-  const [pasteJson, setPasteJson] = useState("");
   const [imports, setImports] = useState<ImportDraft[]>([]);
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -441,6 +339,9 @@ export function WorkflowGallery({ view }: { view: any }) {
   const fileInput = useRef<HTMLInputElement>(null);
   // The filter pills scroll sideways with a plain wheel; their scrollbar is hidden.
   const filtersWheelRef = useWheelRef<HTMLDivElement>(scrollSideways);
+  // Followed app-wide (workflowSetup.ts): its card shows it working, the strip how it ended.
+  const setup = useWorkflowSetup();
+  const settingUpIds = useMemo(() => new Set(setup?.status === "running" ? setup.workflowIds || [] : []), [setup]);
 
   const ofKind = useMemo(() => workflows.filter((item) => item.kind === kind), [kind, workflows]);
   const attentionCount = ofKind.filter((item) => !item.validation.ok).length;
@@ -455,6 +356,7 @@ export function WorkflowGallery({ view }: { view: any }) {
   }, [filter, ofKind, query]);
   const selected = filtered.find((item) => item.id === selectedId) || filtered[0] || null;
   const selectedStatus = selected ? workflowState(selected.validation, comfyRestarting) : null;
+  const selectedSettingUp = Boolean(selected && settingUpIds.has(selected.profileId));
   // An import's family, from the ones installed here: it shares their LoRA stacks. "Its own" keeps it apart.
   const familyOptions = (current = "") => {
     const known = new Map<string, string>();
@@ -471,7 +373,7 @@ export function WorkflowGallery({ view }: { view: any }) {
   const settingUp = Boolean(setupSubject?.missing?.length);
 
   const openImport = () => { setImportStep(imports.length ? "review" : "choose"); setImportOpen(true); };
-  const closeImport = () => { setImportOpen(false); setImports([]); setImportStep("choose"); setPasteJson(""); setAdvancedOpen({}); };
+  const closeImport = () => { setImportOpen(false); setImports([]); setImportStep("choose"); setAdvancedOpen({}); };
   const checkAgain = async () => {
     setChecking(true);
     try { refreshModels(false); await Promise.resolve(refreshWorkflows()); } finally { window.setTimeout(() => setChecking(false), 600); }
@@ -515,7 +417,7 @@ export function WorkflowGallery({ view }: { view: any }) {
 
   const deleteWorkflow = async (workflow: WorkflowSummary) => {
     if (!workflow.deleteId) return;
-    if (!await confirmAction({ title: `Delete ${workflow.name}?`, description: "To get it back, import its JSON again.", action: "Delete", destructive: true })) return;
+    if (!await confirmAction({ title: `Delete ${workflow.name}?`, description: "To get it back, import it again.", action: "Delete", destructive: true })) return;
     setBusy(true);
     try {
       await apiJson(`/api/workflows/${encodeURIComponent(workflow.deleteId)}`, { method: "DELETE" });
@@ -538,10 +440,48 @@ export function WorkflowGallery({ view }: { view: any }) {
     }
   };
 
+  /** Starts installing add-ons in the background; their workflows' cards show it until it ends. */
+  const startSetup = async (packs: ResolvedPack[], approved: string[], names: string[], workflowIds: string[]) => {
+    const data = await apiJson<{ setup: WorkflowSetupState }>("/api/workflows/setup", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ packs, approved, workflowName: names.join(", "), workflowIds })
+    });
+    setWorkflowSetup(data.setup);
+  };
+
+  /** An imported workflow that lost (or never had) its nodes: find the add-ons that provide them and get them. */
+  const getAddOns = async (workflow: WorkflowSummary) => {
+    setBusy(true);
+    try {
+      const plan = await apiJson<{ packs: ResolvedPack[]; unresolved: string[] }>("/api/workflows/packs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ missingNodes: workflow.validation.missingNodes || [] })
+      });
+      if (!plan.packs.length) {
+        showToast("No add-on HEISS knows provides these nodes", "error", { description: "Copy their names and look them up in ComfyUI-Manager." });
+        return;
+      }
+      const outside = plan.packs.filter((pack) => !pack.registry);
+      let approved: string[] = [];
+      if (outside.length && await confirmAction({
+        title: outside.length === 1 ? `Also install ${outside[0].name}?` : `Also install ${outside.length} add-ons from outside the registry?`,
+        description: `${outside.map((pack) => pack.repository.replace(/^https:\/\//, "")).join(", ")} ${outside.length === 1 ? "isn’t" : "aren’t"} in the ComfyUI registry. Install only if you trust where ${outside.length === 1 ? "it comes" : "they come"} from.`,
+        action: "Install"
+      })) approved = outside.map((pack) => pack.key);
+      const packs = plan.packs.filter((pack) => pack.registry || approved.includes(pack.key));
+      if (!packs.length) return;
+      await startSetup(packs, approved, [workflow.name], [workflow.profileId]);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Couldn’t get the add-ons", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const [sources, setSources] = useState<{ loading: boolean; comfy: boolean; recent: ImportSourceItem[]; saved: SavedWorkflowItem[] }>({ loading: false, comfy: true, recent: [], saved: [] });
   const [showAllSaved, setShowAllSaved] = useState(false);
-  // Followed app-wide (workflowSetup.ts): the strip shows it while this window is open.
-  const setup = useWorkflowSetup();
 
   // The picker opens on what ComfyUI already has: recent runs and saved workflows.
   useEffect(() => {
@@ -563,10 +503,10 @@ export function WorkflowGallery({ view }: { view: any }) {
     setImports((current) => [...current, { raw, filename: request.filename || data.preview.detected.name, preview: data.preview, metadata: data.preview.detected, approved: [], fileChoices: {} }]);
   };
 
-  const pickSource = async (request: ImportRequest) => {
+  const pickSource = async (request: ImportRequest, raw: unknown = null) => {
     setBusy(true);
     try {
-      await previewRequest(request);
+      await previewRequest(request, raw);
       setImportStep("review");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Couldn’t read the workflow", "error");
@@ -596,33 +536,47 @@ export function WorkflowGallery({ view }: { view: any }) {
     }
   };
 
-  const previewPaste = async () => {
-    if (!pasteJson.trim()) return;
-    setBusy(true);
-    try {
-      const raw = JSON.parse(pasteJson);
-      await previewRequest({ source: "file", workflow: raw, filename: "pasted-workflow.json" }, raw);
-      setPasteJson("");
-      setImportStep("review");
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "That isn’t valid workflow JSON", "error");
-    } finally {
-      setBusy(false);
+  // While picking, a paste anywhere is an import: a workflow's JSON, or a file copied in Finder or Explorer.
+  const pasteRef = useRef<(event: ClipboardEvent) => void>(() => undefined);
+  pasteRef.current = (event: ClipboardEvent) => {
+    if (busy) return;
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (target?.closest("input, textarea, [contenteditable='true']")) return;
+    const files = Array.from(event.clipboardData?.files || []).filter(importableFile);
+    if (files.length) {
+      event.preventDefault();
+      readFiles(files);
+      return;
     }
+    const text = event.clipboardData?.getData("text") || "";
+    if (!text.trim()) return;
+    event.preventDefault();
+    let raw: unknown;
+    try { raw = JSON.parse(text); } catch { showToast("That isn’t a ComfyUI workflow", "error", { description: "Copy the workflow’s JSON, or the file itself." }); return; }
+    // No file name: the server names it after its main model.
+    pickSource({ source: "file", workflow: raw, filename: "" }, raw);
   };
+  useEffect(() => {
+    if (!importOpen || importStep !== "choose") return;
+    const onPaste = (event: ClipboardEvent) => pasteRef.current(event);
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [importOpen, importStep]);
 
   const saveImports = async () => {
     setBusy(true);
     try {
-      const packs = new Map<string, NonNullable<WorkflowImportPreview["packs"]>["packs"][number]>();
+      const packs = new Map<string, ResolvedPack>();
+      const saved: Array<{ profileId: string; kind: Mode }> = [];
       for (const item of imports) {
         const { nodes: _nodes, guessed: _guessed, question: _question, confidence: _confidence, ...metadata } = item.metadata;
         const files = importFileDecisions(item);
-        await apiJson("/api/workflows/import", {
+        const data = await apiJson<{ workflow: { profileId: string; kind: Mode } }>("/api/workflows/import", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ graph: item.preview.graph, filename: item.filename, ...(item.preview.provisional ? { provisional: true, visual: item.preview.visual } : {}), metadata: { ...metadata, source: item.preview.source || "file", fileSwaps: files.fileSwaps, skippedLoras: files.skippedLoras, loraEntriesOff: files.loraEntriesOff } })
         });
+        if (data.workflow?.profileId) saved.push({ profileId: data.workflow.profileId, kind: data.workflow.kind || item.metadata.kind });
         // Its model files download in the background, in the usual downloads list.
         for (const id of files.downloads) {
           await apiJson("/api/models/downloads", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch((error) => showToast(error instanceof Error ? error.message : "Couldn’t start a download", "error"));
@@ -634,21 +588,26 @@ export function WorkflowGallery({ view }: { view: any }) {
       const count = imports.length;
       const names = imports.map((item) => item.metadata.name);
       const approved = imports.flatMap((item) => item.approved);
-      setImports([]);
-      setImportOpen(false);
+      closeImport();
       refreshModels(false);
       refreshWorkflows();
+      // Land on what was just imported, so Use workflow is one click away.
+      const last = saved[saved.length - 1];
+      if (last) {
+        setKind(last.kind);
+        setFilter("all");
+        setQuery("");
+        setSelectedId(last.profileId);
+        setMobileDetailsOpen(true);
+      }
       if (packs.size) {
-        // Add-ons install in the background; the line at the top follows it.
-        const data = await apiJson<{ setup: WorkflowSetupState }>("/api/workflows/setup", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ packs: [...packs.values()], approved, workflowName: names.join(", ") })
-        });
-        setWorkflowSetup(data.setup);
-        showToast(count === 1 ? "Workflow imported. Getting its add-ons…" : `${count} workflows imported. Getting their add-ons…`, "success");
+        // Add-ons install in the background; the new cards say so until they're in.
+        await startSetup([...packs.values()], approved, names, saved.map((entry) => entry.profileId));
+        showToast(count === 1 ? "Imported. Getting its add-ons…" : `${count} workflows imported. Getting their add-ons…`, "success");
       } else {
-        showToast(count === 1 ? "Workflow imported" : `${count} workflows imported`, "success");
+        // "Use it" only when it can run now: nothing to download, nothing missing.
+        const ready = count === 1 && imports[0].preview.validation.ok && !importFileDecisions(imports[0]).downloads.length;
+        showToast(count === 1 ? "Workflow imported" : `${count} workflows imported`, "success", last && ready ? { action: { label: "Use it", onClick: () => { selectWorkflow(last.profileId); onClose(); } } } : undefined);
       }
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Couldn’t import the workflow", "error");
@@ -711,17 +670,32 @@ export function WorkflowGallery({ view }: { view: any }) {
     } : item));
   };
 
+  // The import happens in this same window: the gallery steps aside for the picker, then the review.
+  const importTitle = importStep === "choose" ? "Import a workflow" : imports.length > 1 ? `Ready to import ${imports.length} workflows` : "Ready to import";
+  const importDescription = importStep === "choose"
+    ? "Pick something you ran in ComfyUI, or drop or paste a workflow."
+    : "It runs the way you built it in ComfyUI. Your prompt and the usual controls go in from here.";
+
   return (
     <Modal
       open
-      onOpenChange={(open) => { if (!open) onClose(); }}
+      // Escape, the close button and a click outside step back out of an import before closing the window.
+      onOpenChange={(open) => { if (open) return; if (importOpen) closeImport(); else onClose(); }}
       size="wide"
       busy={busy}
-      className="workflow-gallery"
-      bodyClassName="wf-layout"
-      title="Workflows"
-      description="Choose what the next generation runs on, or import a ComfyUI workflow."
-      headerActions={thisComputer ? <button className="btn is-primary" onClick={openImport}><Upload size={15} /><span>Import</span></button> : undefined}
+      className={cn("workflow-gallery", importOpen && "is-importing")}
+      bodyClassName={importOpen ? "wf-import-body" : "wf-layout"}
+      title={importOpen ? importTitle : "Workflows"}
+      description={importOpen ? importDescription : "Choose what the next generation runs on, or import a ComfyUI workflow."}
+      headerActions={importOpen ? undefined : thisComputer ? <button className="btn is-primary" onClick={openImport}><Upload size={15} /><span>Import</span></button> : undefined}
+      footer={!importOpen ? undefined : importStep === "choose" ? (
+        <button className="btn" disabled={busy} onClick={closeImport}>Cancel</button>
+      ) : (
+        <>
+          <button className="btn" disabled={busy} onClick={() => setImportStep("choose")}><ArrowLeft size={14} /> Add more</button>
+          <button className="btn is-primary" onClick={saveImports} disabled={busy || !imports.length}>{busy ? "Importing…" : imports.length > 1 ? `Import ${imports.length} workflows` : "Import"}</button>
+        </>
+      )}
       contentProps={{
         onDragEnter: (event) => { if (event.dataTransfer.types.includes("Files")) { event.preventDefault(); setDragging(true); } },
         onDragOver: (event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); },
@@ -729,228 +703,210 @@ export function WorkflowGallery({ view }: { view: any }) {
         onDrop: (event) => { event.preventDefault(); setDragging(false); const files = Array.from(event.dataTransfer.files).filter(importableFile); if (files.length && thisComputer) readFiles(files); }
       }}
     >
-      <section className={cn("wf-browse", mobileDetailsOpen && "is-hidden-mobile")}>
-        {setup ? <SetupStrip setup={setup} busy={busy} onUndo={undoSetup} onDismiss={dismissWorkflowSetup} /> : null}
-        <div className="wf-toolbar">
-          <label className="wf-search">
-            <Search size={14} />
-            <input className="is-framed" aria-label="Search workflows" value={query} placeholder="Search workflows" onChange={(event) => setQuery(event.target.value)} />
-            {query ? <button type="button" aria-label="Clear search" onClick={() => setQuery("")}><X size={13} /></button> : null}
-          </label>
-          <Segmented label="Kind" value={kind} onChange={(next) => { setKind(next); setFilter("all"); }} options={[{ value: "image", label: "Image" }, { value: "video", label: <>Video<BetaTag /></> }]} />
-        </div>
-        <div ref={filtersWheelRef} className="wf-filters" role="radiogroup" aria-label="Filter workflows">
-          {([["all", `All ${ofKind.length}`], ["favorites", "Favorites"], ...(attentionCount ? [["attention", `Needs attention ${attentionCount}`]] : [])] as Array<[Filter, string]>).map(([value, label]) => (
-            <button key={value} type="button" role="radio" aria-checked={filter === value} className={cn(filter === value && "active")} onClick={() => setFilter(value)}>{label}</button>
-          ))}
-        </div>
-        {filtered.length ? (
-          <div className="wf-grid">
-            {filtered.map((workflow) => (
-              <button
-                key={workflow.id}
-                type="button"
-                aria-pressed={workflow.id === selected?.id}
-                className={cn("wf-card", workflow.id === selected?.id && "active")}
-                onClick={() => { setSelectedId(workflow.id); setMobileDetailsOpen(true); }}
-                onDoubleClick={() => useWorkflow(workflow)}
-              >
-                <span className="wf-thumb"><WorkflowThumbnail key={workflow.thumbnail} src={workflow.thumbnail} /></span>
-                {workflow.favorite ? <span className="wf-fav" aria-label="Favorite"><Heart size={12} fill="currentColor" /></span> : null}
-                {workflow.profileId === model ? <span className="wf-current">In use</span> : null}
-                <span className="wf-card-copy">
-                  <strong>{workflow.name}</strong>
-                  <span><em className={cn("wf-origin", workflow.source === "builtin" && "is-builtin")}>{workflow.source === "builtin" ? "Built in" : "Imported"}</em>{workflow.familyName || workflow.family}</span>
-                </span>
-                {workflow.validation.ok && !workflow.validation.unverified ? null : <StatusBadge validation={workflow.validation} />}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="wf-empty">
-            <Search size={20} />
-            <h3>{query ? "Nothing matches" : filter === "favorites" ? "No favorites yet" : `No ${kind} workflows yet`}</h3>
-            <p>{query ? "Try another name or clear the search." : filter === "favorites" ? "Tap the heart on a workflow to add it here." : "Import a ComfyUI workflow."}</p>
-            {query ? <button className="btn" onClick={() => setQuery("")}>Clear search</button> : filter === "favorites" ? <button className="btn" onClick={() => setFilter("all")}>Show all</button> : thisComputer ? <button className="btn is-primary" onClick={openImport}><Upload size={14} /> Import workflow</button> : null}
-          </div>
-        )}
-      </section>
-
-      <aside className={cn("wf-detail", mobileDetailsOpen && "is-open-mobile")}>
-        {selected && selectedStatus ? (
-          <>
-            <button type="button" className="btn is-ghost wf-back" onClick={() => setMobileDetailsOpen(false)}><ArrowLeft size={15} /> All workflows</button>
-            <div className="wf-detail-thumb"><WorkflowThumbnail key={selected.thumbnail} src={selected.thumbnail} /></div>
-            <div className="wf-detail-head">
-              <h3>{selected.name}</h3>
-              <button type="button" className={cn("wf-heart", selected.favorite && "active")} aria-pressed={Boolean(selected.favorite)} aria-label={selected.favorite ? "Remove from favorites" : "Add to favorites"} disabled={busy} onClick={() => updateFavorites(selected.id).catch((error) => showToast(error instanceof Error ? error.message : "Couldn’t update favorites", "error"))}>
-                <Heart size={16} fill={selected.favorite ? "currentColor" : "none"} />
-              </button>
-            </div>
-            {selected.description ? <p className="wf-detail-desc">{selected.description}</p> : null}
-
-            <div className={cn("wf-health", `is-${selectedStatus.state}`)}>
-              <StatusBadge validation={selected.validation} />
-              {/* With the setup panel below, its rows say it; the summary and issue lines would repeat them. */}
-              {settingUp ? null : <p>{selectedStatus.detail}</p>}
-              {setupSubject ? (
-                <ModelSetup key={setupSubject.id} variant="gallery" profile={setupSubject} alsoNeedsNodes={Boolean(!selectedProfile && selected.validation.missingNodes?.length)} showToast={showToast} onInstalled={() => { refreshModels(false); refreshWorkflows(); }} />
+      {importOpen ? (
+        <div className="wf-import-inner">
+          {importStep === "choose" ? (
+            <div className="wf-pick">
+              <section className="wf-pick-section" aria-label="Recent in ComfyUI">
+                <h4>Recent in ComfyUI</h4>
+                {sources.loading && !sources.recent.length ? <p className="wf-pick-hint">Looking at what ComfyUI ran…</p>
+                  : sources.recent.length ? <RecentRuns items={sources.recent} disabled={busy} onPick={(item) => pickSource({ source: "history", promptId: item.id, filename: item.name })} />
+                  : <p className="wf-pick-hint">{sources.comfy ? "Run a workflow in ComfyUI and it shows up here." : "Start ComfyUI to pick from what you ran there."}</p>}
+              </section>
+              {sources.saved.length ? (
+                <section className="wf-pick-section" aria-label="Saved in ComfyUI">
+                  <h4>Saved in ComfyUI</h4>
+                  <ul className="wf-saved">
+                    {(showAllSaved ? sources.saved : sources.saved.slice(0, 6)).map((item) => (
+                      <li key={item.path}>
+                        <button type="button" disabled={busy} onClick={() => pickSource({ source: "saved", path: item.path, filename: item.name })}>
+                          <FileJson size={13} aria-hidden="true" /><span>{item.path.replace(/\.json$/i, "")}</span><em>{relativeTime(item.modified)}</em>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {sources.saved.length > 6 && !showAllSaved ? <button type="button" className="btn is-ghost" onClick={() => setShowAllSaved(true)}>Show all {sources.saved.length}</button> : null}
+                </section>
               ) : null}
-              {selected.validation.missingNodes?.length ? (
-                <div className="wf-missing">
-                  <ul>{selected.validation.missingNodes.map((node) => <li key={node}><code>{node}</code></li>)}</ul>
-                  <button className="btn is-ghost" onClick={() => copyMissing(selected.validation.missingNodes || [])}><CopyIcon copied={Boolean(nodesCopy.copied)} size={13} /> {nodesCopy.copied ? "Copied" : "Copy names"}</button>
+              <button type="button" className="wf-dropzone" onClick={() => fileInput.current?.click()} disabled={busy}>
+                <Upload size={20} />
+                <strong>{busy ? "Reading…" : "Choose a file"}</strong>
+                <span>A workflow (.json), or an image or video ComfyUI made. Or drop it here, or paste it with {isMac ? "⌘V" : "Ctrl+V"}.</span>
+              </button>
+              <input ref={fileInput} hidden type="file" accept="application/json,.json,image/png,image/webp,video/mp4,video/webm,.png,.webp,.mp4,.webm" multiple onChange={(event) => { if (event.target.files?.length) readFiles(event.target.files); event.currentTarget.value = ""; }} />
+            </div>
+          ) : (
+            <div className="wf-review">
+              {imports.map((item, index) => {
+                const status = workflowState(item.preview.validation, comfyRestarting);
+                const { joined, more } = takesLine(item.metadata);
+                const missingFiles = item.preview.validation.missingParts || [];
+                const packsCover = new Set((item.preview.packs?.packs || []).flatMap((pack) => pack.nodes));
+                return (
+                  <div className="wf-review-card" key={`${item.filename}-${index}`}>
+                    <div className="wf-review-head">
+                      {item.preview.thumbnail ? <span className="wf-review-thumb"><SafeImg src={item.preview.thumbnail} fallback={<Wand2 size={16} />} /></span> : null}
+                      <input className="modal-input wf-review-name" aria-label="Name" value={item.metadata.name} onChange={(event) => updateImport(index, { name: event.target.value })} />
+                      {imports.length > 1 ? <button type="button" className="modal-close" aria-label="Remove from import" onClick={() => setImports((current) => current.filter((_, i) => i !== index))}><X size={14} /></button> : null}
+                    </div>
+                    <PromptChoice item={item} onPick={(mappings) => answerPrompt(index, mappings)} />
+                    {item.metadata.controls.prompt ? (
+                      <p className="wf-found">Takes your {joined}.{more ? <> Its other {more === 1 ? "setting is" : `${more} settings are`} in the sidebar’s Advanced tab.</> : null}</p>
+                    ) : item.preview.provisional ? (
+                      // Read without all its nodes: the prompt is found once ComfyUI has them (server settleProvisionalWorkflows).
+                      <p className="wf-found">{status.state === "unchecked" ? "ComfyUI is offline, so HEISS connects your prompt once it’s back." : "HEISS connects your prompt once its add-ons are in."}</p>
+                    ) : (
+                      <div className="wf-noprompt" role="note">
+                        <strong>Doesn’t take your prompt</strong>
+                        <span>It runs exactly as saved, whatever you type.</span>
+                        <button type="button" className="btn" onClick={() => setAdvancedOpen((current) => ({ ...current, [index]: true }))}>Choose the prompt</button>
+                      </div>
+                    )}
+                    <ImportNeeds item={item} onApprove={(key, on) => approvePack(index, key, on)} onChoose={(key, on) => chooseFile(index, key, on)} />
+                    {!item.preview.models && missingFiles.length ? (
+                      <p className="wf-found is-quiet">Needs {missingFiles.length === 1 ? "a model file" : `${missingFiles.length} model files`} ComfyUI doesn’t have yet: {missingFiles.map((part) => part.label).slice(0, 3).join(", ")}{missingFiles.length > 3 ? "…" : ""}. Its card says where each one goes.</p>
+                    ) : null}
+                    {status.state === "missing-nodes" && item.preview.validation.missingNodes?.some((node) => !packsCover.has(node)) && !item.preview.packs?.unresolved?.length ? <p className="wf-found is-quiet">Won’t run until ComfyUI has: {item.preview.validation.missingNodes.filter((node) => !packsCover.has(node)).join(", ")}</p> : null}
+                    {item.preview.warnings?.length ? <p className="wf-found is-quiet">{item.preview.warnings.join(" ")}</p> : null}
+                    {item.preview.risks?.length ? <ImportRisks risks={item.preview.risks} /> : null}
+                    <details className="wf-mapping" open={Boolean(advancedOpen[index])} onToggle={(event) => { const open = (event.currentTarget as HTMLDetailsElement).open; setAdvancedOpen((current) => current[index] === open ? current : { ...current, [index]: open }); }}>
+                      <summary>Advanced</summary>
+                      <div className="wf-review-row">
+                        <div className="field"><span>Kind</span><Segmented label="Kind" value={item.metadata.kind} onChange={(next) => updateImport(index, { kind: next })} options={[{ value: "image", label: "Image" }, { value: "video", label: "Video" }]} /></div>
+                        <Field label="Family"><Select value={item.metadata.family || "custom"} onChange={(value) => updateImport(index, { family: value })} options={familyOptions(item.metadata.family)} /></Field>
+                      </div>
+                      <h5 className="wf-map-title">What goes where</h5>
+                      <div className="wf-map-grid">
+                        {workflowControls.filter((control) => control.editable && !(item.metadata.kind === "image" && (control.key === "frames" || control.key === "fps")) && !(item.metadata.kind === "video" && control.key === "count")).map(({ key, label }) => (
+                          <Field key={key} label={label}>
+                            <Select
+                              value={selectedNodeValue(item.metadata.controls[key])}
+                              onChange={(value) => updateImportControl(index, key, value === "__none" ? "" : value)}
+                              options={[
+                                { label: "Stays as saved", value: "__none" },
+                                ...item.metadata.nodes.flatMap((node) => node.inputs.map((input) => ({ label: `${node.title || node.classType} · ${input}`, value: `${node.id}.${input}` })))
+                              ]}
+                            />
+                          </Field>
+                        ))}
+                      </div>
+                      <AgentGuide onCopy={() => copyAgent(agentPromptFor(item), `item-${index}`)} copied={agentCopy.copied === `item-${index}`} />
+                    </details>
+                  </div>
+                );
+              })}
+              {!imports.length ? <div className="wf-empty"><FileJson size={20} /><h3>Nothing to import</h3><p>Pick a run, or add a file.</p></div> : null}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <section className={cn("wf-browse", mobileDetailsOpen && "is-hidden-mobile")}>
+            {setup ? <SetupStrip setup={setup} busy={busy} onUndo={undoSetup} onDismiss={dismissWorkflowSetup} /> : null}
+            <div className="wf-toolbar">
+              <label className="wf-search">
+                <Search size={14} />
+                <input className="is-framed" aria-label="Search workflows" value={query} placeholder="Search workflows" onChange={(event) => setQuery(event.target.value)} />
+                {query ? <button type="button" aria-label="Clear search" onClick={() => setQuery("")}><X size={13} /></button> : null}
+              </label>
+              <Segmented label="Kind" value={kind} onChange={(next) => { setKind(next); setFilter("all"); }} options={[{ value: "image", label: "Image" }, { value: "video", label: <>Video<BetaTag /></> }]} />
+            </div>
+            <div ref={filtersWheelRef} className="wf-filters" role="radiogroup" aria-label="Filter workflows">
+              {([["all", `All ${ofKind.length}`], ["favorites", "Favorites"], ...(attentionCount ? [["attention", `Needs attention ${attentionCount}`]] : [])] as Array<[Filter, string]>).map(([value, label]) => (
+                <button key={value} type="button" role="radio" aria-checked={filter === value} className={cn(filter === value && "active")} onClick={() => setFilter(value)}>{label}</button>
+              ))}
+            </div>
+            {filtered.length ? (
+              <div className="wf-grid">
+                {filtered.map((workflow) => (
+                  <button
+                    key={workflow.id}
+                    type="button"
+                    aria-pressed={workflow.id === selected?.id}
+                    className={cn("wf-card", workflow.id === selected?.id && "active")}
+                    onClick={() => { setSelectedId(workflow.id); setMobileDetailsOpen(true); }}
+                    onDoubleClick={() => useWorkflow(workflow)}
+                  >
+                    <span className="wf-thumb"><WorkflowThumbnail key={workflow.thumbnail} src={workflow.thumbnail} /></span>
+                    {workflow.favorite ? <span className="wf-fav" aria-label="Favorite"><Heart size={12} fill="currentColor" /></span> : null}
+                    {workflow.profileId === model ? <span className="wf-current">In use</span> : null}
+                    <span className="wf-card-copy">
+                      <strong>{workflow.name}</strong>
+                      <span><em className={cn("wf-origin", workflow.source === "builtin" && "is-builtin")}>{workflow.source === "builtin" ? "Built in" : "Imported"}</em>{workflow.familyName || (workflow.family === "custom" ? "" : workflow.family)}</span>
+                    </span>
+                    {settingUpIds.has(workflow.profileId) ? <SettingUpBadge /> : workflow.validation.ok && !workflow.validation.unverified ? null : <StatusBadge validation={workflow.validation} />}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="wf-empty">
+                <Search size={20} />
+                <h3>{query ? "Nothing matches" : filter === "favorites" ? "No favorites yet" : `No ${kind} workflows yet`}</h3>
+                <p>{query ? "Try another name or clear the search." : filter === "favorites" ? "Tap the heart on a workflow to add it here." : "Import a ComfyUI workflow."}</p>
+                {query ? <button className="btn" onClick={() => setQuery("")}>Clear search</button> : filter === "favorites" ? <button className="btn" onClick={() => setFilter("all")}>Show all</button> : thisComputer ? <button className="btn is-primary" onClick={openImport}><Upload size={14} /> Import workflow</button> : null}
+              </div>
+            )}
+          </section>
+
+          <aside className={cn("wf-detail", mobileDetailsOpen && "is-open-mobile")}>
+            {selected && selectedStatus ? (
+              <>
+                <button type="button" className="btn is-ghost wf-back" onClick={() => setMobileDetailsOpen(false)}><ArrowLeft size={15} /> All workflows</button>
+                <div className="wf-detail-thumb"><WorkflowThumbnail key={selected.thumbnail} src={selected.thumbnail} /></div>
+                <div className="wf-detail-head">
+                  <h3>{selected.name}</h3>
+                  <button type="button" className={cn("wf-heart", selected.favorite && "active")} aria-pressed={Boolean(selected.favorite)} aria-label={selected.favorite ? "Remove from favorites" : "Add to favorites"} disabled={busy} onClick={() => updateFavorites(selected.id).catch((error) => showToast(error instanceof Error ? error.message : "Couldn’t update favorites", "error"))}>
+                    <Heart size={16} fill={selected.favorite ? "currentColor" : "none"} />
+                  </button>
                 </div>
-              ) : null}
-              {[...(selectedProfile?.missing?.length ? [] : selected.validation.issues.filter((issue) => !(selected.validation.missingNodes?.length && issue.startsWith("Missing node class:")) && !(settingUp && missingFileIssue.test(issue)))), ...(selected.validation.warnings || [])].map((issue) => <p className="wf-issue" key={issue}>{issue}</p>)}
-              {selected.validation.missingNodes?.length ? <ComfyRestart compact className="wf-restart" onBack={checkAgain} /> : null}
-              {selectedStatus.state !== "ready" && !settingUp ? <button className="btn is-ghost" onClick={checkAgain} disabled={checking}><RefreshCw size={13} className={cn(checking && "spin")} /> Check again</button> : null}
-            </div>
+                <p className="wf-detail-meta">{selected.source === "builtin" ? "Built in" : "Imported"}{selected.familyName || (selected.family && selected.family !== "custom") ? ` · ${selected.familyName || selected.family}` : ""}</p>
+                {selected.description && selected.description !== defaultDescription ? <p className="wf-detail-desc">{selected.description}</p> : null}
 
-            <div className="wf-detail-actions">
-              <button className="btn is-primary" onClick={() => useWorkflow(selected)} disabled={busy || (!selected.validation.ok && !selectedProfile?.missing?.length) || selected.profileId === model}>
-                {selected.profileId === model ? <><Check size={15} /> In use</> : "Use workflow"}
-              </button>
-              {selected.deleteId && thisComputer ? <button className="btn is-ghost is-danger-text" disabled={busy} onClick={() => deleteWorkflow(selected)}><Trash2 size={14} /> Delete</button> : null}
-            </div>
+                {/* Health only when there's something to do: a ready workflow says nothing. */}
+                {selectedSettingUp ? (
+                  <div className="wf-health is-unchecked" role="status">
+                    <SettingUpBadge />
+                    <p>{setup?.step ? `${setup.step}…` : "Its add-ons are on the way."} It’s ready when they’re in.</p>
+                  </div>
+                ) : selectedStatus.state !== "ready" ? (
+                  <div className={cn("wf-health", `is-${selectedStatus.state}`)}>
+                    <StatusBadge validation={selected.validation} />
+                    {/* With the setup panel below, its rows say it; the summary and issue lines would repeat them. */}
+                    {settingUp ? null : <p>{selectedStatus.detail}</p>}
+                    {setupSubject ? (
+                      <ModelSetup key={setupSubject.id} variant="gallery" profile={setupSubject} alsoNeedsNodes={Boolean(!selectedProfile && selected.validation.missingNodes?.length)} showToast={showToast} onInstalled={() => { refreshModels(false); refreshWorkflows(); }} />
+                    ) : null}
+                    {selected.validation.missingNodes?.length ? (
+                      <div className="wf-missing">
+                        <ul>{selected.validation.missingNodes.map((node) => <li key={node}><code>{node}</code></li>)}</ul>
+                        <div className="wf-missing-actions">
+                          {thisComputer ? <button className="btn" disabled={busy} onClick={() => getAddOns(selected)}><Package size={13} /> Get add-ons</button> : null}
+                          <button className="btn is-ghost" onClick={() => copyMissing(selected.validation.missingNodes || [])}><CopyIcon copied={Boolean(nodesCopy.copied)} size={13} /> {nodesCopy.copied ? "Copied" : "Copy names"}</button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {[...(selectedProfile?.missing?.length ? [] : selected.validation.issues.filter((issue) => !(selected.validation.missingNodes?.length && issue.startsWith("Missing node class:")) && !(settingUp && missingFileIssue.test(issue)))), ...(selected.validation.warnings || [])].map((issue) => <p className="wf-issue" key={issue}>{issue}</p>)}
+                    {!settingUp ? <button className="btn is-ghost" onClick={checkAgain} disabled={checking}><RefreshCw size={13} className={cn(checking && "spin")} /> Check again</button> : null}
+                  </div>
+                ) : selected.validation.warnings?.length ? (
+                  <div className="wf-health">{selected.validation.warnings.map((issue) => <p className="wf-issue" key={issue}>{issue}</p>)}</div>
+                ) : null}
 
-            <dl className="wf-facts">
-              <dt>Source</dt><dd>{selected.source === "builtin" ? "Built in" : "Imported"}</dd>
-              <dt>Family</dt><dd>{selected.familyName || selected.family || "Unknown"}</dd>
-              <dt>Last used</dt><dd>{timeLabel(selected.lastUsedAt) || "Never"}</dd>
-              {selected.controls?.length ? <><dt>Controls</dt><dd>{selected.controls.map(controlLabel).join(", ")}</dd></> : null}
-              {selected.mediaInputs?.length ? <><dt>Inputs</dt><dd>{selected.mediaInputs.map((input) => input.label || "Reference image").join(", ")}</dd></> : null}
-            </dl>
-          </>
-        ) : (
-          <div className="wf-empty"><Wand2 size={22} /><h3>No workflow selected</h3><p>Choose one to see its details.</p></div>
-        )}
-      </aside>
+                <div className="wf-detail-actions">
+                  <button className="btn is-primary" onClick={() => useWorkflow(selected)} disabled={busy || selectedSettingUp || (!selected.validation.ok && !selectedProfile?.missing?.length) || selected.profileId === model}>
+                    {selected.profileId === model ? <><Check size={15} /> In use</> : "Use workflow"}
+                  </button>
+                  {selected.deleteId && thisComputer ? <button className="btn is-ghost is-danger-text" disabled={busy} onClick={() => deleteWorkflow(selected)}><Trash2 size={14} /> Delete</button> : null}
+                </div>
+              </>
+            ) : (
+              <div className="wf-empty"><Wand2 size={22} /><h3>No workflow selected</h3><p>Choose one to see its details.</p></div>
+            )}
+          </aside>
+        </>
+      )}
 
       {dragging ? <div className="wf-drop"><FileJson size={24} /><strong>Drop to import</strong><span>A ComfyUI workflow, or an image or video ComfyUI made</span></div> : null}
-
-      <Modal
-        open={importOpen}
-        onOpenChange={(open) => { if (!open) closeImport(); }}
-        size="form"
-        busy={busy}
-        className="wf-import"
-        title={<>{importStep === "choose" ? "Import a workflow" : imports.length > 1 ? `Ready to import ${imports.length} workflows` : "Ready to import"}</>}
-        description={importStep === "choose"
-          ? "Pick something you ran in ComfyUI, or drop a workflow or an image ComfyUI made."
-          : "It runs the way you made it in ComfyUI. Your prompt and the usual controls go in from here."}
-        footer={importStep === "choose" ? (
-          <button className="btn" disabled={busy} onClick={closeImport}>Cancel</button>
-        ) : (
-          <>
-            <button className="btn" disabled={busy} onClick={() => setImportStep("choose")}><ArrowLeft size={14} /> Add more</button>
-            <button className="btn is-primary" onClick={saveImports} disabled={busy || !imports.length}>{busy ? "Importing…" : imports.length > 1 ? `Import ${imports.length} workflows` : "Import"}</button>
-          </>
-        )}
-      >
-        {importStep === "choose" ? (
-          <div className="wf-pick">
-            <section className="wf-pick-section" aria-label="Recent in ComfyUI">
-              <h4>Recent in ComfyUI</h4>
-              {sources.loading && !sources.recent.length ? <p className="wf-pick-hint">Looking at what ComfyUI ran…</p>
-                : sources.recent.length ? <RecentRuns items={sources.recent} disabled={busy} onPick={(item) => pickSource({ source: "history", promptId: item.id, filename: item.name })} />
-                : <p className="wf-pick-hint">{sources.comfy ? "Run a workflow in ComfyUI and it shows up here." : "Start ComfyUI to pick from what you ran there."}</p>}
-            </section>
-            {sources.saved.length ? (
-              <section className="wf-pick-section" aria-label="Saved in ComfyUI">
-                <h4>Saved in ComfyUI</h4>
-                <ul className="wf-saved">
-                  {(showAllSaved ? sources.saved : sources.saved.slice(0, 6)).map((item) => (
-                    <li key={item.path}>
-                      <button type="button" disabled={busy} onClick={() => pickSource({ source: "saved", path: item.path, filename: item.name })}>
-                        <FileJson size={13} aria-hidden="true" /><span>{item.path.replace(/\.json$/i, "")}</span><em>{relativeTime(item.modified)}</em>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {sources.saved.length > 6 && !showAllSaved ? <button type="button" className="btn is-ghost" onClick={() => setShowAllSaved(true)}>Show all {sources.saved.length}</button> : null}
-              </section>
-            ) : null}
-            <button type="button" className="wf-dropzone" onClick={() => fileInput.current?.click()} disabled={busy}>
-              <Upload size={20} />
-              <strong>{busy ? "Reading…" : "Choose a file"}</strong>
-              <span>A workflow (.json), or an image or video ComfyUI made. Or drop it anywhere here.</span>
-            </button>
-            <input ref={fileInput} hidden type="file" accept="application/json,.json,image/png,image/webp,video/mp4,video/webm,.png,.webp,.mp4,.webm" multiple onChange={(event) => { if (event.target.files?.length) readFiles(event.target.files); event.currentTarget.value = ""; }} />
-            <details className="wf-mapping">
-              <summary>More ways</summary>
-              <Field label={<><ClipboardPaste size={13} /> Paste the JSON</>}>
-                <textarea className="wf-paste" value={pasteJson} onChange={(event) => setPasteJson(event.target.value)} placeholder="{ … }" spellCheck={false} />
-              </Field>
-              <button className="btn" onClick={previewPaste} disabled={busy || !pasteJson.trim()}>Read it</button>
-              <AgentGuide onCopy={() => copyAgent(agentPrompt(), "guide")} copied={agentCopy.copied === "guide"} />
-            </details>
-            <InstallHistory showToast={showToast} onUndone={() => { refreshModels(false); refreshWorkflows(); }} />
-          </div>
-        ) : (
-          <div className="wf-review">
-            {imports.map((item, index) => {
-              const status = workflowState(item.preview.validation, comfyRestarting);
-              const { parts, more } = foundSummary(item.metadata);
-              const missingFiles = item.preview.validation.missingParts || [];
-              const packsCover = new Set((item.preview.packs?.packs || []).flatMap((pack) => pack.nodes));
-              return (
-                <div className="wf-review-card" key={`${item.filename}-${index}`}>
-                  <div className="wf-review-head">
-                    {item.preview.thumbnail ? <span className="wf-review-thumb"><SafeImg src={item.preview.thumbnail} fallback={<Wand2 size={16} />} /></span> : null}
-                    <input className="modal-input wf-review-name" aria-label="Name" value={item.metadata.name} onChange={(event) => updateImport(index, { name: event.target.value })} />
-                    {imports.length > 1 ? <button type="button" className="modal-close" aria-label="Remove from import" onClick={() => setImports((current) => current.filter((_, i) => i !== index))}><X size={14} /></button> : null}
-                  </div>
-                  <PromptChoice item={item} onPick={(mappings) => answerPrompt(index, mappings)} />
-                  {item.metadata.controls.prompt ? (
-                    <p className="wf-found">Follows your {parts.join(", ").replace(/, ([^,]*)$/, " and $1")}{more ? <>, with {more} more setting{more === 1 ? "" : "s"} in Advanced</> : null}.</p>
-                  ) : item.preview.provisional ? (
-                    // Read without all its nodes: the prompt is found once ComfyUI has them (server settleProvisionalWorkflows).
-                    <p className="wf-found">{status.state === "unchecked" ? "ComfyUI is offline, so HEISS connects your prompt once it’s back." : "HEISS connects your prompt once its add-ons are in."}</p>
-                  ) : (
-                    <div className="wf-noprompt" role="note">
-                      <strong>Doesn’t take your prompt</strong>
-                      <span>It runs exactly as saved, whatever you type.</span>
-                      <button type="button" className="btn" onClick={() => setAdvancedOpen((current) => ({ ...current, [index]: true }))}>Choose the prompt</button>
-                    </div>
-                  )}
-                  <ImportAddOns item={item} onApprove={(key, on) => approvePack(index, key, on)} />
-                  {item.preview.models ? <ImportFiles item={item} onChoose={(key, on) => chooseFile(index, key, on)} /> : missingFiles.length ? (
-                    <p className="wf-found is-quiet">Needs {missingFiles.length === 1 ? "a model file" : `${missingFiles.length} model files`} ComfyUI doesn’t have yet: {missingFiles.map((part) => part.label).slice(0, 3).join(", ")}{missingFiles.length > 3 ? "…" : ""}. Its card says where each one goes.</p>
-                  ) : null}
-                  {status.state === "missing-nodes" && item.preview.validation.missingNodes?.some((node) => !packsCover.has(node)) && !item.preview.packs?.unresolved?.length ? <p className="wf-found is-quiet">Won’t run until ComfyUI has: {item.preview.validation.missingNodes.filter((node) => !packsCover.has(node)).join(", ")}</p> : null}
-                  {item.preview.warnings?.length ? <p className="wf-found is-quiet">{item.preview.warnings.join(" ")}</p> : null}
-                  {item.preview.risks?.length ? <ImportRisks risks={item.preview.risks} /> : null}
-                  <details className="wf-mapping" open={Boolean(advancedOpen[index])} onToggle={(event) => { const open = (event.currentTarget as HTMLDetailsElement).open; setAdvancedOpen((current) => current[index] === open ? current : { ...current, [index]: open }); }}>
-                    <summary>Advanced</summary>
-                    <div className="wf-review-row">
-                      <div className="field"><span>Kind</span><Segmented label="Kind" value={item.metadata.kind} onChange={(next) => updateImport(index, { kind: next })} options={[{ value: "image", label: "Image" }, { value: "video", label: "Video" }]} /></div>
-                      <Field label="Family"><Select value={item.metadata.family || "custom"} onChange={(value) => updateImport(index, { family: value })} options={familyOptions(item.metadata.family)} /></Field>
-                    </div>
-                    <ImportFit item={item} />
-                    <div className="wf-map-grid">
-                      {workflowControls.filter((control) => control.editable).map(({ key, label }) => (
-                        <Field key={key} label={label}>
-                          <Select
-                            value={selectedNodeValue(item.metadata.controls[key])}
-                            onChange={(value) => updateImportControl(index, key, value === "__none" ? "" : value)}
-                            options={[
-                              { label: "Stays as saved", value: "__none" },
-                              ...item.metadata.nodes.flatMap((node) => node.inputs.map((input) => ({ label: `${node.title || node.classType} #${node.id} · ${input}`, value: `${node.id}.${input}` })))
-                            ]}
-                          />
-                        </Field>
-                      ))}
-                    </div>
-                    <AgentGuide forWorkflow onCopy={() => copyAgent(agentPromptFor(item), `item-${index}`)} copied={agentCopy.copied === `item-${index}`} />
-                  </details>
-                </div>
-              );
-            })}
-            {!imports.length ? <div className="wf-empty"><FileJson size={20} /><h3>Nothing to import</h3><p>Pick a run, or add a file.</p></div> : null}
-          </div>
-        )}
-      </Modal>
     </Modal>
   );
 }

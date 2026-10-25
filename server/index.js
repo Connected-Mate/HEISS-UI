@@ -73,7 +73,7 @@ import { comfyPython, comfyRootDir, packInstallPlan } from './node-install.js';
 import { setupTips } from './setup-tips.js';
 import { linkModelFolders, modelFolderReport, unlinkModelFolder } from './model-folders.js';
 import { packInstallRoutes, packInstallState, startPackInstall } from './pack-installer.js';
-import { prepareImport, settleProvisionalWorkflows } from './workflow-import.js';
+import { packPlan, prepareImport, settleProvisionalWorkflows } from './workflow-import.js';
 import { recentFromHistory, savedWorkflowList } from './workflow-sources.js';
 import { convertWithComfyPage, resetComfyPage } from './comfy-page-convert.js';
 import { dismissWorkflowSetup, startWorkflowSetup, undoWorkflowSetup, workflowSetupState } from './workflow-setup.js';
@@ -1179,7 +1179,19 @@ app.post("/api/workflows/setup", async (req, res) => {
         version: String(pack.version || ""), repository: String(pack.repository || ""), folder: String(pack.folder || ""),
         commit: /^[0-9a-f]{40}$/i.test(String(pack.commit || "")) ? String(pack.commit) : "", registry: Boolean(pack.registry)
       }));
-    res.json({ ok: true, setup: startWorkflowSetup({ packs, workflowName: String(req.body?.workflowName || "").slice(0, 120) }, setupDeps) });
+    const workflowIds = (Array.isArray(req.body?.workflowIds) ? req.body.workflowIds : []).map((id) => String(id).slice(0, 200)).slice(0, 24);
+    res.json({ ok: true, setup: startWorkflowSetup({ packs, workflowName: String(req.body?.workflowName || "").slice(0, 120), workflowIds }, setupDeps) });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+/** The add-ons that provide an imported workflow's missing nodes, for its Get add-ons button. */
+app.post("/api/workflows/packs", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const missing = (Array.isArray(req.body?.missingNodes) ? req.body.missingNodes : []).map(String).filter(Boolean).slice(0, 200);
+    res.json({ ok: true, ...(await packPlan(missing)) });
   } catch (error) {
     res.status(400).json({ ok: false, error: error.message });
   }
