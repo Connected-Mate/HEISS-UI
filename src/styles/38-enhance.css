@@ -83,23 +83,28 @@
   inset: -52px -72px -36px;
   z-index: -2;
   pointer-events: none;
-  opacity: calc((.55 + var(--enhance-progress, 0) * .45) * var(--enhance-fade, 1));
+  opacity: calc((.7 + var(--enhance-progress, 0) * .3) * var(--enhance-fade, 1));
   transition: opacity 900ms var(--motion-ease);
 }
 .enhance-haze > i {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(50% 58% at 50% 56%,
-      rgb(255 138 72 / .2) 0%,
-      rgb(255 138 72 / .15) 30%,
-      rgb(255 138 72 / .09) 50%,
-      rgb(255 138 72 / .04) 68%,
-      rgb(255 138 72 / 0) 86%),
-    radial-gradient(28% 40% at 26% 50%, rgb(255 176 120 / .08), rgb(255 176 120 / 0) 80%),
-    radial-gradient(28% 40% at 76% 58%, rgb(255 118 66 / .07), rgb(255 118 66 / 0) 80%);
+    radial-gradient(52% 60% at 50% 56%,
+      rgb(255 138 72 / .36) 0%,
+      rgb(255 138 72 / .27) 30%,
+      rgb(255 138 72 / .16) 50%,
+      rgb(255 138 72 / .07) 68%,
+      rgb(255 138 72 / 0) 88%),
+    radial-gradient(30% 42% at 26% 50%, rgb(255 176 120 / .14), rgb(255 176 120 / 0) 80%),
+    radial-gradient(30% 42% at 76% 58%, rgb(255 118 66 / .12), rgb(255 118 66 / 0) 80%);
   filter: blur(22px);
-  animation: enhance-drift 11s ease-in-out infinite alternate;
+  /* Drifting slowly, and pulsing very slightly, like a warm light breathing behind the glass. */
+  animation: enhance-drift 11s ease-in-out infinite alternate, enhance-pulse-haze 3.8s ease-in-out infinite;
+}
+@keyframes enhance-pulse-haze {
+  0%, 100% { opacity: .82; }
+  50% { opacity: 1; }
 }
 @keyframes enhance-drift {
   from { transform: translate3d(-2.5%, 1%, 0) scale(1); }
@@ -107,9 +112,11 @@
 }
 /* Waiting for ComfyUI to start it: no line yet, the haze breathing. */
 .enhance-aura.is-waiting .enhance-haze { animation: enhance-breathe 3.6s ease-in-out infinite; }
+/* One breath at a time: the slight pulse joins once the run is under way. */
+.enhance-aura.is-waiting .enhance-haze > i { animation: enhance-drift 11s ease-in-out infinite alternate; }
 @keyframes enhance-breathe {
-  0%, 100% { opacity: .38; }
-  50% { opacity: .62; }
+  0%, 100% { opacity: .5; }
+  50% { opacity: .78; }
 }
 
 /* No motion: the haze alone, still; no line frozen somewhere along the edge. */
