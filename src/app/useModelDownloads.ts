@@ -83,7 +83,10 @@ export async function refresh() {
   try {
     accept(await apiJson<DownloadState & { ok: boolean }>('/api/models/downloads'));
   } catch {
-    // Without the route the panels still work as lists of links.
+    // Without the route the panels still work as lists of links. A poll that fails while
+    // files move (HEISS restarting, a dropped connection) keeps trying, slower, so the bars don't freeze.
+    window.clearTimeout(timer);
+    if (isBusy(store.state)) timer = window.setTimeout(refresh, 4000);
   }
 }
 

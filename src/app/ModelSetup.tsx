@@ -226,21 +226,21 @@ export function ModelSetup({ profile, showToast, onInstalled, variant = 'sidebar
   };
   const moving = rows.some((row) => row.rowState === 'downloading' || row.rowState === 'queued');
   const stuck = stuckShown && rows.some((row) => row.rowState === 'landed');
-  const fetchable = rows.filter((row) => row.download).length;
 
   // A missing node pack comes first: nothing else can be checked until ComfyUI has it.
   const pack = missing.find((item) => item.nodePack)?.nodePack;
   // An older ComfyUI cannot run this family at all, whatever gets downloaded.
   const outdated = missing.some((item) => item.part === 'comfy' && !item.nodePack);
   const manual = rows.some((row) => row.rowState === 'manual');
+  // The words the menu and the gallery badge use (workflowStatus.ts); the line under it says which.
+  // In the gallery that badge sits right above, so the panel doesn't say it twice.
   const title = moving ? 'Downloading'
     : optional ? 'Recommended'
-    : outdated ? 'Update ComfyUI first'
-    : pack ? `Add ${pack.name} to ComfyUI`
-    : fetchable === missing.length ? `Needs ${missing.length} more file${missing.length === 1 ? '' : 's'}` : 'Not ready yet';
+    : variant === 'gallery' ? ''
+    : 'Needs setup';
   const subtitle = optional ? (missing.length === 1 && missing[0].detail ? missing[0].detail : `${name} runs now, and works better with ${missing.length === 1 ? 'this' : 'these'}.`)
     : outdated ? `${name} needs a newer ComfyUI. Update it before downloading the rest.`
-    : pack ? `${name} needs custom nodes that don’t come with ComfyUI.`
+    : pack ? `${name} needs ${pack.name}, which ComfyUI doesn’t include.`
     : alsoNeedsNodes ? `${name} needs ${missing.length === 1 ? 'this file' : 'these files'} and the custom nodes listed below.`
     : profile.encoderBuiltIn === false && profile.source === 'checkpoint'
     ? 'This checkpoint doesn’t include everything it needs.'
@@ -253,7 +253,7 @@ export function ModelSetup({ profile, showToast, onInstalled, variant = 'sidebar
     <section className={cn('model-setup', `is-${variant}`)} aria-label="Files this model needs">
       <header className="model-setup-head">
         <div>
-          <strong>{title}</strong>
+          {title ? <strong>{title}</strong> : null}
           <span>{short && !moving ? `These need ${formatBytes(short.need)} and the disk has ${formatBytes(short.free)} free.` : subtitle}</span>
         </div>
         {profile.setupGuide ? (
@@ -456,11 +456,17 @@ function RowActions({ rowState, download, current, remote, run, start, pause, di
     );
   }
   if (rowState === 'error' && current?.needsBrowser) {
-    // Gated: only a logged-in browser can fetch it, so the way on is its page.
-    return <a className="btn" href={download.url.replace('/resolve/', '/blob/')} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Hugging Face</a>;
+    // Gated: a logged-in browser can fetch it, or a token added in Settings lets this try again.
+    return (
+      <>
+        <a className="btn" href={download.url.replace('/resolve/', '/blob/')} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Hugging Face</a>
+        <button type="button" className="btn is-ghost is-icon" aria-label={`Try ${download.file} again`} title="Try again" onClick={() => run(() => start(download.id))}><RotateCw size={14} /></button>
+      </>
+    );
   }
   if (rowState === 'error') {
-    return <button type="button" className="btn" onClick={() => run(() => start(download.id))}><RotateCw size={13} /> {current?.retryable === false ? 'Try again' : 'Resume'}</button>;
+    // Resume only when part of the file is here to resume from.
+    return <button type="button" className="btn" onClick={() => run(() => start(download.id))}><RotateCw size={13} /> {current?.retryable !== false && current?.receivedBytes ? 'Resume' : 'Try again'}</button>;
   }
   if (rowState === 'landed') return <span className="model-setup-meta">In place</span>;
   return (

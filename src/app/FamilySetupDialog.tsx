@@ -163,7 +163,11 @@ export function FamilySetupDialog({ family, profileId, open, onOpenChange, showT
     return 'idle' as const;
   };
   const parts = plan?.parts || [];
-  const pending = parts.filter((row) => ['idle', 'paused', 'error'].includes(rowState(row.download, row.have)));
+  // A failure a retry can't fix (a gated file, no room) stays out of the batch; its row says why.
+  const pending = parts.filter((row) => {
+    const state = rowState(row.download, row.have);
+    return state === 'idle' || state === 'paused' || (state === 'error' && downloadFor(downloads, row.download!.file)?.retryable !== false);
+  });
   const moving = parts.filter((row) => rowState(row.download, row.have) === 'downloading');
   const totals = parts.reduce((sum, row) => {
     const state = rowState(row.download, row.have);
@@ -294,6 +298,7 @@ export function FamilySetupDialog({ family, profileId, open, onOpenChange, showT
                 <div>
                   <strong>{row.label}<em>{row.part === 'encoder' ? 'reads your prompt' : 'draws the pixels'}</em></strong>
                   {state === 'downloading' || state === 'paused' ? <CellBar value={value} /> : <code>{row.have || row.download?.file}</code>}
+                  {state === 'error' && current?.error ? <p className="upscale-fine is-warn">{current.error}</p> : null}
                 </div>
                 <span>
                   {done ? <><Check size={12} strokeWidth={3} /> {state === 'installed' ? 'In place' : 'Downloaded'}</>
@@ -323,7 +328,7 @@ export function FamilySetupDialog({ family, profileId, open, onOpenChange, showT
           </>
         ) : pending.length && admin && plan.local !== false ? (
           <button className="btn is-primary" disabled={busy || short} onClick={getAll}>
-            <Download size={14} /> {failed || pending.some((row) => rowState(row.download, row.have) === 'paused') ? 'Resume' : 'Download'} · {formatBytes(remaining)}
+            <Download size={14} /> {pending.some((row) => rowState(row.download, row.have) === 'error') ? 'Try again' : pending.some((row) => rowState(row.download, row.have) === 'paused') ? 'Resume' : 'Download'} · {formatBytes(remaining)}
           </button>
         ) : null}
       </>

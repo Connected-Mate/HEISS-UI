@@ -546,13 +546,19 @@ export function familyLabel(profile: Profile | null) {
   return profile.family;
 }
 
-/** What an unready model still lacks, in the words the gallery badges use; "" when it can run. */
+/** An unready model, in the word the gallery badges use (workflowStatus.ts); "" when it can run. */
 export function setupNote(profile: Profile | null) {
+  return profile?.missing?.length ? "Needs setup" : "";
+}
+
+/** Which setup, for a tooltip under that word; "" when it can run. */
+export function setupDetail(profile: Profile | null) {
   const missing = profile?.missing || [];
   if (!missing.length) return "";
-  if (missing.some((item) => item.part === "comfy" && !item.nodePack)) return "Needs a newer ComfyUI";
-  if (missing.some((item) => item.nodePack)) return "Needs ComfyUI nodes";
-  return `Needs ${missing.length} file${missing.length === 1 ? "" : "s"}`;
+  if (missing.some((item) => item.part === "comfy" && !item.nodePack)) return "It needs a newer ComfyUI.";
+  const pack = missing.find((item) => item.nodePack)?.nodePack;
+  if (pack) return `It needs ${pack.name}, which ComfyUI doesn’t include.`;
+  return missing.length === 1 ? "A file it needs isn’t here yet." : `${missing.length} files it needs aren’t here yet.`;
 }
 
 /** Favorites and recents for the model menu, and how to change them. */
@@ -703,7 +709,7 @@ export function ModelPicker({ value, profiles, showInpaint = true, showRapid = t
   let rowIndex = -1;
   return (
     <div className={cn("model-picker", compact && "is-compact", density !== "full" && `is-density-${density}`)} ref={pickerRef} data-open-surface={open || undefined}>
-      <Tip content={selected ? `${selected.displayName || selected.label}${setupNote(selected) ? ` · ${setupNote(selected)}` : ""} · choose a model` : "Choose a model"}><button ref={triggerRef} type="button" data-open-trigger className={cn("model-trigger", setupNote(selected) && "needs-setup")} aria-haspopup="listbox" aria-expanded={open} onClick={() => (open ? close() : setOpen(true))}>
+      <Tip content={selected ? `${selected.displayName || selected.label}${setupNote(selected) ? ` · ${setupNote(selected)}. ${setupDetail(selected)}` : " · choose a model"}` : "Choose a model"}><button ref={triggerRef} type="button" data-open-trigger className={cn("model-trigger", setupNote(selected) && "needs-setup")} aria-haspopup="listbox" aria-expanded={open} onClick={() => (open ? close() : setOpen(true))}>
           {setupNote(selected) ? <span className="model-setup-flag" aria-label={setupNote(selected)} /> : null}
           {compact ? (
             <span className="model-copy"><strong>{selected?.displayName || selected?.label || "No model"}</strong></span>
@@ -745,7 +751,7 @@ export function ModelPicker({ value, profiles, showInpaint = true, showRapid = t
                     const { size, fits } = sizeNote(profile, hardware);
                     return (
                       <div key={`${section.id}:${profile.id}`} className={cn("model-row", starred && "is-starred")}>
-                        <Tip content={`${profile.displayName || profile.label}${fits ? " · fits this computer" : ""}`} forceOpen={abilityRow === `${section.id}:${profile.id}` ? false : undefined}><button
+                        <Tip content={`${profile.displayName || profile.label}${setupNote(profile) ? ` · ${setupDetail(profile)}` : fits ? " · fits this computer" : ""}`} forceOpen={abilityRow === `${section.id}:${profile.id}` ? false : undefined}><button
                             type="button"
                             role="option"
                             aria-selected={profile.id === value}

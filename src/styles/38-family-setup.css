@@ -44,3 +44,4 @@
 .family-setup-ready q { color: hsl(var(--foreground) / .9); quotes: none; }
 
 .family-setup-gap { margin-top: 12px; }
+.upscale-files .upscale-fine { margin: 0; }

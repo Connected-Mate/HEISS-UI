@@ -108,6 +108,27 @@
 .wf-thumb-empty i:nth-child(1),
 .wf-thumb-empty i:nth-child(4) { background: rgb(255 255 255 / .045); }
 .wf-thumb-empty svg { position: absolute; inset: 0; margin: auto; }
+/* No output yet, but a family: its name on its own soft tint. */
+.wf-thumb-empty.is-named {
+  display: flex;
+  align-items: flex-end;
+  padding: 12px 14px;
+  background:
+    radial-gradient(120% 90% at 85% 10%, hsl(var(--wf-hue) 70% 62% / .22), transparent 60%),
+    linear-gradient(160deg, hsl(var(--wf-hue) 35% 30% / .35), hsl(var(--wf-hue) 30% 14% / .2));
+}
+.wf-thumb-empty.is-named span {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: hsl(var(--wf-hue) 60% 88% / .78);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.wf-detail-thumb .wf-thumb-empty.is-named span { font-size: 20px; }
 
 .wf-fav,
 .wf-current {
