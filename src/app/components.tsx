@@ -2,11 +2,12 @@ import React, { lazy, Suspense, memo, useCallback, useEffect, useRef, useState }
 import { VideoPreview } from './VideoPreview';
 import { mediaUrl } from './mediaUrl';
 import { useDismiss } from './useDismiss';
-import { Brush, ChevronDown, ImagePlus, Info, Minus, Plus, Search, Star, X, Zap } from 'lucide-react';
+import { Brush, ChevronDown, ChevronRight, ImagePlus, Info, Layers, Minus, Plus, Search, Star, X, Zap } from 'lucide-react';
 import { Select as FluidSelect, SelectContent as FluidSelectContent, SelectItem as FluidSelectItem, SelectTrigger as FluidSelectTrigger } from '@/components/ui/select';
 import { Tooltip as FluidTooltip } from '@/components/ui/tooltip';
 import { AnimatedNumber } from './AnimatedNumber';
-import type { AspectPreset, AutoUpscale, NativeSupport, Output, Profile, SavedSize } from './types';
+import type { AspectPreset, AutoUpscale, LoraSelection, NativeSupport, Output, Profile, SavedSize } from './types';
+import { loraDisplayName } from './loras';
 import { MEGAPIXEL, presetRatio, type SideLimits } from './sizing';
 import { LinkedSizeFields, MegapixelField, SavedSizeRow, SizePreview, SizeTabs, sizeMenuModel, type MegapixelControl, type SizeRow, type SizeTier } from './SizeMenu';
 import { usePresence } from './usePresence';
@@ -14,6 +15,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { aspectIconStyle, cn, titleFromPrompt } from './format';
 import { wheelPixels } from './wheel';
 import { formatDownload, modelFits, useHardware } from './hardware';
+import { RunFields, runWords, type RunControl } from './RunSettings';
 
 /** How much room a composer control gets: full label, icon-only, or bare essentials. */
 export type ControlDensity = "full" | "compact" | "mini";
@@ -363,7 +365,7 @@ function triggerShapeStyle(width: number, height: number): React.CSSProperties {
  * and changes the shape. The trigger draws the real shape and says the ratio,
  * with a tag for 2K ("2K") and Custom ("C").
  */
-export function AspectPicker({ value, options, onChange, currentSize, defaultSize, density = "full", tier = "none", tiers = ["none", "custom"], native, sizeMax = 8192, limits, onTierChange, onCustomRatio, onCustomSize, savedSizes = [], onSaveSize, onRenameSize, onRemoveSize, onPickSaved, targetArea = 0, megapixel = null, videoUpscale = "none", onVideoUpscaleChange }: {
+export function AspectPicker({ value, options, onChange, currentSize, defaultSize, density = "full", tier = "none", tiers = ["none", "custom"], native, sizeMax = 8192, limits, onTierChange, onCustomRatio, onCustomSize, savedSizes = [], onSaveSize, onRenameSize, onRemoveSize, onPickSaved, targetArea = 0, megapixel = null, videoUpscale = "none", onVideoUpscaleChange, run }: {
   value: string;
   options: AspectPreset[];
   onChange: (value: string) => void;
@@ -391,6 +393,8 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
   /** Megapixels in 2K's place (Settings › Generation): Default draws every shape at this area. */
   targetArea?: number;
   megapixel?: MegapixelControl | null;
+  /** Steps and Images, folded in under the shapes (RunSettings.tsx); the button says them too. */
+  run?: RunControl;
 }) {
   const [open, setOpen] = useState(false);
   const presence = usePresence(open);
@@ -402,13 +406,19 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
   // The preview window opens the first time the menu is hovered or worked from the keyboard,
   // then stays like the menu itself: it goes when the menu closes (picking a size closes it).
   const [peek, setPeek] = useState(false);
-  useEffect(() => { if (!open) { setHovered(null); setPeek(false); } }, [open]);
+  // An Images count under the pointer: the preview deals that many frames until it leaves.
+  const [hoveredCount, setHoveredCount] = useState<number | null>(null);
+  useEffect(() => { if (!open) { setHovered(null); setPeek(false); setHoveredCount(null); } }, [open]);
 
   const { custom, picked, shown, rows, savedMatch, ownSize, isActive, savedRow, label, badge, what, captionFor, note } = sizeMenuModel({ value, options, currentSize, defaultSize, tier, native, sizeMax, limits, savedSizes, targetArea, offerTwoK: tiers.includes("2k") });
   const previewRow = hovered;
   const previewSize = previewRow ? previewRow.size : shown;
   const previewLabel = captionFor(previewRow);
   const rtxLabel = onVideoUpscaleChange && (videoUpscale === "2k" || videoUpscale === "4k") ? `, RTX upscale to ${videoUpscale.toUpperCase()}` : "";
+  const steps = run?.steps?.value;
+  const count = run?.count?.value || 1;
+  const previewCount = hoveredCount ?? count;
+  const runLabel = runWords(run) ? ` · ${runWords(run)}` : "";
 
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   // While the menu is open the trigger keeps the width it opened at: its label changes as you
@@ -422,12 +432,14 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
   // What the button shows is held too while the menu is open: a tag coming or going (2K, MP, C)
   // or a new ratio would change its width and move the menu under the pointer. It catches up
   // once the menu has closed.
-  const [heldFace, setHeldFace] = useState<{ label: string; badge: string; width: number; height: number } | null>(null);
+  const [heldFace, setHeldFace] = useState<{ label: string; badge: string; width: number; height: number; steps?: number; count: number } | null>(null);
   React.useLayoutEffect(() => {
-    if (open) setHeldFace((held) => held ?? { label, badge, width: shown.width, height: shown.height });
+    if (open) setHeldFace((held) => held ?? { label, badge, width: shown.width, height: shown.height, steps, count });
     else if (!presence.mounted) setHeldFace(null);
-  }, [open, presence.mounted, label, badge, shown.width, shown.height]);
-  const face = heldFace || { label, badge, width: shown.width, height: shown.height };
+  }, [open, presence.mounted, label, badge, shown.width, shown.height, steps, count]);
+  const face = heldFace || { label, badge, width: shown.width, height: shown.height, steps, count };
+  // With no label beside the shape there is one corner: the size's own tag wins, else how many.
+  const cornerTag = face.badge || (face.count > 1 ? `×${face.count}` : "");
   const wasOpen = useRef(false);
   useEffect(() => {
     if (wasOpen.current && !open) {
@@ -447,15 +459,18 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
 
   return (
     <div className={cn("aspect-picker", density !== "full" && `is-density-${density}`)} ref={pickerRef} data-open-surface={open || undefined}>
-      <Tip content={`Size: ${what}${rtxLabel}`}><button ref={triggerRef} type="button" data-open-trigger className={cn("aspect-trigger", heldWidth !== null && "is-held")} style={heldWidth ? { width: heldWidth } : undefined} aria-label={`Size: ${what}${rtxLabel}`} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((next) => !next)}>
+      <Tip content={`Size: ${what}${rtxLabel}${runLabel}`}><button ref={triggerRef} type="button" data-open-trigger className={cn("aspect-trigger", heldWidth !== null && "is-held", run && "has-run")} style={heldWidth ? { width: heldWidth } : undefined} aria-label={`Size: ${what}${rtxLabel}${runLabel}`} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((next) => !next)}>
           {/* The shape drawn to fit an 18 × 14 box, so every ratio sits in the same slot. */}
           <span className="aspect-shape-slot">
             <span className="aspect-shape" style={triggerShapeStyle(face.width, face.height)} />
-            {face.badge && density !== "full" ? <b className="aspect-tag is-corner" aria-hidden="true">{face.badge}</b> : null}
+            {cornerTag && density === "mini" ? <b className={cn("aspect-tag is-corner", !face.badge && "run-count-tag")} aria-hidden="true">{cornerTag}</b> : null}
           </span>
-          {density === "full" ? <span className="aspect-trigger-label">{face.label}</span> : null}
+          {density !== "mini" ? <span className="aspect-trigger-label">{face.label}</span> : null}
           {/* 2K or Custom: a small tag after the ratio; with no label to follow (narrow bars), on the shape's corner. */}
-          {face.badge && density === "full" ? <b className="aspect-tag" aria-hidden="true">{face.badge}</b> : null}
+          {face.badge && density !== "mini" ? <b className="aspect-tag" aria-hidden="true">{face.badge}</b> : null}
+          {/* Steps after a hairline, where there's room; the count as a tag once it's more than one. */}
+          {face.steps !== undefined && density === "full" ? <span className="aspect-trigger-run"><AnimatedNumber value={String(face.steps)} /><span>{face.steps === 1 ? "step" : "steps"}</span></span> : null}
+          {face.count > 1 && density !== "mini" ? <b className="aspect-tag run-count-tag" aria-hidden="true">×{face.count}</b> : null}
           {density === "mini" ? null : <ChevronDown size={14} className={cn(open && "flip")} />}
         </button></Tip>
       {presence.mounted ? (
@@ -467,7 +482,7 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
           onPointerEnter={(event) => { if (event.pointerType !== "touch") setPeek(true); }}
           onFocusCapture={(event) => { if ((event.target as HTMLElement).matches(":focus-visible, input")) setPeek(true); }}
         >
-          <SizePreview size={previewSize} label={previewLabel} sub={`${previewSize.width} × ${previewSize.height}`} accent={!previewRow && (tier !== "none" || targetArea > 0)} shown={peek} />
+          <SizePreview size={previewSize} label={previewLabel} sub={`${previewSize.width} × ${previewSize.height}`} accent={!previewRow && (tier !== "none" || targetArea > 0)} shown={peek} count={previewCount} />
           <div className="size-menu-side">
             <div className="aspect-upscale">
               <div className="aspect-upscale-head">
@@ -529,6 +544,7 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
             </div>
             {/* Under every shape: how big they're all drawn. */}
             {megapixel ? <MegapixelField current={(shown.width * shown.height) / MEGAPIXEL} control={megapixel} custom={custom} /> : null}
+            {run ? <RunFields run={run} onPreviewCount={setHoveredCount} /> : null}
           </div>
         </div>
       ) : null}
@@ -617,7 +633,43 @@ function ModelAbilities({ profile, showInpaint = true, showRapid = true, onHover
   );
 }
 
-export function ModelPicker({ value, profiles, showInpaint = true, showRapid = true, onChange, compact = false, badges = {}, density = "full", emptyHint = "", onFindModels, onGetModels, strayCount = 0, menu }: { value: string; profiles: Profile[]; showInpaint?: boolean; showRapid?: boolean; onChange: (value: string) => void; compact?: boolean; badges?: Record<string, string>; density?: ControlDensity; emptyHint?: string; onFindModels?: () => void; onGetModels?: () => void; strayCount?: number; menu?: ModelMenuState }) {
+/** The LoRAs on the chosen model, for the model menu's last card; left out where the model takes none. */
+export type ModelMenuLoras = { active: LoraSelection[]; onOpen: () => void };
+const menuLoraLimit = 3;
+
+/**
+ * The model menu's last card: the LoRAs riding on this model, each with how
+ * strongly, or a quiet way to add one. The whole card opens the LoRA list.
+ */
+function MenuLoras({ loras, onOpen }: { loras: ModelMenuLoras; onOpen: () => void }) {
+  const active = loras.active;
+  const shown = active.slice(0, menuLoraLimit);
+  const more = active.length - shown.length;
+  return (
+    <button type="button" className={cn("model-menu-loras", active.length > 0 && "has-active")} onClick={onOpen}>
+      <span className="model-menu-loras-head">
+        <span className="model-menu-loras-icon" aria-hidden="true"><Layers size={13} strokeWidth={1.9} /></span>
+        <strong>{active.length ? `${active.length} LoRA${active.length === 1 ? "" : "s"}` : "LoRAs"}</strong>
+        <em>{active.length ? "Edit" : "None on"}<ChevronRight size={13} aria-hidden="true" /></em>
+      </span>
+      {shown.length ? (
+        <span className="model-menu-loras-list">
+          {shown.map((lora, index) => (
+            <span key={`${lora.name}:${index}`} className="model-menu-lora">
+              <span className="model-menu-lora-name">{loraDisplayName(lora.name)}</span>
+              {/* How strongly, drawn against 1 (the LoRA as trained); past 1 the bar is full and warm. */}
+              <span className={cn("model-menu-lora-meter", lora.strength > 1 && "is-over")} aria-hidden="true"><i style={{ width: `${Math.round(Math.min(1, Math.max(0, lora.strength)) * 100)}%` }} /></span>
+              <span className="model-menu-lora-strength">{lora.strength.toFixed(2)}</span>
+            </span>
+          ))}
+          {more > 0 ? <span className="model-menu-lora is-more">and {more} more</span> : null}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+export function ModelPicker({ value, profiles, showInpaint = true, showRapid = true, onChange, compact = false, badges = {}, density = "full", emptyHint = "", onFindModels, onGetModels, strayCount = 0, menu, loras }: { value: string; profiles: Profile[]; showInpaint?: boolean; showRapid?: boolean; onChange: (value: string) => void; compact?: boolean; badges?: Record<string, string>; density?: ControlDensity; emptyHint?: string; onFindModels?: () => void; onGetModels?: () => void; strayCount?: number; menu?: ModelMenuState; loras?: ModelMenuLoras }) {
   const hardware = useHardware();
   const [abilityRow, setAbilityRow] = React.useState("");
   const [open, setOpen] = useState(false);
@@ -706,13 +758,18 @@ export function ModelPicker({ value, profiles, showInpaint = true, showRapid = t
   };
 
   const favorites = new Set(menu?.favorites || []);
+  const loraCount = loras?.active.length || 0;
   let rowIndex = -1;
   return (
     <div className={cn("model-picker", compact && "is-compact", density !== "full" && `is-density-${density}`)} ref={pickerRef} data-open-surface={open || undefined}>
-      <Tip content={selected ? `${selected.displayName || selected.label}${setupNote(selected) ? ` · ${setupNote(selected)}. ${setupDetail(selected)}` : " · choose a model"}` : "Choose a model"}><button ref={triggerRef} type="button" data-open-trigger className={cn("model-trigger", setupNote(selected) && "needs-setup")} aria-haspopup="listbox" aria-expanded={open} onClick={() => (open ? close() : setOpen(true))}>
+      <Tip content={selected ? `${selected.displayName || selected.label}${setupNote(selected) ? ` · ${setupNote(selected)}. ${setupDetail(selected)}` : loraCount ? ` · ${loraCount} LoRA${loraCount === 1 ? "" : "s"}` : " · choose a model"}` : "Choose a model"}><button ref={triggerRef} type="button" data-open-trigger className={cn("model-trigger", setupNote(selected) && "needs-setup", loraCount > 0 && "has-loras")} aria-haspopup="listbox" aria-expanded={open} aria-label={selected ? `${selected.displayName || selected.label}${loraCount ? `, ${loraCount} LoRA${loraCount === 1 ? "" : "s"}` : ""}, choose a model` : undefined} onClick={() => (open ? close() : setOpen(true))}>
           {setupNote(selected) ? <span className="model-setup-flag" aria-label={setupNote(selected)} /> : null}
           {compact ? (
-            <span className="model-copy"><strong>{selected?.displayName || selected?.label || "No model"}</strong></span>
+            <>
+              <span className="model-copy"><strong>{selected?.displayName || selected?.label || "No model"}</strong></span>
+              {/* The LoRAs riding on it, as a small count after the name; the menu's last card lists them. */}
+              {loraCount ? <b className="model-lora-tag" aria-hidden="true"><Layers size={11} strokeWidth={2.2} /><AnimatedNumber value={loraCount} /></b> : null}
+            </>
           ) : (
             <span className="model-copy">
               <strong>{selected?.displayName || selected?.label || "No model"}</strong>
@@ -789,6 +846,7 @@ export function ModelPicker({ value, profiles, showInpaint = true, showRapid = t
               <em>{strayCount ? "Add" : "Search"}</em>
             </button>
           ) : null}
+          {loras && profiles.length ? <MenuLoras loras={loras} onOpen={() => { close(); loras.onOpen(); }} /> : null}
 
         </div>
       ) : null}

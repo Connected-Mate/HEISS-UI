@@ -1,6 +1,12 @@
 import type { LoraSelection, Profile } from './types';
 
 export const maxLoras = 8;
+
+/** A LoRA as people know it: the file's name, without its folder or extension. */
+export function loraDisplayName(name: string) {
+  return name.split(/[\\/]/).pop()?.replace(/\.(safetensors|ckpt|pt|bin)$/i, "") || name;
+}
+
 export const defaultLoraStrength = 0.7;
 
 export type LoraGroup = {

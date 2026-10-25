@@ -106,7 +106,11 @@ const tierLabels: Record<SizeTier, string> = { none: "Default", "2k": "2K", cust
  * across the whole window, so a change of shape reads as the lines sliding.
  * The window's size comes from the menu it sits beside, so it is measured.
  */
-export function SizePreview({ size, label, sub, accent = false, shown = true, inset = 26, className }: {
+/** How many frames the preview stacks at most: past four the deck reads the same. */
+const STACK_MAX = 4;
+const STACK_STEP = 6;
+
+export function SizePreview({ size, label, sub, accent = false, shown = true, inset = 26, className, count = 1 }: {
   size: Size;
   label: string;
   sub: string;
@@ -115,6 +119,8 @@ export function SizePreview({ size, label, sub, accent = false, shown = true, in
   /** The frame's margin inside the window: the phone's shorter stage keeps less. */
   inset?: number;
   className?: string;
+  /** Pictures a run makes: more than one stacks that many frames, like a small deck. */
+  count?: number;
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null);
   const [stage, setStage] = React.useState({ width: 0, height: 0 });
@@ -129,22 +135,36 @@ export function SizePreview({ size, label, sub, accent = false, shown = true, in
   }, []);
   // Room for the frame: an inset all round, and the caption's line at the bottom.
   const caption = 30;
-  const roomW = Math.max(1, stage.width - inset * 2);
-  const roomH = Math.max(1, stage.height - inset * 2 - caption);
+  // The deck fans up and to the right; the frame glides aside to leave it room, so a stack never clips.
+  const stacked = Math.min(STACK_MAX, Math.max(1, count));
+  const fan = (stacked - 1) * STACK_STEP;
+  const roomW = Math.max(1, stage.width - inset * 2 - fan);
+  const roomH = Math.max(1, stage.height - inset * 2 - caption - fan);
   const scale = Math.min(roomW / Math.max(1, size.width), roomH / Math.max(1, size.height));
   const width = Math.max(3, size.width * scale);
   const height = Math.max(3, size.height * scale);
-  const left = (stage.width - width) / 2;
-  const top = inset + (roomH - height) / 2;
+  const left = (stage.width - width - fan) / 2;
+  const top = inset + fan + (roomH - height) / 2;
   const px = (value: number) => `${Math.round(value * 10) / 10}px`;
   return (
-    <div ref={ref} className={cn("size-peek", className, shown && "is-on", accent && "is-accent", stage.width > 0 && "is-measured")} aria-hidden="true">
+    <div ref={ref} className={cn("size-peek", className, shown && "is-on", accent && "is-accent", stacked > 1 && "is-stacked", stage.width > 0 && "is-measured")} aria-hidden="true">
       {/* Lines from the frame's edges across the window: they glide with it. */}
       <i className="size-guide is-x" style={{ top: px(top) }} />
       <i className="size-guide is-x" style={{ top: px(top + height) }} />
       <i className="size-guide is-y" style={{ left: px(left) }} />
       <i className="size-guide is-y" style={{ left: px(left + width) }} />
-      <div className="size-frame" style={{ left: px(left), top: px(top), width: px(width), height: px(height) }} />
+      {/* The deck behind the frame: always there, each card shown once the count reaches it, so it deals in and out. */}
+      {Array.from({ length: STACK_MAX - 1 }, (_, index) => STACK_MAX - 1 - index).map((depth) => (
+        <div
+          key={depth}
+          className={cn("size-frame is-card", depth < stacked && "is-dealt")}
+          style={{ left: px(left), top: px(top), width: px(width), height: px(height), "--card-depth": depth, "--card-step": `${STACK_STEP}px` } as React.CSSProperties}
+        />
+      ))}
+      <div className="size-frame" style={{ left: px(left), top: px(top), width: px(width), height: px(height) }}>
+        {/* How many the deck stands for, on the front card: the deck stops at four, the count doesn't. */}
+        {count > 1 ? <b key={count} className="size-count">×{count}</b> : null}
+      </div>
       <p className="size-peek-caption"><strong>{label}</strong><span>{sub}</span></p>
     </div>
   );

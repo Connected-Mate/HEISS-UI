@@ -1,0 +1,279 @@
+/* ---------------------------------------------------------------------------
+   Output and LoRAs in the composer (RunSettings.tsx, components.tsx).
+
+   One button for what comes out: the size's shape and ratio, then its steps
+   past a hairline, then "×2" once a run makes more than one. Its menu keeps
+   Images and Steps under the shapes, in the size menu's own well, pill and
+   sliding thumb; the preview window deals one frame per image.
+
+   LoRAs ride on the model button as a small ember count, and the model menu
+   ends on a card that lists them and opens the LoRA list.
+--------------------------------------------------------------------------- */
+
+/* --- The button --------------------------------------------------------- */
+
+.aspect-trigger-run {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  padding-left: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* The hairline between "what shape" and "how long": quiet, half the button's height. */
+.aspect-trigger-run::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: 14px;
+  translate: 0 -50%;
+  background: rgb(255 255 255 / .14);
+}
+.aspect-trigger-run > span:last-child { color: hsl(var(--muted-foreground)); font-weight: 500; }
+.aspect-trigger.is-held .aspect-trigger-run { overflow: hidden; }
+
+/* How many: white, not ember. Ember says "a bigger picture"; this only says "more of them". */
+.aspect-tag.run-count-tag {
+  background: rgb(255 255 255 / .09);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12);
+  color: hsl(var(--foreground) / .9);
+  letter-spacing: 0;
+}
+.aspect-tag.is-corner:not(.run-count-tag) { letter-spacing: .03em; }
+
+/* The no-size button (RunPicker): the steps glyph sits where a shape would. */
+.run-picker .aspect-shape-slot { color: hsl(var(--muted-foreground)); }
+
+/* --- In the menu -------------------------------------------------------- */
+
+.run-fields {
+  display: grid;
+  gap: 0;
+  margin-top: 6px;
+  padding-top: 8px;
+  box-shadow: inset 0 1px 0 var(--surface-border);
+}
+.run-count { display: grid; padding: 2px 4px 0; }
+.run-count .aspect-upscale-head { justify-content: space-between; padding-bottom: 7px; }
+.run-count .aspect-upscale-head small {
+  color: hsl(var(--muted-foreground) / .8);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  animation: saveSwap var(--motion-slow) var(--motion-spring) both;
+}
+.run-count-tabs button { min-height: 28px; font-family: var(--font-mono); font-size: 12px; }
+/* A count above one is chosen in white: ember is for size here, as on the button. */
+.run-count-tabs button.is-active:not([data-tier="none"]) { color: hsl(var(--foreground)); }
+
+.run-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 4px 2px 10px;
+}
+.run-row .size-mp-reset { margin-left: -4px; }
+
+/* − value +, in the well: the ends are round buttons, the middle a field. */
+.run-stepper {
+  flex: none;
+  display: grid;
+  grid-template-columns: 30px 38px 30px;
+  align-items: center;
+  height: 32px;
+  padding: 0 1px;
+  border-radius: var(--r-pill);
+  background: var(--well);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / .5);
+  transition: background-color var(--motion-base) var(--motion-ease);
+}
+.run-stepper:focus-within { background: linear-gradient(rgb(255 255 255 / .045), rgb(255 255 255 / .045)), var(--well); }
+.run-stepper button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease), scale var(--motion-base) var(--motion-spring);
+}
+@media (hover: hover) { .run-stepper button:hover:not(:disabled) { color: hsl(var(--foreground)); background: rgb(255 255 255 / .07); } }
+.run-stepper button:active:not(:disabled) { scale: .86; transition-duration: var(--motion-instant); }
+.run-stepper button:disabled { opacity: .3; cursor: default; }
+.run-stepper button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.run-stepper input,
+.run-stepper input:focus,
+.run-stepper input:focus-visible {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  box-shadow: none;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font: 500 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.run-stepper input::selection { background: rgb(255 154 82 / .32); color: #fff; }
+
+/* The small menu of a workflow with no size: only the block, no line above it. */
+.aspect-menu.size-menu.run-menu { width: min(256px, calc(100vw - 24px)); }
+.run-menu .run-fields { margin-top: 0; padding-top: 2px; box-shadow: none; }
+.run-menu .run-row:first-child { padding-top: 4px; }
+
+/* --- The preview's deck: one card per image behind the frame ---------------- */
+
+.size-frame.is-card {
+  opacity: 0;
+  background: #191919;
+  border-color: rgb(255 255 255 / .42);
+  transform: none;
+  transition:
+    left var(--motion-slow) var(--size-spring), top var(--motion-slow) var(--size-spring),
+    width var(--motion-slow) var(--size-spring), height var(--motion-slow) var(--size-spring),
+    transform var(--motion-slow) var(--size-spring), opacity var(--motion-base) var(--motion-ease),
+    border-color var(--motion-base) var(--motion-ease);
+}
+.size-frame.is-card.is-dealt {
+  opacity: calc(1 - var(--card-depth) * .24);
+  transform: translate(calc(var(--card-depth) * var(--card-step)), calc(var(--card-depth) * var(--card-step) * -1));
+}
+/* With cards behind it, the front frame is a card too: solid, so the deck reads as stacked. */
+.size-peek.is-stacked .size-frame:not(.is-card) { background: #1c1c1c; }
+
+/* --- LoRAs on the model button ------------------------------------------ */
+
+.zen-prompt-actions .model-picker.is-compact .model-trigger.has-loras { grid-template-columns: minmax(0, max-content) auto 12px; }
+/* The name is cut after about twenty letters; the tooltip and the menu say all of it. */
+.zen-prompt-actions .model-picker.is-compact:not(.is-density-compact):not(.is-density-mini) .model-trigger .model-copy strong { max-width: 164px; }
+.model-lora-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 6px 0 5px;
+  border-radius: 6px;
+  background: rgb(255 154 82 / .13);
+  box-shadow: inset 0 0 0 1px rgb(255 154 82 / .2);
+  color: var(--ember);
+  font: 700 10.5px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.model-lora-tag svg { flex: none; }
+
+/* --- LoRAs at the foot of the model menu ------------------------------------ */
+
+.model-menu-loras {
+  display: grid;
+  gap: 9px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px 12px 10px 10px;
+  border: 0;
+  border-radius: var(--r-item);
+  background: var(--well);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / .5), inset 0 0 0 1px rgb(255 255 255 / .04);
+  color: hsl(var(--foreground));
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--motion-ease);
+}
+@media (hover: hover) {
+  .model-menu-loras:hover { background: linear-gradient(rgb(255 255 255 / .035), rgb(255 255 255 / .035)), var(--well); }
+  .model-menu-loras:hover .model-menu-loras-head em { color: hsl(var(--foreground)); }
+  .model-menu-loras:hover .model-menu-loras-head em svg { translate: 2px 0; }
+}
+.model-menu-loras:active { scale: .99; }
+.model-menu-loras:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.model-menu-loras-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.model-menu-loras-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: rgb(255 255 255 / .06);
+  color: hsl(var(--muted-foreground));
+}
+.model-menu-loras.has-active .model-menu-loras-icon { background: rgb(255 154 82 / .14); color: var(--ember); }
+.model-menu-loras-head strong { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; }
+.model-menu-loras-head em {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  transition: color var(--motion-fast) var(--motion-ease);
+}
+.model-menu-loras-head em svg { transition: translate var(--motion-base) var(--motion-spring); }
+.model-menu-loras-list { display: grid; gap: 7px; padding-left: 30px; }
+.model-menu-lora {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px 30px;
+  align-items: center;
+  gap: 9px;
+  color: hsl(var(--foreground) / .86);
+  font-size: 12px;
+}
+.model-menu-lora-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-menu-lora-meter { height: 3px; overflow: hidden; border-radius: 2px; background: rgb(255 255 255 / .1); }
+.model-menu-lora-meter i { display: block; height: 100%; border-radius: inherit; background: rgb(255 255 255 / .62); }
+.model-menu-lora-meter.is-over i { background: var(--ember); }
+.model-menu-lora-strength {
+  justify-self: end;
+  color: hsl(var(--muted-foreground));
+  font: 500 11px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.model-menu-lora.is-more { display: block; color: hsl(var(--muted-foreground)); font-size: 11.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .size-frame.is-card, .run-stepper button, .model-menu-loras-head em svg { transition: none; }
+  .run-count .aspect-upscale-head small { animation: none; }
+}
+
+/* The count on the front card's corner, popping in as it changes. */
+.size-count {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: inline-grid;
+  place-items: center;
+  height: 18px;
+  min-width: 22px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / .1);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14);
+  color: hsl(var(--foreground));
+  font: 700 10.5px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  animation: runCountPop var(--motion-slow) var(--motion-spring) both;
+}
+@keyframes runCountPop {
+  from { opacity: 0; transform: scale(.7); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .size-count { animation: none; } }
+/* On the shape's corner it stays solid, so the shape can't show through. */
+.aspect-tag.is-corner.run-count-tag { background: #262626; box-shadow: 0 0 0 1.5px #090909, inset 0 0 0 1px rgb(255 255 255 / .16); }
