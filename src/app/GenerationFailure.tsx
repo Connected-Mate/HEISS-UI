@@ -67,7 +67,9 @@ type FixButton = { label: string; icon: React.ReactNode; run: () => unknown };
 function fixButtons(item: GalleryItem, failure: GenerationFailure, fixes: FailureFixes | undefined, admin: boolean): FixButton[] {
   if (!fixes) return [];
   // An item from before fixes existed (or a Hidden one still locked) has nothing to rerun from.
-  const canRerun = Boolean(item.prompt && item.model && item.settings);
+  // Nor has an inpaint: the painting isn't kept, so a rerun would change the whole picture.
+  // Use these settings brings the picture back to paint again.
+  const canRerun = Boolean(item.prompt && item.model && item.settings && !item.settings.inpaint);
   if (failure.fix === 'memory' && canRerun) {
     return [
       ...(admin ? [{ label: failure.retry?.tiledDecode ? 'Free memory, decode in tiles' : 'Free memory and try again', icon: <RotateCw size={14} />, run: () => fixes.freeMemoryAndRetry(item) }] : []),

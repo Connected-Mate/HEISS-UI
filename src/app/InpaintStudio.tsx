@@ -30,6 +30,7 @@ const maxZoom = 12;
 const exportDelay = 220;
 const tint = "#ff9a52";
 
+const isMac = typeof navigator !== "undefined" && /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent);
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const typing = (target: EventTarget | null) => target instanceof HTMLElement && (target.isContentEditable || /^(input|textarea|select)$/i.test(target.tagName));
 
@@ -575,10 +576,10 @@ export function InpaintStudio({ anchor, asset, mask, popRef, onChange, onClose }
           </Tip>
         ))}
         <span className="inpaint-divider" aria-hidden="true" />
-        <Tip content={<>Undo <kbd>⌘Z</kbd></>}>
+        <Tip content={<>Undo <kbd>{isMac ? "⌘Z" : "Ctrl+Z"}</kbd></>}>
           <button type="button" className="inpaint-tool" aria-label="Undo" disabled={!history.undo} onClick={undo}><Undo2 size={16} /></button>
         </Tip>
-        <Tip content={<>Redo <kbd>⇧⌘Z</kbd></>}>
+        <Tip content={<>Redo <kbd>{isMac ? "⇧⌘Z" : "Ctrl+Shift+Z"}</kbd></>}>
           <button type="button" className="inpaint-tool" aria-label="Redo" disabled={!history.redo} onClick={redoStroke}><Redo2 size={16} /></button>
         </Tip>
         {/* Only there while zoomed in: at fit it takes no room and has no tooltip. */}

@@ -249,7 +249,7 @@ function ReferencePopover({ input, selected, anchor, popRef, dropActive, dropped
                       data-reference-index={index}
                       className="reference-tile-select"
                       aria-pressed={isSelected}
-                      aria-label={`${isSelected ? "Selected: " : ""}${asset.name}`}
+                      aria-label={`${isSelected ? "Selected: " : ""}${referenceName(asset.name)}`}
                       onKeyDown={(event) => moveGridFocus(event, index)}
                       onClick={() => choose(asset)}
                       disabled={Boolean(selectingId || upload.busy)}
@@ -531,7 +531,7 @@ function ReferenceSlot({ input, selected, open, busy, progress, fresh, paint, ro
         return <i key={item.input.id} className={cn("ref-deck-card", `is-${index + 1}`)} aria-hidden="true" style={src ? { backgroundImage: `url("${src.replace(/"/g, "%22")}")` } : undefined} />;
       })}
       <Tip content={`${name} · Click to change`}>
-        <button type="button" data-open-trigger className="ref-thumb" onClick={onOpen} aria-label={`Change ${label.toLowerCase()}, currently ${selected.name}`} aria-expanded={open}>
+        <button type="button" data-open-trigger className="ref-thumb" onClick={onOpen} aria-label={`Change ${label.toLowerCase()}, currently ${referenceName(selected.name)}`} aria-expanded={open}>
           {image && !broken ? <img src={image} alt="" draggable={false} onError={() => setBroken(true)} /> : selected.source === "vault" ? <LockKeyhole size={14} /> : <ImageIcon size={15} />}
         </button>
       </Tip>
@@ -546,15 +546,23 @@ function ReferenceSlot({ input, selected, open, busy, progress, fresh, paint, ro
   );
 }
 
+/** What Edit and Reference do, in the words both the desktop's tips and the phone's line use. */
+export function roleWords(value: "edit" | "reference", many: boolean) {
+  return value === "edit"
+    ? many ? "Changes the first picture, at its size and framing. The others are what it can draw from" : "Changes this picture, at its size and framing"
+    : many ? "They all guide a new picture, at the size you pick" : "Guides a new picture, at the size you pick";
+}
+export const roleLockedWords = "The painted part changes this picture. Clear the paint to use it as a reference";
+
 /** Edit | Reference: one thumb slides between the two, like the size menu's tabs. */
 export function RoleSwitch({ role, many, className }: { role: ReferenceRoleControl; many: boolean; className?: string }) {
   return (
     <div className={cn("ref-menu-role", role.value === "reference" && "is-ref", role.locked && "is-locked", className)} role="radiogroup" aria-label="What this image is">
       <i aria-hidden="true" />
-      <Tip content={many ? "Change the first picture, at its size and framing. The others are what it can draw from" : "Change this picture: the result keeps its size and framing"}>
+      <Tip content={roleWords("edit", many)}>
         <button type="button" role="radio" aria-checked={role.value === "edit"} className={cn(role.value === "edit" && "is-active")} onClick={() => role.onChange("edit")}>Edit</button>
       </Tip>
-      <Tip content={role.locked ? "The painted part is changed in this picture. Clear the paint to use it as a reference" : many ? "Let them all guide a new picture, at the size you picked" : "Let it guide a new picture, at the size you picked"}>
+      <Tip content={role.locked ? roleLockedWords : roleWords("reference", many)}>
         <button type="button" role="radio" aria-checked={role.value === "reference"} aria-disabled={role.locked || undefined} className={cn(role.value === "reference" && "is-active")} onClick={() => { if (!role.locked) role.onChange("reference"); }}>Reference</button>
       </Tip>
     </div>
@@ -569,7 +577,7 @@ function StackThumb({ item, number, guide }: { item: StackItem; number: number; 
   return (
     <span className={cn("ref-stack-item", item.open && "is-open", item.fresh && "is-new")}>
       <Tip content={`Reference ${number}: ${referenceName(item.asset.name)}${guide ? " · Not edited, only drawn from" : ""} · Click to change`}>
-        <button type="button" data-open-trigger className="ref-stack-thumb" aria-label={`Change reference ${number}, currently ${item.asset.name}`} aria-expanded={item.open} onClick={item.onOpen}>
+        <button type="button" data-open-trigger className="ref-stack-thumb" aria-label={`Change reference ${number}, currently ${referenceName(item.asset.name)}`} aria-expanded={item.open} onClick={item.onOpen}>
           {item.busy ? <LoaderCircle className="spin" size={14} /> : src && !broken ? <img src={src} alt="" draggable={false} onError={() => setBroken(true)} /> : item.asset.source === "vault" ? <LockKeyhole size={13} /> : <ImageIcon size={14} />}
         </button>
       </Tip>

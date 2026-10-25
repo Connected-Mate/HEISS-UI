@@ -158,6 +158,16 @@ export async function referenceAssetFromGallery(galleryItemId: string) {
   return data.asset;
 }
 
+/** A past run's pictures by the ids its settings kept: each one, or null where it's gone. */
+export async function resolveReferenceAssets(ids: string[]) {
+  const data = await apiJson<{ assets: Array<ReferenceAsset | null> }>("/api/reference-assets/resolve", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ids })
+  });
+  return Array.isArray(data.assets) ? data.assets : [];
+}
+
 export function deleteReferenceAsset(assetId: string) {
   return apiJson<{ ok?: boolean }>(`/api/reference-assets/${encodeURIComponent(assetId)}`, { method: "DELETE" });
 }

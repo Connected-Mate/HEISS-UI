@@ -80,7 +80,7 @@ export function PhoneAdvancedControls({ view }: { view: any }) {
     setCfg, setDenoise, setFps, setFrames, setHeight, setLoras, setSampler, setScheduler, setSeed, setTextEncoder, setVae,
     setWeightDtype, setWidth, textEncoder, vae, weightDtype, width, widthMeta, loraLibrary, rememberedLoraStrength,
     textEncoders, setTextEncoders, refreshModels, refreshWorkflows, showToast,
-    inpaintActive, inpaintStrength, setInpaintStrength, inpaintFeather, setInpaintFeather
+    inpaintActive, inpaintStrength, setInpaintStrength, inpaintFeather, setInpaintFeather, sidebarReference
   } = view;
   const { loraOptions, loraLimit, loraUnavailable } = loraSetup(view);
   const samplers = profileOptions.samplers?.length ? profileOptions.samplers : models?.samplers?.length ? models.samplers : fallbackSamplers;
@@ -128,7 +128,8 @@ export function PhoneAdvancedControls({ view }: { view: any }) {
           {currentProfile?.capabilities.denoise ? <PhoneSlider label="Inpaint strength" value={inpaintStrength} min={0.05} max={1} step={0.05} onChange={setInpaintStrength} format={(value) => `${Math.round(value * 100)}%`} hint={<><span>Touch it up</span><span>Paint it anew</span></>} /> : null}
           <PhoneSlider label="Edge softness" value={inpaintFeather} min={0} max={1} step={0.05} onChange={setInpaintFeather} format={(value) => `${Math.round(value * 100)}%`} hint={<><span>Crisp</span><span>Soft</span></>} />
         </>
-      ) : canUseStartImage && currentProfile?.capabilities.denoise ? (
+      ) : canUseStartImage && sidebarReference && currentProfile?.capabilities.denoise ? (
+        // Like the sidebar: only with a picture to change from.
         <PhoneSlider label="Change from the reference" value={denoise} min={denoiseMeta.min ?? 0} max={denoiseMeta.max ?? 1} step={denoiseMeta.step || 0.05} onChange={setDenoise} format={(value) => `${Math.round(value * 100)}%`} hint={<><span>Keep it close</span><span>Change a lot</span></>} />
       ) : null}
 
@@ -243,7 +244,7 @@ export function SidebarControls({ view }: { view: any }) {
                   <span className="sidebar-reference-thumb"><SafeImg src={sidebarReference.asset.thumbnailUrl || sidebarReference.asset.url || ""} alt="" /></span>
                   <span className="sidebar-reference-copy">
                     <strong>{sidebarReference.label}</strong>
-                    <small>{referenceName(sidebarReference.asset.name)}</small>
+                    <small>{referenceName(sidebarReference.asset.name)}{sidebarReference.more ? ` · and ${sidebarReference.more} more` : ""}</small>
                   </span>
                   <Tip content={`Remove ${sidebarReference.label.toLowerCase()}`}>
                     <button type="button" className="icon-button sidebar-reference-remove" aria-label={`Remove ${sidebarReference.label.toLowerCase()}`} onClick={sidebarReference.remove}><X size={14} /></button>

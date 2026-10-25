@@ -62,6 +62,7 @@ export function useViewerControls(view: any) {
       setCfg(before.cfg);
       setCount(before.count);
       setLoras(before.loras);
+      if (before.referenceAssets) view.putReferencesBack?.(before);
     }));
   }
 
@@ -105,10 +106,14 @@ export function useViewerControls(view: any) {
     setStartImage(item.referenceImage || "");
     if (setStartImageId) setStartImageId(item.startImageId || item.referenceImage || "");
     setStartImageName(item.referenceImageName || String(itemSettings.referenceImageName || ""));
+    // Its reference pictures and their role, or none if it had none (main.tsx restoreReferences).
+    if (matchingProfile) view.restoreReferences?.(item);
     setCustomSize(!matchingAspects.some((option: { w: number; h: number }) => option.w === Number(item.width) && option.h === Number(item.height)));
     const message = matchingProfile ? "Settings applied." : "Settings applied. Its model isn’t installed, so the current model stays.";
     toast(message, {
       duration: 8000,
+      // The painting isn't kept with a picture, so an inpaint comes back as its picture, ready to paint again.
+      ...(matchingProfile && itemSettings.inpaint ? { description: "Paint the part to change again: the painting isn’t kept." } : {}),
       action: before ? { label: "Undo", onClick: () => restoreDraft(before) } : undefined
     });
     return Boolean(matchingProfile);

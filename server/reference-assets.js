@@ -288,6 +288,30 @@ export function referenceAssetFromGallery(req, galleryItemId) {
 }
 
 /**
+ * The pictures a past run used, by the ids its settings kept, for "Use these settings":
+ * each as the picker would give it, or null when it's gone. A Hidden one while Hidden is
+ * locked comes back without a preview; the composer fetches it once Hidden opens.
+ */
+export function resolveReferenceAssets(req, ids = []) {
+  const uploads = loadManifest().filter((item) => item.source === "upload");
+  let vaultItems = null;
+  return ids.slice(0, 16).map((raw) => {
+    const id = String(raw || "");
+    if (id.startsWith("vault:")) {
+      const vaultId = id.slice(6);
+      if (!encryptionKeyFromRequest(req)) return { id, source: "vault", privacyDomain: "vault", name: "Hidden image", mime: "", width: 0, height: 0, size: 0, createdAt: "", galleryItemId: vaultId };
+      vaultItems ??= vaultGalleryItemsForRequest(req, { bundles: false });
+      const item = vaultItems.find((entry) => entry.id === vaultId && finishedImage(entry));
+      return item ? galleryAsset(item) : null;
+    }
+    const upload = uploads.find((item) => item.id === id);
+    if (upload) return publicUploadAsset(upload);
+    const item = findGalleryItem(id);
+    return item && finishedImage(item) && !item.library ? galleryAsset(item) : null;
+  });
+}
+
+/**
  * An image shown upscaled is used upscaled: its sharper pixels, scaled back to
  * the original's size, since an image-to-image start image is encoded at its
  * own size and a 4x one would make a 4x render (slow, and often out of GPU

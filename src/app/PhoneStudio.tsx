@@ -11,7 +11,7 @@ import { downloadUrl } from './GalleryTile';
 import { canUpscaleItem, shortLeft, upscaledWithRun, upscaleLeftLine, upscaleTooltip, useUpscaleClock } from './useUpscale';
 import { chooseVideoTier, rtxVideoTiers, useRtxOffered } from './rtx';
 import { UpscaleArrow } from './UpscaleArrow';
-import { ReferenceSlots } from './ReferenceMediaPicker';
+import { ReferenceSlots, roleLockedWords, roleWords } from './ReferenceMediaPicker';
 import { haptic, HapticTarget } from './phoneControls';
 import { Media } from './components';
 import { useFocusTrap } from './useFocusTrap';
@@ -622,10 +622,7 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
                   </button>
                 ))}
               </div>
-              <small key={`${referenceRole.value}:${many}:${Boolean(referenceRole.locked)}`}>{referenceRole.locked ? 'The painted part changes this picture. Clear the paint to use it as a reference'
-                : referenceRole.value === 'edit'
-                ? many ? 'Changes the first picture, at its size. The others are what it can draw from' : 'Changes this picture, at its size and framing'
-                : many ? 'They all guide a new picture, at the size you pick' : 'Guides a new picture, at the size you pick'}</small>
+              <small key={`${referenceRole.value}:${many}:${Boolean(referenceRole.locked)}`}>{referenceRole.locked ? roleLockedWords : roleWords(referenceRole.value, many)}</small>
             </motion.div>
           ) : null}
         </AnimatePresence>

@@ -23,6 +23,21 @@ test("uploaded references are validated, indexed, thumbnailed, and deletable", a
   assert.equal(referenceAssets.listReferenceAssets({}, { source: "upload" }).items.length, 0);
 });
 
+test("a past run's references resolve by id: uploads as the picker gives them, the gone as null, a locked Hidden one without a preview", async () => {
+  const buffer = await sharp({ create: { width: 40, height: 30, channels: 3, background: "#445566" } }).png().toBuffer();
+  const asset = await referenceAssets.saveUploadedReference({ buffer, name: "kept.png", mime: "image/png" });
+  const [kept, gone, hidden] = referenceAssets.resolveReferenceAssets({}, [asset.id, "nope", "vault:abc"]);
+  assert.equal(kept.id, asset.id);
+  assert.equal(kept.width, 40);
+  assert.ok(kept.thumbnailUrl);
+  assert.equal(gone, null);
+  assert.equal(hidden.source, "vault");
+  assert.equal(hidden.galleryItemId, "abc");
+  assert.equal(hidden.thumbnailUrl, undefined);
+  referenceAssets.deleteUploadedReference(asset.id);
+  assert.deepEqual(referenceAssets.resolveReferenceAssets({}, [asset.id]), [null]);
+});
+
 test("non-image uploads are rejected", async () => {
   await assert.rejects(() => referenceAssets.saveUploadedReference({ buffer: Buffer.from("not an image"), name: "fake.png", mime: "image/png" }));
 });

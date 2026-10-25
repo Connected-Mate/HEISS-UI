@@ -9,7 +9,7 @@ import "./styles.css";
 import { useModelFolders } from './app/useModelFolders';
 import type { AspectPreset, AutoUpscale, PreviousExit, SavedSize, ComfyStatus, GalleryItem, Health, LoraSelection, MediaInput, Mode, Models, OutputFolderReport, Paths, Preferences, Profile, InpaintMask, ReferenceAsset, ReferenceInpaint, ReferenceRole, ReferenceRoleControl, SelectedReferenceAsset, TouchGesture, UpdatePrefs, UpdateStatus, WorkflowPreferences, WorkflowSummary } from './app/types';
 import { fallbackAspectPresets } from './app/constants';
-import { apiJson, copyImage, copyText, loadDraft, loadPrefs, referenceAssetFromGallery } from './app/api';
+import { apiJson, copyImage, copyText, loadDraft, loadPrefs, referenceAssetFromGallery, resolveReferenceAssets } from './app/api';
 import { characterMeta, clampText, clientJobUuid, formatElapsed, generationDetailEntries, settingMax, textLength, titleFromPrompt } from './app/format';
 import { useGalleryColumnCount } from './app/gallery';
 import { normalizeLoras, sameBaseModel } from './app/loras';
@@ -75,6 +75,15 @@ function snapDimension(value: number, meta: Record<string, number> = {}): number
   const max = meta.max ?? 4096;
   const snapped = Math.round(value / step) * step;
   return Math.min(max, Math.max(min, snapped || step));
+}
+
+/** The picked pictures a model switch keeps: each in the slot of the same name, or a lone one in a lone slot. */
+function referencesKeptBy(profile: Profile, current: SelectedReferenceAsset[]): SelectedReferenceAsset[] {
+  const nextInputs = imageInputsForProfile(profile);
+  return nextInputs.flatMap((input, index) => {
+    const compatible = current.find((item) => item.slot === input.id) || (nextInputs.length === 1 && index === 0 ? current[0] : undefined);
+    return compatible ? [{ slot: input.id, asset: compatible.asset }] : [];
+  });
 }
 
 function imageInputsForProfile(profile: Profile | null | undefined): MediaInput[] {
@@ -1146,11 +1155,7 @@ function App() {
       setStartImageId("");
       setStartImageName("");
     } else {
-      const nextInputs = imageInputsForProfile(profile);
-      setReferenceAssets((current) => nextInputs.flatMap((input, index) => {
-        const compatible = current.find((item) => item.slot === input.id) || (nextInputs.length === 1 && index === 0 ? current[0] : undefined);
-        return compatible ? [{ slot: input.id, asset: compatible.asset }] : [];
-      }));
+      setReferenceAssets((current) => referencesKeptBy(profile, current));
     }
   }
 
@@ -1619,11 +1624,7 @@ function App() {
   // Picking in the composer counts as using it, so the menu's Recent follows what you pick.
   function pickModel(profileId: string) {
     const next = models?.profiles.find((item) => item.id === profileId);
-    if (next && profileId !== model) {
-      // A switch loads the workflow's own defaults, which the composer shows; only
-      // a reference image it had to drop is news.
-      if (referenceAssets.length > 0 && !imageInputsForProfile(next).length) showToast(`Reference image removed. ${next.displayName || next.label || "This model"} doesn’t use one.`, "warning");
-    }
+    if (next && profileId !== model) sayDroppedReferences(next);
     chooseModel(profileId);
     const lastUsed = { [profileId]: new Date().toISOString() };
     setWorkflowPreferences((current) => ({ ...current, lastUsed: { ...current.lastUsed, ...lastUsed } }));
@@ -1650,9 +1651,25 @@ function App() {
 
   toggleModelFavoriteRef.current = toggleModelFavorite;
 
+  /**
+   * A switch loads the model's own defaults, which the composer shows; only pictures it had
+   * to let go are news: all of them (it takes none), or the ones past what it takes.
+   */
+  function sayDroppedReferences(next: Profile) {
+    const had = arrangeReferences(referenceAssets, referenceInputs).length;
+    const dropped = had - referencesKeptBy(next, referenceAssets).length;
+    if (dropped <= 0) return;
+    const name = next.displayName || next.label || "This model";
+    const takes = imageInputsForProfile(next).length;
+    showToast(!takes
+      ? `${had > 1 ? "References" : "Reference image"} removed. ${name} doesn’t use one.`
+      : `${dropped} ${dropped > 1 ? "references" : "reference"} removed. ${name} takes ${takes === 1 ? "one" : takes}.`, "warning");
+  }
+
   function selectWorkflow(profileId: string) {
     // Picking a video workflow from the image gallery (or the reverse) switches mode with it.
     const profile = models?.profiles.find((item) => item.id === profileId);
+    if (profile && profileId !== model) sayDroppedReferences(profile);
     if (profile && profile.kind !== mode) setMode(profile.kind);
     chooseModel(profileId);
     apiJson<{ preferences: WorkflowPreferences }>("/api/workflows/preferences", {
@@ -1703,6 +1720,46 @@ function App() {
     setStartImageName(first?.name || "");
   }
 
+  /**
+   * "Use these settings" brings back the run's own pictures, each in its slot, and whether the
+   * first was edited or only guided. A run that had none leaves the composer with none, so the
+   * next run isn't quietly an edit. The painting is never kept, so there's no mask to bring back.
+   */
+  const referenceRestore = useRef(0);
+  function restoreReferences(item: GalleryItem) {
+    const settings = item.settings || {};
+    const saved = (Array.isArray(settings.referenceAssets) ? settings.referenceAssets as Array<{ slot?: string; assetId?: string }> : []).filter((ref) => ref?.assetId);
+    const run = ++referenceRestore.current;
+    setInpaintMask(null);
+    setReferenceAssets([]);
+    if (!saved.length) return;
+    setPrefs({ referenceRole: settings.referenceRole === "reference" ? "reference" : "edit" });
+    resolveReferenceAssets(saved.map((ref) => String(ref.assetId))).then((assets) => {
+      if (run !== referenceRestore.current) return;
+      const found = saved.flatMap((ref, index) => assets[index] ? [{ slot: String(ref.slot || "reference"), asset: assets[index] as ReferenceAsset }] : []);
+      setReferenceAssets(found);
+      setStartImage("");
+      setStartImageId(found[0]?.asset.id || "");
+      setStartImageName(found[0]?.asset.name || "");
+      const gone = saved.length - found.length;
+      if (gone) showToast(gone === saved.length
+        ? saved.length > 1 ? "Its reference pictures are gone, so they weren’t added" : "Its reference picture is gone, so it wasn’t added"
+        : `${gone} of its ${saved.length} reference pictures ${gone > 1 ? "are" : "is"} gone, so ${gone > 1 ? "they weren’t" : "it wasn’t"} added`, "warning");
+    }).catch(() => {
+      if (run === referenceRestore.current) showToast("Couldn’t bring back its reference pictures", "error");
+    });
+  }
+
+  /** Undo of "Use these settings": the pictures that were in the composer before, as they were. */
+  function putReferencesBack(before: { referenceAssets: SelectedReferenceAsset[]; startImageId: string; startImageName: string; referenceRole?: ReferenceRole }) {
+    referenceRestore.current += 1;
+    setReferenceAssets(before.referenceAssets);
+    setStartImage("");
+    setStartImageId(before.startImageId);
+    setStartImageName(before.startImageName);
+    if (before.referenceRole) setPrefs({ referenceRole: before.referenceRole });
+  }
+
   async function useOutputAsStartImage(item: GalleryItem) {
     if (!canUseStartImage || item.status !== "done" || item.type !== "image" || !item.url || item.vaultLocked) {
       showToast("This model can’t use this image as a reference", "error");
@@ -1732,7 +1789,7 @@ function App() {
   const { generate, cancelJob, cancelQueue, clearGallery, clearFailedItems, resetAllSettings, clearAllCache, openOutputFolder, deleteItem, deleteItems } = generationActions;
 
   const viewerActions = useViewerControls({
-    draft: { prompt, negative, seed, rapidSeed, mode, model, width, height, steps, cfg, count, loras }, active, deleteItem, doneGallery: zenGallery, generate, generateDisabled, height, lastTapRef, lastTouchRef, mode, models, prefs, setActive, setCfg, setClipType, setCount, setCustomSize, setDenoise, setFps, setFrames, setHeight, setIsDraggingViewer, setLoras: setLorasWithMemory, setMode, setModel, setNegative, setPrompt, setSampler, setScheduler, setSeed, setRapidSeed, setShowDetails, setStartImage, setStartImageId, setStartImageName, setSteps, setTextEncoder, setTextEncoders, setVae, setViewerPan, setViewerZoom, setWeightDtype, setWidth, replaceWorkflowSettings, setZenSelectedId, showToast, touchGestureRef, viewerDragEndRef, viewerDragRef, viewerPan, viewerZoom, visibleGallery, width, zenItem, zenStripDragRef, zenStripRef, viewerGallery
+    draft: { prompt, negative, seed, rapidSeed, mode, model, width, height, steps, cfg, count, loras, referenceAssets, startImageId, startImageName, referenceRole: prefs.referenceRole }, restoreReferences, putReferencesBack, active, deleteItem, doneGallery: zenGallery, generate, generateDisabled, height, lastTapRef, lastTouchRef, mode, models, prefs, setActive, setCfg, setClipType, setCount, setCustomSize, setDenoise, setFps, setFrames, setHeight, setIsDraggingViewer, setLoras: setLorasWithMemory, setMode, setModel, setNegative, setPrompt, setSampler, setScheduler, setSeed, setRapidSeed, setShowDetails, setStartImage, setStartImageId, setStartImageName, setSteps, setTextEncoder, setTextEncoders, setVae, setViewerPan, setViewerZoom, setWeightDtype, setWidth, replaceWorkflowSettings, setZenSelectedId, showToast, touchGestureRef, viewerDragEndRef, viewerDragRef, viewerPan, viewerZoom, visibleGallery, width, zenItem, zenStripDragRef, zenStripRef, viewerGallery
   });
   const { resetViewer, openItem, applyAllSettings, applyLoras, moveZen, moveViewer, goLatestZen, submitZenPrompt, startZenStripDrag, dragZenStrip, stopZenStripDrag, selectZenItem, zoomViewer, wheelViewer, clickViewer, startViewerDrag, dragViewer, stopViewerDrag, startViewerTouch, moveViewerTouch, endViewerTouch } = viewerActions;
 
@@ -1821,7 +1878,7 @@ function App() {
     recordRecents: (names: string[]) => { recordLoraRecents(names); bumpLoraLibrary(); }
   };
   // The first reference, shown at the top of the sidebar's Basics with how much it may change.
-  const sidebarReference = referenceInput && referenceAsset ? { asset: referenceAsset, label: referenceInput.role === "start" ? "Start image" : referenceInput.label || "Reference image", remove: () => removeReferenceAsset(referenceInput.id) } : null;
+  const sidebarReference = referenceInput && referenceAsset ? { asset: referenceAsset, label: referenceInput.role === "start" ? "Start image" : referenceInput.label || "Reference image", more: Math.max(0, composerReferenceAssets.length - 1), remove: () => removeReferenceAsset(referenceInput.id) } : null;
   const sidebarView = { rapid, prefs, setPrefs, openSettings: (section: SettingsSection) => setSettings(section), sidebarReference, workflowSettings: currentWorkflowSettings || {}, setWorkflowSetting, resetWorkflowSettings, inpaintActive: Boolean(activeInpaintMask), inpaintStrength, setInpaintStrength, inpaintFeather, setInpaintFeather, canUseStartImage, cfg, cfgMeta, changeMode, clipType, confirmAction, count, countMeta, currentProfile, currentWorkflow, customSize, aspectLocked, denoise, denoiseMeta, fps, fpsMeta, frameMeta, frames, height, heightMeta, loras, loraActiveCount, mode, models, profileOptions, readStartImage, sampler, scheduler, seed, setCfg, setCount, setDenoise, setFps, setFrames, setHeight, setLoras: setLorasWithMemory, setSampler, setScheduler, setSeed, setStartImage, setStartImageId, setStartImageName, setSteps, setTextEncoder, setTextEncoders, setVae, setWeightDtype, setWidth, setWorkflowGalleryOpen, startImageName, steps, stepsMeta, textEncoder, textEncoders, refreshModels, refreshWorkflows, showToast, modelFolders, vae, weightDtype, width, widthMeta, workflowPreferences, loraLibrary, rememberedLoraStrength: loraStrengthForCurrentWorkflow, sidebarTab, setSidebarTab, recommended };
   const sidebarControls = <StableSidebarControls view={sidebarView} />;
   // The same settings as the sidebar, laid out for the phone's Advanced sheet.

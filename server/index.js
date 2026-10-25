@@ -61,7 +61,7 @@ import { adoptHiddenRuns, forgetHiddenRunKeys, settleHiddenRuns, withoutHiddenRu
 import { sendGalleryExport } from './gallery-export.js';
 import { applyLoraOps, clearLoraState, loadLoraLibrary, loadLoraStack, saveLoraLibrary, saveLoraStack } from './lora-stacks.js';
 import { inpaintInputNames, prepareInpaint } from './inpaint.js';
-import { bytesForReference, deleteUploadedReference, listReferenceAssets, readMultipartImage, readUploadedReference, referenceAssetFromGallery, saveUploadedReference, stageReferenceAssets, uploadBufferToComfy } from './reference-assets.js';
+import { bytesForReference, deleteUploadedReference, listReferenceAssets, readMultipartImage, readUploadedReference, referenceAssetFromGallery, resolveReferenceAssets, saveUploadedReference, stageReferenceAssets, uploadBufferToComfy } from './reference-assets.js';
 import { prepareInputImage } from './input-image-sizing.js';
 import { enhanceModel, enhancePlan, enhancerChoices, finishPrompt, loadEnhanceSettings, runEnhance, saveEnhanceSettings } from './prompt-enhance.js';
 import { nodePack, nodePacks } from './node-packs.js';
@@ -1700,6 +1700,11 @@ app.post("/api/reference-assets/from-gallery", (req, res) => {
   } catch (error) {
     res.status(404).json({ ok: false, error: error.message });
   }
+});
+
+app.post("/api/reference-assets/resolve", (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+  res.json({ ok: true, assets: resolveReferenceAssets(req, ids) });
 });
 
 app.get("/api/reference-assets/:id/media", (req, res) => {
