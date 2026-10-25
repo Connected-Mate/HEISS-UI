@@ -7,7 +7,8 @@
    same − value + pill; the preview window deals one frame per image.
 
    LoRAs ride on the model button as a small ember count, and the model menu
-   ends on a card that lists them and opens the LoRA list.
+   ends on a card that lists them and opens the LoRA list: a title and Edit,
+   then one row per LoRA whose name starts under the title's.
 --------------------------------------------------------------------------- */
 
 /* --- The button --------------------------------------------------------- */
@@ -171,10 +172,10 @@
 
 .model-menu-loras {
   display: grid;
-  gap: 9px;
+  gap: 8px;
   width: 100%;
   margin-top: 4px;
-  padding: 9px 12px 10px 10px;
+  padding: 10px 12px;
   border: 0;
   border-radius: var(--r-item);
   background: var(--well);
@@ -193,18 +194,7 @@
 .model-menu-loras:active { scale: .99; }
 .model-menu-loras:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .model-menu-loras-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.model-menu-loras-icon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  background: rgb(255 255 255 / .06);
-  color: hsl(var(--muted-foreground));
-}
-.model-menu-loras.has-active .model-menu-loras-icon { background: rgb(255 154 82 / .14); color: var(--ember); }
-.model-menu-loras-head strong { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; }
+.model-menu-loras-head strong { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; }
 .model-menu-loras-head em {
   flex: none;
   display: inline-flex;
@@ -217,12 +207,12 @@
   transition: color var(--motion-fast) var(--motion-ease);
 }
 .model-menu-loras-head em svg { transition: translate var(--motion-base) var(--motion-spring); }
-.model-menu-loras-list { display: grid; gap: 7px; padding-left: 30px; }
+.model-menu-loras-list { display: grid; gap: 6px; }
 .model-menu-lora {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px 30px;
+  grid-template-columns: minmax(0, 1fr) 34px 28px;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   color: hsl(var(--foreground) / .86);
   font-size: 12px;
 }
@@ -233,10 +223,12 @@
 .model-menu-lora-strength {
   justify-self: end;
   color: hsl(var(--muted-foreground));
-  font: 500 11px/1 var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.model-menu-lora.is-more { display: block; color: hsl(var(--muted-foreground)); font-size: 11.5px; }
+.model-menu-lora.is-more { display: block; color: hsl(var(--muted-foreground)); font-size: 12px; }
 
 @media (prefers-reduced-motion: reduce) {
   .size-frame.is-card, .run-stepper button, .model-menu-loras-head em svg { transition: none; }

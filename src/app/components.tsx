@@ -2,6 +2,7 @@ import React, { lazy, Suspense, memo, useCallback, useEffect, useRef, useState }
 import { VideoPreview } from './VideoPreview';
 import { mediaUrl } from './mediaUrl';
 import { useDismiss } from './useDismiss';
+import { useScrollEdges } from './useScrollEdges';
 import { Brush, ChevronDown, ChevronRight, ImagePlus, Info, Layers, Minus, Plus, Search, Star, X, Zap } from 'lucide-react';
 import { Select as FluidSelect, SelectContent as FluidSelectContent, SelectItem as FluidSelectItem, SelectTrigger as FluidSelectTrigger } from '@/components/ui/select';
 import { Tooltip as FluidTooltip } from '@/components/ui/tooltip';
@@ -645,7 +646,6 @@ function MenuLoras({ loras, onOpen }: { loras: ModelMenuLoras; onOpen: () => voi
   return (
     <button type="button" className={cn("model-menu-loras", active.length > 0 && "has-active")} onClick={onOpen}>
       <span className="model-menu-loras-head">
-        <span className="model-menu-loras-icon" aria-hidden="true"><Layers size={13} strokeWidth={1.9} /></span>
         <strong>{active.length ? `${active.length} LoRA${active.length === 1 ? "" : "s"}` : "LoRAs"}</strong>
         <em>{active.length ? "Edit" : "None on"}<ChevronRight size={13} aria-hidden="true" /></em>
       </span>
@@ -680,6 +680,7 @@ export function ModelPicker({ value, profiles, showInpaint = true, showRapid = t
   const close = useCallback(() => setOpen(false), []);
   const presence = usePresence(open);
   useEffect(() => { if (!presence.mounted) { setQuery(""); setCursor(-1); } }, [presence.mounted]);
+  useScrollEdges(listRef, presence.mounted && profiles.length > 0);
   useDismiss(pickerRef, open, close);
   const searchable = profiles.length >= menuSearchFrom;
   const menuId = React.useId();

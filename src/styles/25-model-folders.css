@@ -278,7 +278,17 @@
   /* Room for the scrollbar without it touching the rows. */
   margin-right: -3px;
   padding-right: 3px;
+  /* An edge with more past it fades (useScrollEdges sets data-more), so rows slide under
+     the search and the cards below instead of being cut off at a hard line. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent);
+  transition: --fade-top var(--motion-base) var(--motion-ease), --fade-bottom var(--motion-base) var(--motion-ease);
 }
+.model-menu-list:is([data-more="above"], [data-more="both"]) { --fade-top: 28px; }
+.model-menu-list:is([data-more="below"], [data-more="both"]) { --fade-bottom: 28px; }
+@property --fade-top { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --fade-bottom { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@media (prefers-reduced-motion: reduce) { .model-menu-list { transition: none; } }
 .model-menu-section { display: grid; gap: 2px; }
 .model-menu-label {
   padding: 6px 10px 2px;
