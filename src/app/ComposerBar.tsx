@@ -1,10 +1,10 @@
 import React from 'react';
-import { ArrowUp, Dices, EyeOff, ChevronUp, History, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowUp, Dices, EyeOff, ChevronUp, CircleDotDashed, History, Images, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { LoraMismatchChip, type LoraMismatch } from './LoraMismatchChip';
 import { SetupTipChip, type SetupTip } from './SetupTipChip';
 import { cn } from './format';
-import { AspectPicker, ModelPicker, Skeleton, Tip, type ControlDensity, type ModelMenuState } from './components';
+import { AspectPicker, ModelPicker, NumberPicker, Skeleton, Tip, type ControlDensity, type ModelMenuState } from './components';
 import { RunPicker, type RunControl } from './RunSettings';
 import { ReferenceSlots } from './ReferenceMediaPicker';
 import { EnhanceButton } from './EnhanceComposer';
@@ -20,17 +20,36 @@ import type { SideLimits } from './sizing';
    The composer bar always shows every control as large as it fits. When the
    row runs out of room we walk down a fixed ladder of single-notch demotions,
    cheapest control first, so the important ones keep their labels longest.
-   Priority (largest kept longest): model > private > output.
+   Priority (largest kept longest): model > private > aspect > images > steps.
+   LoRAs ride on the model button as a count.
 
-   "Output" is one button for what comes out: size, steps and images (the
-   size menu holds all three, RunSettings.tsx); its steps go first, then its
-   ratio. LoRAs ride on the model button as a count.
+   With Compact options (Settings › Generation) the size button is "output":
+   size, steps and images in one (the size menu holds all three,
+   RunSettings.tsx); its steps go first, then its ratio.
 --------------------------------------------------------------------------- */
 
-type ControlId = "workflow" | "private" | "negative" | "aspect";
+type ControlId = "workflow" | "private" | "negative" | "aspect" | "steps" | "variants";
 type Demotion = ControlDensity | "drawer";
+type Ladder = Array<[ControlId, Demotion]>;
 
-const LADDER: Array<[ControlId, Demotion]> = [
+/** Steps and Images as controls of their own, the default. */
+const SPREAD_LADDER: Ladder = [
+  ["steps", "compact"],
+  ["variants", "compact"],
+  ["negative", "compact"],
+  ["aspect", "compact"],
+  ["steps", "mini"],
+  ["variants", "mini"],
+  ["aspect", "mini"],
+  ["private", "compact"],
+  ["workflow", "compact"],
+  ["steps", "drawer"],
+  ["variants", "drawer"],
+  ["aspect", "drawer"],
+  ["workflow", "mini"],
+];
+/** Compact options: Steps and Images inside the size button. */
+const COMPACT_LADDER: Ladder = [
   ["negative", "compact"],
   ["aspect", "compact"],
   ["aspect", "mini"],
@@ -45,12 +64,12 @@ const LADDER: Array<[ControlId, Demotion]> = [
 
 type Plan = Record<ControlId, { density: ControlDensity; drawer: boolean }>;
 
-function planForLevel(level: number): Plan {
+function planForLevel(level: number, ladder: Ladder): Plan {
   const plan = {} as Plan;
-  (["workflow", "private", "negative", "aspect"] as ControlId[])
+  (["workflow", "private", "negative", "aspect", "steps", "variants"] as ControlId[])
     .forEach((id) => { plan[id] = { density: "full", drawer: false }; });
-  for (let index = 0; index < Math.min(level, LADDER.length); index += 1) {
-    const [id, to] = LADDER[index];
+  for (let index = 0; index < Math.min(level, ladder.length); index += 1) {
+    const [id, to] = ladder[index];
     if (to === "drawer") plan[id].drawer = true;
     else plan[id].density = to;
   }
@@ -83,12 +102,14 @@ function measureGroupWidth(group: HTMLElement) {
  * naturally needed at each level, so we only climb back up once that much room
  * is genuinely back — which is what keeps it from oscillating on a slow resize.
  */
-function useDensityLevel(contentKey: string) {
+function useDensityLevel(contentKey: string, ladder: Ladder) {
   const rowRef = React.useRef<HTMLDivElement | null>(null);
   const [level, setLevel] = React.useState(0);
   const needsRef = React.useRef<number[]>([]);
   const levelRef = React.useRef(0);
   levelRef.current = level;
+  const ladderRef = React.useRef(ladder);
+  ladderRef.current = ladder;
 
   const check = React.useCallback(() => {
     const row = rowRef.current;
@@ -98,7 +119,7 @@ function useDensityLevel(contentKey: string) {
     const needed = measureNaturalWidth(row);
     const current = levelRef.current;
     if (needed > available + 0.5) {
-      if (current < LADDER.length) {
+      if (current < ladderRef.current.length) {
         needsRef.current[current] = needed;
         setLevel(current + 1);
       }
@@ -123,7 +144,7 @@ function useDensityLevel(contentKey: string) {
     return () => observer.disconnect();
   }, []);
 
-  return { rowRef, plan: planForLevel(level), level };
+  return { rowRef, plan: planForLevel(level, ladder), level };
 }
 
 /**
@@ -256,6 +277,8 @@ export type ComposerBarProps = {
   loraActiveCount: number;
   /** The LoRAs on the current model, for the model menu's card; left out where the model takes none. */
   activeLoras?: LoraSelection[];
+  /** Settings › Generation: Steps and Images inside the size button instead of beside it. */
+  compactOptions?: boolean;
   hiddenSpace: boolean;
   onOpenLoras?: () => void;
   showNegativePrompt: boolean;
@@ -301,7 +324,7 @@ export function ComposerBar(props: ComposerBarProps) {
     models, model, modelProfiles, showInpaint = true, showRapid = true, profileBadges, chooseModel, modelMenu, currentProfile, comfyOffline, heissUnreachable = false, comfyRestarting = false, onFindModels, onGetModels, strayModelCount, mode,
     aspectPickerValue, aspectOptions, aspectValue, defaultAspectSize, applyAspect, sizeTier = "none", sizeTiers, sizeArea = 0, megapixelControl = null, sizeMax, customLimits, chooseSizeTier, applyCustomRatio, setCustomDimensions, savedSizes, saveCustomSize, renameSavedSize, removeSavedSize, pickSavedSize, videoUpscale = "none", onVideoUpscaleChange,
     customSize, aspectLocked = false, width, widthMeta, setWidth, height, heightMeta, setHeight,
-    steps, stepsMeta, setSteps, count, countMeta, setCount, loraActiveCount, activeLoras,
+    steps, stepsMeta, setSteps, count, countMeta, setCount, loraActiveCount, activeLoras, compactOptions = false,
     hiddenSpace, onOpenLoras,
     showNegativePrompt, setShowNegativePrompt, canUseNegativePrompt,
     runningCount, generateDisabled, generateDisabledReason, generate, refreshComfyStatus, comfyRetrying,
@@ -314,8 +337,8 @@ export function ComposerBar(props: ComposerBarProps) {
   const displayCount = showVariants ? count : 1;
   const workflowName = currentProfile?.displayName || currentProfile?.label || "";
   // What changes a button's width: the bar refits when it does (steps by their digits, images once more than one).
-  const contentKey = [workflowName, mode, customSize ? "custom" : "preset", aspectLocked ? "locked" : "free", loraActiveCount, hiddenSpace, canUseNegativePrompt, Boolean(models), pinnedSeed.trim(), Boolean(onToggleHistory), String(steps).length, displayCount > 1 ? displayCount : 1].join("|");
-  const { rowRef, plan, level } = useDensityLevel(contentKey);
+  const contentKey = [workflowName, mode, customSize ? "custom" : "preset", aspectLocked ? "locked" : "free", loraActiveCount, hiddenSpace, canUseNegativePrompt, Boolean(models), pinnedSeed.trim(), Boolean(onToggleHistory), String(steps).length, displayCount > 1 ? displayCount : 1, compactOptions].join("|");
+  const { rowRef, plan, level } = useDensityLevel(contentKey, compactOptions ? COMPACT_LADDER : SPREAD_LADDER);
   useComposerHeightVar(rowRef);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
@@ -326,16 +349,16 @@ export function ComposerBar(props: ComposerBarProps) {
     ? <ModelPicker value={model} profiles={modelProfiles} showInpaint={showInpaint} showRapid={showRapid} onChange={chooseModel} menu={modelMenu} loras={menuLoras} compact badges={profileBadges} density={density} onFindModels={comfyOffline ? undefined : onFindModels} onGetModels={comfyOffline ? undefined : onGetModels} strayCount={strayModelCount} emptyHint={comfyOffline ? "Start ComfyUI to see your models." : strayModelCount ? "Some models are in a folder ComfyUI doesn’t read." : "No usable models in ComfyUI yet. Add one to its models folder, or find yours."} />
     : comfyOffline ? null : <Skeleton className="composer-skeleton" />;
 
-  // Steps and Images, for the size menu (or a small menu of their own where there's no size).
-  // An imported workflow whose graph takes no steps gets none.
+  // With Compact options, Steps and Images for the size menu (or a small menu of their own where
+  // there's no size). An imported workflow whose graph takes no steps gets none.
   const run: RunControl = {
     steps: currentProfile?.capabilities.steps === false ? undefined : { value: steps, onChange: setSteps, min: stepsMeta.min || 1, max: stepsMeta.max || 150, step: stepsMeta.step || 1, default: stepsMeta.default },
     count: showVariants ? { value: count, onChange: setCount, min: countMeta.min || 1, max: countMeta.max ?? 8, step: countMeta.step || 1 } : undefined
   };
   const sizeless = aspectLocked || currentProfile?.capabilities.size === false;
-  const aspectPicker = (density: ControlDensity) => sizeless ? (run.steps || run.count ? <RunPicker run={run} density={density} /> : null) : (
+  const aspectPicker = (density: ControlDensity) => sizeless ? (compactOptions && (run.steps || run.count) ? <RunPicker run={run} density={density} /> : null) : (
     <AspectPicker
-      run={run}
+      run={compactOptions ? run : undefined}
       value={aspectPickerValue}
       onChange={(value) => applyAspect(value)}
       options={aspectOptions}
@@ -362,12 +385,23 @@ export function ComposerBar(props: ComposerBarProps) {
     />
   );
 
+  // Without Compact options, Steps and Images stand in the bar on their own.
+  const stepsPicker = (density: ControlDensity) => compactOptions || !run.steps ? null : (
+    <NumberPicker label="Steps" icon={<CircleDotDashed size={14} />} density={density} value={steps} onChange={setSteps} min={run.steps.min} max={run.steps.max} step={run.steps.step} size="sm" />
+  );
+
+  const variantsPicker = (density: ControlDensity) => compactOptions || !run.count ? null : (
+    <NumberPicker label="Images" icon={<Images size={14} />} density={density} value={count} onChange={setCount} min={run.count.min} max={run.count.max} step={run.count.step} size="sm" />
+  );
+
   const privateToggle = (density: ControlDensity) => hiddenSpace ? <HiddenChip density={density} /> : null;
 
   const CONTROLS: Array<[ControlId, string, (density: ControlDensity) => React.ReactNode]> = [
     ["workflow", "Model", workflowPicker],
     ["private", "Hidden", privateToggle],
-    ["aspect", sizeless ? "Steps" : "Size", aspectPicker]
+    ["aspect", sizeless ? "Steps" : compactOptions ? "Size" : "Aspect ratio", aspectPicker],
+    ["steps", "Steps", stepsPicker],
+    ["variants", "Images", variantsPicker]
   ];
 
   /** Controls the ladder has pushed out of the bar, in reading order for the drawer. */
@@ -456,6 +490,8 @@ export function ComposerBar(props: ComposerBarProps) {
         <div className="zen-inline-settings" data-fluid-group>
           {inline("workflow", workflowPicker)}
           {inline("aspect", aspectPicker)}
+          {inline("steps", stepsPicker)}
+          {inline("variants", variantsPicker)}
           {tucked.length ? (
             <Tip content="More settings">
               <button

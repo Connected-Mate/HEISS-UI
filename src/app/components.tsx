@@ -438,6 +438,9 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
   const face = heldFace || { label, badge, width: shown.width, height: shown.height, steps, count };
   // With no label beside the shape there is one corner: the size's own tag wins, else how many.
   const cornerTag = face.badge || (face.count > 1 ? `×${face.count}` : "");
+  // The ratio stays beside the shape until mini when the button also holds Steps and Images (they
+  // go first); on its own it goes at compact, as the bar's other controls do.
+  const labelled = run ? density !== "mini" : density === "full";
   const wasOpen = useRef(false);
   useEffect(() => {
     if (wasOpen.current && !open) {
@@ -461,11 +464,11 @@ export function AspectPicker({ value, options, onChange, currentSize, defaultSiz
           {/* The shape drawn to fit an 18 × 14 box, so every ratio sits in the same slot. */}
           <span className="aspect-shape-slot">
             <span className="aspect-shape" style={triggerShapeStyle(face.width, face.height)} />
-            {cornerTag && density === "mini" ? <b className={cn("aspect-tag is-corner", !face.badge && "run-count-tag")} aria-hidden="true">{cornerTag}</b> : null}
+            {cornerTag && !labelled ? <b className={cn("aspect-tag is-corner", !face.badge && "run-count-tag")} aria-hidden="true">{cornerTag}</b> : null}
           </span>
-          {density !== "mini" ? <span className="aspect-trigger-label">{face.label}</span> : null}
+          {labelled ? <span className="aspect-trigger-label">{face.label}</span> : null}
           {/* 2K or Custom: a small tag after the ratio; with no label to follow (narrow bars), on the shape's corner. */}
-          {face.badge && density !== "mini" ? <b className="aspect-tag" aria-hidden="true">{face.badge}</b> : null}
+          {face.badge && labelled ? <b className="aspect-tag" aria-hidden="true">{face.badge}</b> : null}
           {/* Steps after a hairline, where there's room; the count as a tag once it's more than one. */}
           {face.steps !== undefined && density === "full" ? <span className="aspect-trigger-run"><AnimatedNumber value={String(face.steps)} /><span>{face.steps === 1 ? "step" : "steps"}</span></span> : null}
           {face.count > 1 && density !== "mini" ? <b className="aspect-tag run-count-tag" aria-hidden="true">×{face.count}</b> : null}

@@ -734,6 +734,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
               setCount={setCount}
               loraActiveCount={loraActiveCount}
               activeLoras={view.activeLoras}
+              compactOptions={Boolean(prefs.compactOptions)}
               hiddenSpace={Boolean(hiddenSpace)}
               onOpenLoras={view.openLoras}
               showNegativePrompt={showNegativePrompt}
@@ -874,6 +875,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
               setCount={setCount}
               loraActiveCount={loraActiveCount}
               activeLoras={view.activeLoras}
+              compactOptions={Boolean(prefs.compactOptions)}
               hiddenSpace={Boolean(hiddenSpace)}
               onOpenLoras={view.openLoras}
               showNegativePrompt={showNegativePrompt}

@@ -381,6 +381,8 @@ export type Preferences = {
   autoUpscale: AutoUpscale;
   /** Settings › Generation: the size menu sets megapixels instead of offering 2K. */
   megapixelSizing?: boolean;
+  /** Settings › Generation: Steps and Images fold into the size menu instead of standing in the composer bar. */
+  compactOptions?: boolean;
   /** The megapixels Default draws every shape at, with megapixelSizing on; unset, each model's own size. */
   megapixels?: number | null;
   /** Custom sizes kept from the size menu ("Save size"), for every model. */

@@ -1060,6 +1060,7 @@ export function SettingsDialog({ view, open, section, onSectionChange, onClose, 
                 <Segmented label="Run variants as" value={prefs.variationQueueMode === 'separate' ? 'separate' : 'batch'} onChange={(next) => setPrefs({ variationQueueMode: next })} options={[{ value: 'batch', label: 'One batch' }, { value: 'separate', label: 'Separate jobs' }]} />
               </Row>
               <PromptHistoryRow Row={Row} Switch={Switch} showToast={showToast} confirmAction={confirmAction} />
+              <SwitchRow label="Compact options" description={prefs.compactOptions ? 'Steps and images live in the size menu, so the composer bar keeps one button for what comes out.' : 'Steps and images have their own controls in the composer bar. Turn on to fold them into the size menu.'} checked={Boolean(prefs.compactOptions)} onChange={(next) => setPrefs({ compactOptions: next })} />
               <SwitchRow label="Size in megapixels" description={prefs.megapixelSizing ? 'The size menu has a Megapixels field in place of 2K. Every shape is drawn at the count you set.' : 'Set a megapixel count in the size menu instead of choosing 2K.'} checked={Boolean(prefs.megapixelSizing)} onChange={(next) => setPrefs({ megapixelSizing: next })} />
             </Group>
             <Group title="Previews">
