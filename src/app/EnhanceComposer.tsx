@@ -4,6 +4,7 @@ import { RotateCcw, Undo2, X } from 'lucide-react';
 import { Tip } from './components';
 import { cn } from './format';
 import type { EnhancePhase, EnhanceTiming, PromptEnhance } from './usePromptEnhance';
+import { completionMs, enhanceProgress, FADE_MS, FINISH_MS, followProgress } from './enhanceProgress';
 
 /**
  * Prompt enhance in the composer (usePromptEnhance.ts): the pixel flame that
@@ -81,37 +82,8 @@ export function EnhanceWords({ text, cursor = true }: { text: string; cursor?: b
 
 export const countWords = (text: string) => (text.match(/\S+/g) || []).length;
 
-/** Past its expected time a run keeps creeping toward the end, but never reaches it before it's done. */
-export function easedShare(x: number) {
-  if (!(x > 0)) return 0;
-  return x < 0.8 ? x : 0.8 + 0.17 * (1 - Math.exp(-(x - 0.8) / 0.35));
-}
-
-/**
- * How far along a run is, 0 to 1, from what the server expected
- * (enhance-timing.js). Until the first words its share is the expected wait
- * over the whole; after them, the words written so far or the time spent
- * writing, whichever is further. Null with nothing to go on.
- */
-export function enhanceProgress(timing: EnhanceTiming | null | undefined, words: number, now: number) {
-  if (!timing) return null;
-  const { startMs, writeMs, words: expectedWords } = timing.expect;
-  const total = Math.max(1, startMs + writeMs);
-  const waiting = startMs / total;
-  if (!timing.firstTextAt) return waiting * easedShare((now - timing.startedAt) / Math.max(1, startMs));
-  const written = Math.max(words / Math.max(1, expectedWords), (now - timing.firstTextAt) / Math.max(1, writeMs));
-  return waiting + (1 - waiting) * easedShare(written);
-}
-
 /** Starts and ends at rest, so a completion picks up from the line's slow pace and settles instead of stopping dead. */
 const smootherstep = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x * x * x * (x * (x * 6 - 15) + 10); };
-
-/** How long the line takes to close the ring once the prompt is done: longer the further it has to go, never abrupt. */
-export const completionMs = (remaining: number) => 420 + 640 * Math.min(1, Math.max(0, remaining));
-/** After the ring closes, everything fades together. */
-export const FADE_MS = 380;
-/** How long the overlay keeps the aura once the run is done: the longest completion and the fade. */
-export const FINISH_MS = completionMs(1) + FADE_MS + 60;
 
 /**
  * Prompt enhance's light, meant to be felt more than seen. Behind the glass a
@@ -201,8 +173,8 @@ export function EnhanceAura({ phase, pulse, timing = null, words = 0, idle = 'ca
             draw(loop.current - 0.22, loop.current);
           } else draw(0, 0);
         } else {
-          // Eases toward where the run should be, slowly enough to read as steady, and never back.
-          shown.current = Math.max(shown.current, shown.current + (expected - shown.current) * (1 - Math.exp(-seconds * 1.4)));
+          // Follows where the run should be: exactly while it moves steadily, calmly after a jump, never back.
+          shown.current = followProgress(shown.current, expected, seconds);
           draw(0, Math.min(1, shown.current));
         }
       }
