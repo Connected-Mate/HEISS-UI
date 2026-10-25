@@ -119,25 +119,67 @@ function AgentGuide({ onCopy, copied }: { onCopy: () => void; copied: boolean })
   );
 }
 
-/** A steady hue per name, so a family's empty tiles share a color and the next family's differ. */
-function hueOf(text: string) {
-  let hue = 0;
-  for (const char of text) hue = (hue * 31 + char.charCodeAt(0)) % 360;
-  return hue;
+/** FNV-1a: a steady number per name, for a workflow that belongs to no family. */
+function hashOf(text: string) {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
 }
 
 /**
- * The workflow's latest picture. Before there is one (every built-in model on
- * a fresh install), its family's name on that family's own tint, so a new
- * gallery reads as families rather than a wall of identical tiles.
+ * A tint per family in this gallery, dealt round the color wheel by the golden
+ * angle in name order, so no two families sit close however many there are.
+ * A workflow of its own gets a tint from its name.
  */
-function WorkflowThumbnail({ src, family = "" }: { src?: string; family?: string }) {
-  const [failed, setFailed] = useState(false);
-  if (src && !failed) return <img src={src} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)} />;
-  if (family) return <span className="wf-thumb-empty is-named" aria-hidden="true" style={{ "--wf-hue": hueOf(family) } as React.CSSProperties}><span>{family}</span></span>;
-  return <span className="wf-thumb-empty" aria-hidden="true"><i /><i /><i /><i /><Wand2 size={18} /></span>;
+function useTileHues(labels: string[]) {
+  const key = [...new Set(labels.filter(Boolean))].sort((a, b) => a.localeCompare(b)).join("\n");
+  return useMemo(() => {
+    const hues = new Map<string, number>();
+    key.split("\n").filter(Boolean).forEach((label, index) => hues.set(label, Math.round((24 + index * 137.508) % 360)));
+    return (label: string, name = "") => hues.get(label) ?? hashOf(name || label) % 360;
+  }, [key]);
 }
-const thumbFamily = (workflow: WorkflowSummary) => workflow.familyName || (workflow.family === "custom" ? "" : workflow.family);
+
+/** A family's name as people know it: the profile's, else another workflow's of that family, else its id made readable. */
+function familyLabel(workflow: WorkflowSummary, known: Map<string, string>) {
+  if (workflow.familyName) return workflow.familyName;
+  if (!workflow.family || workflow.family === "custom") return "";
+  const named = known.get(workflow.family);
+  if (named) return named;
+  const plain = workflow.family.replace(/[-_]+/g, " ");
+  return plain.charAt(0).toUpperCase() + plain.slice(1);
+}
+
+/** The small cached copy where there is one: a card is a few hundred pixels, not a full-size PNG. */
+const cardImage = (src: string) => src.replace("/comfy/view?", "/comfy/thumb?").replace("/api/library/file?", "/api/library/thumb?");
+
+/**
+ * The workflow's latest picture, over its tile. The tile is always there: its
+ * family's name on that family's tint (a wand, for a workflow of its own). The
+ * picture fades in once it has really loaded, so a slow, missing or broken one
+ * leaves the tile, never an empty black box.
+ */
+function WorkflowThumbnail({ src, family, hue, small = false }: { src?: string; family: string; hue: number; small?: boolean }) {
+  const [state, setState] = useState<"loading" | "loaded" | "failed">("loading");
+  const image = useRef<HTMLImageElement | null>(null);
+  // Already in the cache: complete before React could hear its load.
+  useEffect(() => { if (image.current?.complete && image.current.naturalWidth) setState("loaded"); }, []);
+  return (
+    <>
+      {state !== "loaded" ? (
+        <span className="wf-thumb-empty is-named" aria-hidden="true" style={{ "--wf-hue": hue } as React.CSSProperties}>
+          {family ? <span>{family}</span> : <Wand2 size={small ? 18 : 22} strokeWidth={1.75} />}
+        </span>
+      ) : null}
+      {src && state !== "failed" ? (
+        <img ref={image} className={cn(state === "loaded" && "is-loaded")} src={small ? cardImage(src) : src} alt="" loading="lazy" decoding="async" draggable={false} onLoad={() => setState("loaded")} onError={() => setState("failed")} />
+      ) : null}
+    </>
+  );
+}
 
 function StatusBadge({ validation }: { validation: WorkflowSummary["validation"] }) {
   const comfyRestarting = useComfyRestarting();
@@ -357,6 +399,9 @@ export function WorkflowGallery({ view }: { view: any }) {
   const settingUpIds = useMemo(() => new Set(setup?.status === "running" ? setup.workflowIds || [] : []), [setup]);
 
   const ofKind = useMemo(() => workflows.filter((item) => item.kind === kind), [kind, workflows]);
+  // Families by their names, from the workflows that carry one; and a tint for each in this gallery.
+  const familyNames = useMemo(() => new Map(workflows.filter((item) => item.family && item.familyName).map((item) => [item.family!, item.familyName!])), [workflows]);
+  const tileHue = useTileHues(workflows.map((item) => familyLabel(item, familyNames)));
   const attentionCount = ofKind.filter((item) => !item.validation.ok).length;
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -840,12 +885,12 @@ export function WorkflowGallery({ view }: { view: any }) {
                     onClick={() => { setSelectedId(workflow.id); setMobileDetailsOpen(true); }}
                     onDoubleClick={() => useWorkflow(workflow)}
                   >
-                    <span className="wf-thumb"><WorkflowThumbnail key={workflow.thumbnail} src={workflow.thumbnail} family={thumbFamily(workflow)} /></span>
+                    <span className="wf-thumb"><WorkflowThumbnail key={workflow.thumbnail} small src={workflow.thumbnail} family={familyLabel(workflow, familyNames)} hue={tileHue(familyLabel(workflow, familyNames), workflow.name)} /></span>
                     {workflow.favorite ? <span className="wf-fav" aria-label="Favorite"><Heart size={12} fill="currentColor" /></span> : null}
                     {workflow.profileId === model ? <span className="wf-current">In use</span> : null}
                     <span className="wf-card-copy">
                       <strong>{workflow.name}</strong>
-                      <span><em className={cn("wf-origin", workflow.source === "builtin" && "is-builtin")}>{workflow.source === "builtin" ? "Built in" : "Imported"}</em>{workflow.familyName || (workflow.family === "custom" ? "" : workflow.family)}</span>
+                      <span><em className={cn("wf-origin", workflow.source === "builtin" && "is-builtin")}>{workflow.source === "builtin" ? "Built in" : "Imported"}</em>{familyLabel(workflow, familyNames)}</span>
                     </span>
                     {settingUpIds.has(workflow.profileId) ? <SettingUpBadge /> : workflow.validation.ok && !workflow.validation.unverified ? null : <StatusBadge validation={workflow.validation} />}
                   </button>
@@ -865,14 +910,14 @@ export function WorkflowGallery({ view }: { view: any }) {
             {selected && selectedStatus ? (
               <>
                 <button type="button" className="btn is-ghost wf-back" onClick={() => setMobileDetailsOpen(false)}><ArrowLeft size={15} /> All workflows</button>
-                <div className="wf-detail-thumb"><WorkflowThumbnail key={selected.thumbnail} src={selected.thumbnail} family={thumbFamily(selected)} /></div>
+                <div className="wf-detail-thumb"><WorkflowThumbnail key={selected.thumbnail} src={selected.thumbnail} family={familyLabel(selected, familyNames)} hue={tileHue(familyLabel(selected, familyNames), selected.name)} /></div>
                 <div className="wf-detail-head">
                   <h3>{selected.name}</h3>
                   <button type="button" className={cn("wf-heart", selected.favorite && "active")} aria-pressed={Boolean(selected.favorite)} aria-label={selected.favorite ? "Remove from favorites" : "Add to favorites"} disabled={busy} onClick={() => updateFavorites(selected.id).catch((error) => showToast(error instanceof Error ? error.message : "Couldn’t update favorites", "error"))}>
                     <Heart size={16} fill={selected.favorite ? "currentColor" : "none"} />
                   </button>
                 </div>
-                <p className="wf-detail-meta">{selected.source === "builtin" ? "Built in" : "Imported"}{selected.familyName || (selected.family && selected.family !== "custom") ? ` · ${selected.familyName || selected.family}` : ""}</p>
+                <p className="wf-detail-meta">{selected.source === "builtin" ? "Built in" : "Imported"}{familyLabel(selected, familyNames) ? ` · ${familyLabel(selected, familyNames)}` : ""}</p>
                 {selected.description && selected.description !== defaultDescription ? <p className="wf-detail-desc">{selected.description}</p> : null}
 
                 {/* Health only when there's something to do: a ready workflow says nothing. */}

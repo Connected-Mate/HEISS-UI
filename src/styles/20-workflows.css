@@ -90,8 +90,20 @@
   border-radius: var(--r-media);
   background: var(--well);
 }
+/* The picture lies over its tile and fades in once it has loaded: until then (or if it never does) the tile shows. */
 .wf-thumb img,
-.wf-detail-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 400ms var(--motion-ease); }
+.wf-detail-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity var(--motion-slow) var(--motion-ease), transform 400ms var(--motion-ease);
+}
+.wf-thumb img.is-loaded,
+.wf-detail-thumb img.is-loaded { opacity: 1; }
 .wf-card:hover .wf-thumb img { transform: scale(1.03); }
 
 /* No output yet: a quiet 2x2 mosaic, echoing the generation preview. */
@@ -129,6 +141,13 @@
   -webkit-box-orient: vertical;
 }
 .wf-detail-thumb .wf-thumb-empty.is-named span { font-size: 20px; }
+/* A workflow of its own: its wand where a family's name would be, in the same tint. */
+.wf-thumb-empty.is-named > svg { position: static; margin: 0; color: hsl(var(--wf-hue) 60% 88% / .72); }
+.wf-card:hover .wf-thumb-empty.is-named { filter: brightness(1.12); }
+.wf-thumb-empty.is-named { transition: filter var(--motion-base) var(--motion-ease); }
+@media (prefers-reduced-motion: reduce) {
+  .wf-thumb img, .wf-detail-thumb img, .wf-thumb-empty.is-named { transition: none; }
+}
 
 .wf-fav,
 .wf-current {
