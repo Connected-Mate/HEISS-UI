@@ -18,8 +18,8 @@
   border-radius: inherit;
   background: #1f1f1f;
 }
-.phone-compose .enhance-rim-glow-layer { filter: blur(9px) saturate(1.2); }
-.phone-compose .enhance-ambient { inset: -4px; filter: blur(14px); }
+/* The phone has no room around the prompt: the haze stays close under it. */
+.phone-compose .enhance-haze { inset: -18px -16px -24px; }
 /* The person's words wait underneath; the ghost on top shows what is being written. */
 .phone-compose.is-enhance-live textarea,
 .phone-compose.is-enhance-live textarea::placeholder {

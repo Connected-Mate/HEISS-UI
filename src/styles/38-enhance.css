@@ -4,12 +4,6 @@
    and cooling to white behind a block cursor. One hue, the ember; steps, not
    blurs. Status reads in the app's own type. */
 
-@property --enhance-heat {
-  syntax: "<number>";
-  inherits: true;
-  initial-value: 0;
-}
-
 :root {
   --ember-hot: #ffc08a;
   --ember-white: #fff1e4;
@@ -71,82 +65,56 @@
   overflow: visible;
   fill: none;
   stroke-linecap: round;
+  opacity: var(--enhance-fade, 1);
 }
 .enhance-rim rect { fill: none; }
-/* The fuse it burns along: a barely-there ember line round the whole edge. */
-.enhance-rim-base { stroke: rgb(255 154 82 / .1); stroke-width: 1; transition: stroke 600ms var(--motion-ease); }
-/* Right at the line, a soft warmth on the glass. */
-.enhance-rim-glow-layer {
-  filter: blur(6px);
-  opacity: calc(.16 + var(--enhance-heat) * .06);
-}
-.enhance-rim-glow { stroke: rgb(255 140 80 / .4); stroke-width: 4; }
-.enhance-rim-flame { stroke: rgb(255 176 120 / .5); stroke-width: 5; }
-/* What has burnt: a quiet cooled line. */
-.enhance-rim-trail { stroke: rgb(255 154 82 / .32); stroke-width: 1; }
-/* The stretch just behind the tip, a touch warmer. */
-.enhance-rim-warm { stroke: rgb(255 192 138 / .5); stroke-width: 1.25; }
-/* The tip: warm, not white. */
-.enhance-rim-tip { stroke: rgb(255 214 180 / .75); stroke-width: 1.5; }
+/* The outline the line follows: measured, never drawn. */
+.enhance-rim-track { stroke: none; }
+/* A hairline, warm and faint: a detail you find, not one that calls. */
+.enhance-rim-line { stroke: rgb(255 170 110 / .2); stroke-width: 1; }
+/* Its leading stretch, a shade warmer, so it reads as moving without a bright tip. */
+.enhance-rim-lead { stroke: rgb(255 196 150 / .3); stroke-width: 1; }
 
-/* Light behind the glass: a soft ember halo round the prompt, under its frosted
-   surface, growing gently as the run gets along. Steady, never flickering. */
-.enhance-ambient {
+/* Light behind the glass: a soft warm haze low under the prompt, wider than
+   it and fading out with no edge, so it reads as light from below rather than
+   as a frame. It drifts slowly and comes up as the run gets along. */
+.enhance-haze {
   position: absolute;
-  inset: -6px;
+  inset: -52px -72px -36px;
   z-index: -2;
-  border-radius: inherit;
-  padding: 10px;
-  background: radial-gradient(120% 140% at 50% 110%, rgb(255 140 70 / .55), rgb(255 154 82 / .25) 55%, rgb(255 154 82 / .12));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  filter: blur(16px);
-  opacity: calc(.28 + var(--enhance-progress, 0) * .22);
-  transition: opacity 600ms var(--motion-ease);
+  pointer-events: none;
+  opacity: calc((.55 + var(--enhance-progress, 0) * .45) * var(--enhance-fade, 1));
+  transition: opacity 900ms var(--motion-ease);
 }
-/* Waiting for ComfyUI to start it: the halo breathes, slowly. */
-.enhance-aura.is-waiting .enhance-ambient { animation: enhance-breathe 3.2s ease-in-out infinite; }
-.enhance-aura.is-waiting .enhance-head { opacity: 0; }
+.enhance-haze > i {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(50% 58% at 50% 56%,
+      rgb(255 138 72 / .2) 0%,
+      rgb(255 138 72 / .15) 30%,
+      rgb(255 138 72 / .09) 50%,
+      rgb(255 138 72 / .04) 68%,
+      rgb(255 138 72 / 0) 86%),
+    radial-gradient(28% 40% at 26% 50%, rgb(255 176 120 / .08), rgb(255 176 120 / 0) 80%),
+    radial-gradient(28% 40% at 76% 58%, rgb(255 118 66 / .07), rgb(255 118 66 / 0) 80%);
+  filter: blur(22px);
+  animation: enhance-drift 11s ease-in-out infinite alternate;
+}
+@keyframes enhance-drift {
+  from { transform: translate3d(-2.5%, 1%, 0) scale(1); }
+  to { transform: translate3d(2.5%, -1%, 0) scale(1.04); }
+}
+/* Waiting for ComfyUI to start it: no line yet, the haze breathing. */
+.enhance-aura.is-waiting .enhance-haze { animation: enhance-breathe 3.6s ease-in-out infinite; }
 @keyframes enhance-breathe {
-  0%, 100% { opacity: .2; }
-  50% { opacity: .38; }
+  0%, 100% { opacity: .38; }
+  50% { opacity: .62; }
 }
 
-/* A small soft glow where it burns. */
-.enhance-head {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
-  will-change: transform;
-  transition: opacity 400ms var(--motion-ease);
-}
-.enhance-head::before {
-  content: "";
-  position: absolute;
-  left: -12px;
-  top: -12px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(255 214 180 / .32) 0, rgb(255 154 82 / .12) 40%, transparent 70%);
-}
-
-/* Done: the rest of the ring warms in where the line didn't reach, the halo with it, then the shell fades. */
-.enhance-aura.is-done .enhance-rim-base { stroke: rgb(255 154 82 / .32); }
-.enhance-aura.is-done .enhance-ambient { opacity: .5; }
-.enhance-aura.is-done .enhance-head { opacity: 0; }
-
-/* No motion: an even, steady edge rather than a tip frozen somewhere. */
-.enhance-aura.is-still .enhance-rim-base { stroke: rgb(255 154 82 / .35); }
-.enhance-aura.is-still .enhance-rim-glow-layer { opacity: .15; }
-.enhance-aura.is-still .enhance-rim-trail,
-.enhance-aura.is-still .enhance-rim-warm,
-.enhance-aura.is-still .enhance-rim-tip,
-.enhance-aura.is-still .enhance-rim-flame,
-.enhance-aura.is-still .enhance-head { display: none; }
+/* No motion: the haze alone, still; no line frozen somewhere along the edge. */
+.enhance-aura.is-still .enhance-rim { display: none; }
+.enhance-aura.is-still .enhance-haze > i { animation: none; }
 
 .zen-prompt.is-enhancing { border-color: transparent; }
 /* The person's words stay in the textarea underneath until the new ones are done. */
@@ -192,26 +160,28 @@
 }
 @keyframes enhance-blink { 50% { opacity: .15; } }
 
-/* Waiting: the person's own words, dimmed, with a scan line stepping over them. */
+/* Waiting: the person's own words, dimmed, with a soft sheen passing slowly over them. */
 .enhance-scan {
-  background: linear-gradient(90deg,
-    hsl(var(--foreground) / .42) 0 44%,
-    hsl(var(--foreground) / .75) 44% 46%,
-    var(--ember) 46% 49%,
-    hsl(var(--foreground) / .75) 49% 51%,
-    hsl(var(--foreground) / .42) 51% 100%);
-  background-size: 300% 100%;
+  background: linear-gradient(100deg,
+    hsl(var(--foreground) / .4) 0%,
+    hsl(var(--foreground) / .4) 38%,
+    hsl(var(--foreground) / .62) 46%,
+    hsl(36 60% 88% / .78) 50%,
+    hsl(var(--foreground) / .62) 54%,
+    hsl(var(--foreground) / .4) 62%,
+    hsl(var(--foreground) / .4) 100%);
+  background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: enhance-scan 1.8s steps(30) infinite;
+  animation: enhance-scan 2.8s cubic-bezier(.45, 0, .55, 1) infinite;
 }
 @keyframes enhance-scan {
-  from { background-position: 100% 0; }
-  to { background-position: 0 0; }
+  from { background-position: 115% 0; }
+  to { background-position: -15% 0; }
 }
 
-/* ------------------------------------------------------------ Status, in mono */
+/* ------------------------------------------------------------ Status */
 
 .enhance-status {
   display: inline-flex;
@@ -231,13 +201,19 @@
 }
 .enhance-status-count::before { content: "· "; color: hsl(var(--muted-foreground)); }
 .enhance-status-count::after { content: " words"; color: hsl(var(--muted-foreground)); }
+/* A small round light that breathes while it works. */
 .enhance-dot {
   flex: none;
   width: 6px;
   height: 6px;
+  border-radius: 50%;
   background: var(--ember);
-  box-shadow: 0 0 8px rgb(255 154 82 / .8);
-  animation: enhance-blink 1.1s steps(2, jump-none) infinite;
+  box-shadow: 0 0 6px rgb(255 154 82 / .45);
+  animation: enhance-pulse 1.8s ease-in-out infinite;
+}
+@keyframes enhance-pulse {
+  0%, 100% { opacity: .45; transform: scale(.85); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
 /* ------------------------------------------------------------ The island */
@@ -480,8 +456,7 @@
   border-radius: inherit;
   background: var(--well);
 }
-.enhance-preview .enhance-ambient { inset: -3px; filter: blur(10px); }
-.enhance-preview .enhance-rim-glow-layer { filter: blur(5px); }
+.enhance-preview .enhance-haze { inset: -14px -24px -20px; }
 .enhance-preview-head {
   display: flex;
   align-items: center;

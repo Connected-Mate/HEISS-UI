@@ -103,38 +103,42 @@ export function enhanceProgress(timing: EnhanceTiming | null | undefined, words:
   return waiting + (1 - waiting) * easedShare(written);
 }
 
+/** Starts and ends at rest, so a completion picks up from the line's slow pace and settles instead of stopping dead. */
+const smootherstep = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x * x * x * (x * (x * 6 - 15) + 10); };
+
+/** How long the line takes to close the ring once the prompt is done: longer the further it has to go, never abrupt. */
+export const completionMs = (remaining: number) => 420 + 640 * Math.min(1, Math.max(0, remaining));
+/** After the ring closes, everything fades together. */
+export const FADE_MS = 380;
+/** How long the overlay keeps the aura once the run is done: the longest completion and the fade. */
+export const FINISH_MS = completionMs(1) + FADE_MS + 60;
+
 /**
- * The rim: a quiet warm line traced along the prompt's edge, with a soft glow
- * behind the glass. Once the server says how long the run should take, the
- * line fills from the top-left corner round the edge over that time, at an
- * even pace along the outline (an SVG stroke, so corners and long sides move
- * alike), easing gently and never going back. Until then it rests: just the
- * faint edge and the glow breathing. Done, the rest of the ring warms in and
- * the shell fades. `idle="fuse"` is for the demos, which have no clock: a slow
- * fuse runs round the edge instead.
+ * Prompt enhance's light, meant to be felt more than seen. Behind the glass a
+ * soft warm haze sits low under the prompt, wider than it and fading out with
+ * no edge, drifting slowly and coming up as the run gets along. On the edge a
+ * hairline, with no glow, traces how far along the run is: it fills from the
+ * top-left corner over the time the server expects (enhance-timing.js), at an
+ * even pace along the outline, easing, never back. Until ComfyUI starts the
+ * run there is no line, only the haze breathing. Done, early or late, the
+ * line carries on and closes the ring in one eased stroke, then the line and
+ * the haze fade together. `idle="fuse"` is for the demos, which have no
+ * clock: a short hairline runs slowly round the edge.
  */
 export function EnhanceAura({ phase, pulse, timing = null, words = 0, idle = 'calm' }: { phase: EnhancePhase; pulse: number; timing?: EnhanceTiming | null; words?: number; idle?: 'calm' | 'fuse' }) {
   const reduced = useReducedMotion();
   const node = useRef<HTMLDivElement | null>(null);
   const svg = useRef<SVGSVGElement | null>(null);
-  const head = useRef<HTMLElement | null>(null);
   const [box, setBox] = useState({ w: 0, h: 0, r: 0 });
-  const heat = useRef(0);
-  const seen = useRef(pulse);
   // Where the line has got to, as a share of the edge. Kept across re-measures: the prompt grows
-  // a line at a time as the words come, and the line must carry on from where it was, not start over.
+  // a line at a time as the words come, and the line must carry on from where it was.
   const shown = useRef(0);
   const loop = useRef(0);
-  // The loop reads the latest of these without restarting.
+  const finish = useRef<{ at: number; from: number; ms: number } | null>(null);
   const live = useRef({ phase, timing, words, idle });
   live.current = { phase, timing, words, idle };
-
-  useEffect(() => {
-    const grown = pulse - seen.current;
-    seen.current = pulse;
-    // Words warm it a little; they don't make it flash.
-    if (grown > 0) heat.current = Math.min(1, heat.current + 0.05 + grown * 0.003);
-  }, [pulse]);
+  // `pulse` stays in the signature for the demos; the light no longer reacts to each word.
+  void pulse;
 
   // The outline follows the prompt's own box and corner radius.
   useLayoutEffect(() => {
@@ -155,9 +159,8 @@ export function EnhanceAura({ phase, pulse, timing = null, words = 0, idle = 'ca
     const aura = node.current;
     const outline = svg.current;
     if (!aura || !outline || !box.w || reduced) return;
-    const measure = outline.querySelector<SVGRectElement>('[data-part="base"]');
-    // Every drawn layer, the blurred glow's own SVG included.
-    const paths = Array.from(aura.querySelectorAll<SVGRectElement>('rect[data-part]:not([data-part="base"])'));
+    const measure = outline.querySelector<SVGRectElement>('[data-part="track"]');
+    const paths = Array.from(outline.querySelectorAll<SVGRectElement>('rect[data-part]:not([data-part="track"])'));
     if (!measure) return;
     const length = measure.getTotalLength();
     if (!length) return;
@@ -167,68 +170,64 @@ export function EnhanceAura({ phase, pulse, timing = null, words = 0, idle = 'ca
     const draw = (from: number, to: number) => {
       const span = Math.max(0, to - from) * length;
       for (const path of paths) {
-        const part = path.dataset.part;
-        const piece = part === 'tip' ? Math.min(span, length * 0.01) : part === 'warm' || part === 'flame' ? Math.min(span, length * 0.08) : span;
+        // The lead: the last stretch, a shade brighter, so the line reads as moving without a bright tip.
+        const piece = path.dataset.part === 'lead' ? Math.min(span, length * 0.06) : span;
         // A dash pattern exactly one outline long repeats seamlessly, so a fuse can run past the start corner.
         path.style.strokeDasharray = `${piece} ${length - piece}`;
         path.style.strokeDashoffset = `${-(to * length - piece)}`;
       }
-      const point = measure.getPointAtLength((((to % 1) + 1) % 1) * length);
-      if (head.current) head.current.style.transform = `translate(${point.x}px, ${point.y}px)`;
     };
     const step = (now: number) => {
       const seconds = Math.min(0.05, (now - before) / 1000);
       before = now;
       const { phase: current, timing: clock, words: written, idle: resting } = live.current;
-      heat.current = Math.max(0, heat.current - seconds * 0.6);
-      const expected = enhanceProgress(clock, written, now);
-      const waiting = expected === null && current !== 'done';
-      aura.classList.toggle('is-waiting', waiting && resting === 'calm');
-      if (waiting && resting === 'fuse') {
-        loop.current = (loop.current + seconds * (0.1 + heat.current * 0.12)) % 1;
-        draw(loop.current - 0.3, loop.current);
-      } else if (waiting) {
-        // Before ComfyUI starts the run (or a new one, after Try again): from the start.
-        shown.current = 0;
-        draw(0, 0);
-      } else if (current !== 'done' && expected !== null) {
-        // Eases toward where the run should be, slowly enough to read as steady, and never back.
-        shown.current = Math.max(shown.current, shown.current + (expected - shown.current) * (1 - Math.exp(-seconds * 1.6)));
-        draw(0, Math.min(1, shown.current));
+      let fade = 1;
+      if (current === 'done') {
+        // Done: carry on from here and close the ring, eased, then let everything go.
+        finish.current ||= { at: now, from: shown.current, ms: shown.current > 0 ? completionMs(1 - shown.current) : 0 };
+        const { at, from, ms } = finish.current;
+        const t = now - at;
+        if (from > 0) shown.current = from + (1 - from) * smootherstep(t / ms);
+        fade = 1 - smootherstep((t - ms) / FADE_MS);
+        draw(0, from > 0 ? shown.current : 0);
       } else {
-        // Done: the line stays where it got to; the rest of the ring warms in (CSS), no sweep round.
-        draw(0, Math.min(1, shown.current));
+        finish.current = null;
+        const expected = enhanceProgress(clock, written, now);
+        if (expected === null) {
+          // Before ComfyUI starts the run (or a new one, after Try again): from the start.
+          shown.current = 0;
+          if (resting === 'fuse') {
+            loop.current = (loop.current + seconds * 0.09) % 1;
+            draw(loop.current - 0.22, loop.current);
+          } else draw(0, 0);
+        } else {
+          // Eases toward where the run should be, slowly enough to read as steady, and never back.
+          shown.current = Math.max(shown.current, shown.current + (expected - shown.current) * (1 - Math.exp(-seconds * 1.4)));
+          draw(0, Math.min(1, shown.current));
+        }
       }
-      aura.style.setProperty('--enhance-heat', heat.current.toFixed(3));
-      aura.style.setProperty('--enhance-progress', (current === 'done' ? 1 : shown.current).toFixed(3));
+      aura.style.setProperty('--enhance-progress', Math.min(1, shown.current).toFixed(3));
+      aura.style.setProperty('--enhance-fade', fade.toFixed(3));
       frame = requestAnimationFrame(step);
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
   }, [box, reduced]);
 
-  const inset = 0.75;
+  const inset = 0.5;
   const rect = { x: inset, y: inset, width: Math.max(0, box.w - inset * 2), height: Math.max(0, box.h - inset * 2), rx: Math.max(0, box.r - inset) };
+  const waiting = !timing && phase !== 'done' && idle === 'calm';
   return (
-    <div ref={node} className={cn('enhance-aura', reduced && 'is-still', phase === 'done' && 'is-done')} data-phase={phase}>
+    <div ref={node} className={cn('enhance-aura', reduced && 'is-still', waiting && 'is-waiting', phase === 'done' && 'is-done')} data-phase={phase}>
       {/* Light behind the glass, under the prompt's frosted surface (its ::before sits at -1). */}
-      <i className="enhance-ambient" aria-hidden="true" />
-      {box.w ? (
-        // The glow blurs as a whole SVG: a filter on a shape inside one isn't drawn everywhere (Safari).
-        <svg className="enhance-rim enhance-rim-glow-layer" width={box.w} height={box.h} aria-hidden="true">
-          <rect {...rect} data-part="glow" className="enhance-rim-glow" />
-          <rect {...rect} data-part="flame" className="enhance-rim-flame" />
-        </svg>
-      ) : null}
+      <i className="enhance-haze" aria-hidden="true"><i /></i>
       {box.w ? (
         <svg ref={svg} className="enhance-rim" width={box.w} height={box.h} aria-hidden="true">
-          <rect {...rect} data-part="base" className="enhance-rim-base" />
-          <rect {...rect} data-part="trail" className="enhance-rim-trail" />
-          <rect {...rect} data-part="warm" className="enhance-rim-warm" />
-          <rect {...rect} data-part="tip" className="enhance-rim-tip" />
+          <rect {...rect} data-part="track" className="enhance-rim-track" />
+          <rect {...rect} data-part="line" className="enhance-rim-line" />
+          <rect {...rect} data-part="lead" className="enhance-rim-lead" />
         </svg>
       ) : null}
-      <i ref={head as React.RefObject<HTMLElement>} className="enhance-head" aria-hidden="true" />
     </div>
   );
 }
@@ -250,7 +249,7 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
     wasBusy.current = busy;
     if (!ended || reduced) return;
     setFinishing(true);
-    const timer = window.setTimeout(() => setFinishing(false), 900);
+    const timer = window.setTimeout(() => setFinishing(false), FINISH_MS);
     return () => { window.clearTimeout(timer); setFinishing(false); };
   }, [busy, phase, reduced]);
 
@@ -285,7 +284,7 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
           aria-hidden="true"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } }}
+          exit={{ opacity: 0, transition: { duration: 0.25 } }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
           <EnhanceAura phase={finishing ? 'done' : phase} pulse={text.length} timing={timing} words={countWords(text)} />
