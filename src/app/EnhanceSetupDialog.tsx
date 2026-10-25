@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Check, RefreshCw, Sparkles } from 'lucide-react';
-import { useReducedMotion } from 'framer-motion';
+import { Check, RefreshCw } from 'lucide-react';
 import { Modal } from './Modal';
+import { EmberGlyph, EnhanceAura, EnhanceWords, useEnhanceDemo } from './EnhanceComposer';
 import { NodeInstall } from './NodeInstall';
 import { ComfyRestart } from './ComfyRestart';
 import { CellBar, Watcher } from './UpscaleDialogs';
@@ -54,35 +54,21 @@ function Steps({ stage }: { stage: Stage }) {
 const DEMO_IDEA = 'a fox in the snow at dusk';
 const DEMO_PROMPT = 'A red fox stands alert in deep fresh snow at the edge of a pine forest, amber eyes fixed past the camera, frost catching in its fur. Low sun from the left rims its coat in gold while the snow falls blue into shadow. Medium shot at eye level, 85mm lens, shallow depth of field; quiet, cold, 35mm film photograph.';
 
-/** The feature, shown: a few words, the heat going round, and the prompt they become, again and again. */
+/** The feature, shown: a few words, the fuse going round, and the prompt they become, again and again. */
 function EnhanceHero({ stage }: { stage: Stage }) {
-  const reduced = useReducedMotion();
   const words = DEMO_PROMPT.split(' ');
-  const [shown, setShown] = useState(reduced ? words.length : 0);
-  useEffect(() => {
-    if (reduced) return;
-    let count = 0;
-    let timer = 0;
-    const tick = () => {
-      // Idea for a beat, then the words arrive at about the model's pace, then a rest, then again.
-      count = count > words.length + 22 ? 0 : count + 1;
-      setShown(Math.max(0, count - 10));
-      timer = window.setTimeout(tick, count <= 10 ? 120 : 75);
-    };
-    timer = window.setTimeout(tick, 400);
-    return () => window.clearTimeout(timer);
-  }, [reduced, words.length]);
+  const shown = useEnhanceDemo(words.length);
   const writing = shown > 0 && shown < words.length;
   return (
     <div className="upscale-hero-wrap enhance-hero" data-stage={stage} aria-hidden="true">
       <div className={cn('enhance-hero-card', writing && 'is-writing', shown === 0 && 'is-idea')}>
-        {writing ? <div className="enhance-aura" data-phase="writing"><div className="enhance-glow"><i /></div><i className="enhance-edge" /></div> : null}
+        {writing ? <EnhanceAura phase="writing" pulse={shown} /> : null}
         <p>
           {shown === 0
             ? <span className="enhance-hero-idea">{DEMO_IDEA}</span>
-            : words.slice(0, shown).map((word, index) => <React.Fragment key={index}><span className="enhance-word">{word}</span>{' '}</React.Fragment>)}
+            : <EnhanceWords text={words.slice(0, shown).join(' ')} cursor={writing} />}
         </p>
-        <span className="enhance-hero-spark"><Sparkles size={13} /></span>
+        <span className="enhance-hero-spark"><EmberGlyph size={13} lit={writing} /></span>
       </div>
       <Steps stage={stage} />
     </div>
@@ -100,7 +86,7 @@ function copyFor(stage: Stage, nodeState: string) {
     case 'restart': return { title: 'Restart ComfyUI to continue', description: 'The new HEISS UI Nodes are in place. ComfyUI loads them when it restarts.' };
     case 'model': return { title: 'Choose the model that writes', description: 'A vision model that reads your words and pictures. It runs inside ComfyUI and makes room for your image models by itself.' };
     case 'downloading': return { title: 'Downloading the model', description: 'A one-time download. It carries on if you close this.' };
-    case 'ready': return { title: 'Prompt enhance is ready', description: 'Press the spark in the prompt bar, or Ctrl+E while you type. Undo is one click away.' };
+    case 'ready': return { title: 'Prompt enhance is ready', description: 'Press the flame in the prompt bar, or Ctrl+E while you type. Undo is one click away.' };
   }
 }
 
@@ -223,7 +209,7 @@ export function EnhanceSetupDialog({ showToast }: { showToast: ShowToast }) {
     footer = <button className="btn" onClick={() => closeEnhanceSetup()}>Close</button>;
   } else if (stage === 'ready') {
     footer = setup?.then
-      ? <button className="btn is-primary" onClick={() => closeEnhanceSetup({ run: true })}><Sparkles size={13} /> Enhance my prompt</button>
+      ? <button className="btn is-primary" onClick={() => closeEnhanceSetup({ run: true })}><EmberGlyph size={13} /> Enhance my prompt</button>
       : <button className="btn is-primary" onClick={() => closeEnhanceSetup()}>Done</button>;
   }
 

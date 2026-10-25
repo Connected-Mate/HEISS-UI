@@ -30,22 +30,12 @@
 
 .phone-compose-tools { align-items: center; min-height: 36px; }
 .phone-enhance-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
+  display: flex;
   min-width: 0;
   margin-right: auto;
-  padding-left: 4px;
-  font-size: 14px;
-  font-weight: 550;
-  white-space: nowrap;
+  padding-left: 6px;
 }
-.phone-enhance-status > svg {
-  flex: none;
-  color: #ffb784;
-  animation: enhance-spark 1.6s cubic-bezier(.45, 0, .55, 1) infinite;
-}
-.phone-enhance-status .enhance-shimmer { overflow: hidden; text-overflow: ellipsis; }
+.phone-enhance-status .enhance-status { font-size: 11.5px; }
 .phone-enhance-stop {
   flex: none;
   background: rgb(255 154 82 / .14);
@@ -98,7 +88,6 @@
 .phone-rtx .phone-seg button:active { transform: scale(var(--press-scale)); }
 
 @media (prefers-reduced-motion: reduce) {
-  .phone-enhance-status > svg { animation: none; }
   .phone-compose-recent:active,
   .phone-rtx .phone-seg button:active { transform: none; }
 }

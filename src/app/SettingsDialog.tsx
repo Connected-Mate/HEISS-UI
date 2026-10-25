@@ -30,7 +30,7 @@ import { TrashRow } from './TrashRow';
 import { loadRtxStatus, rtxStageLine, useRtxStatus } from './rtx';
 import { featureReady, heissNodesAction, loadHeissNodes, openHeissNodes, saveHeissNodesSettings, useHeissNodes } from './heissNodes';
 import { loadEnhanceStatus, openEnhanceSetup, saveEnhanceSettings, useEnhance } from './promptEnhance';
-import { enhanceShortcut } from './EnhanceComposer';
+import { EmberGlyph, EnhanceAura, EnhanceWords, enhanceShortcut, useEnhanceDemo } from './EnhanceComposer';
 import type { ShowToast } from './toast';
 
 export const SETTINGS_SECTIONS = [
@@ -146,6 +146,34 @@ export function Row({ label, description, children, stacked, disabled }: React.P
 }
 
 const creativityLevels = [{ value: 'faithful', label: 'Faithful', amount: 0.4 }, { value: 'balanced', label: 'Balanced', amount: 0.7 }, { value: 'bold', label: 'Bold', amount: 1 }] as const;
+type CreativityLevel = typeof creativityLevels[number]['value'];
+
+/** One idea, written at each style's heat, for the preview above the switch. */
+const STYLE_IDEA = 'a fox in the snow at dusk';
+const STYLE_SAMPLES: Record<CreativityLevel, string> = {
+  faithful: 'A red fox standing in fresh snow at dusk, soft fading light, pine trees behind, quiet winter landscape, natural colors, photograph.',
+  balanced: 'A red fox stands alert in deep snow at the edge of a pine forest at dusk, frost in its fur. Low sun rims its coat in gold while the snow falls blue into shadow. Eye-level medium shot, 85mm, shallow depth of field, 35mm film.',
+  bold: 'A lone red fox mid-leap over a drift of fresh powder, snow bursting into a halo of backlit crystals, the sky behind burning from violet to ember over black pines. Low wide angle, 24mm, frozen at 1/4000s, breath fogging, cinematic contrast.'
+};
+
+/** A style's heat as one, two or three ember cells. */
+function HeatPips({ heat }: { heat: number }) {
+  return <span className="heat-pips" aria-hidden="true">{[0, 1, 2].map((index) => <i key={index} className={cn(index < heat && 'on')} />)}</span>;
+}
+
+/** The chosen style, played: the idea, then the prompt it becomes, arriving hot. Plays again when the style changes. */
+function EnhancePreview({ level }: { level: CreativityLevel }) {
+  const words = STYLE_SAMPLES[level].split(' ');
+  const shown = useEnhanceDemo(words.length, level);
+  const writing = shown > 0 && shown < words.length;
+  return (
+    <div className="enhance-preview" aria-hidden="true">
+      {writing ? <EnhanceAura phase="writing" pulse={shown} /> : null}
+      <div className="enhance-preview-head"><span>{STYLE_IDEA}</span><EmberGlyph size={12} lit={writing} /></div>
+      <p>{shown ? <EnhanceWords text={words.slice(0, shown).join(' ')} cursor={writing} /> : null}</p>
+    </div>
+  );
+}
 
 /**
  * Prompt enhance (promptEnhance.ts): on or off, set up or not, which local
@@ -166,10 +194,11 @@ function EnhanceSettingsDrawer({ prefs, setPrefs }: { prefs: Preferences; setPre
     <SettingsDrawer id="set-feature-enhance" title="Prompt enhance" description={!on ? 'Off' : status?.ready ? `On · ${model?.label || 'ready'}` : 'On · needs setting up'}>
       <SwitchRow
         label="Prompt enhance"
-        description={`The spark in the prompt bar (${enhanceShortcut}): a few words become the prompt your model wants, a picture becomes a prompt, a start frame gets its motion. A local vision model writes it inside ComfyUI, uncensored, and nothing leaves this computer.`}
+        description={`The flame in the prompt bar (${enhanceShortcut}): a few words become the prompt your model wants, a picture becomes a prompt, a start frame gets its motion. A local vision model writes it inside ComfyUI, uncensored, and nothing leaves this computer.`}
         checked={on}
         onChange={(next) => setPrefs({ promptEnhance: next })}
       />
+      {on ? <EnhancePreview level={level.value} /> : null}
       {on && status && !status.ready ? (
         <Row label="Setup" description={status.nodes.ready ? 'Choose and download the model that writes.' : 'It runs on HEISS UI Nodes 8 and a local model.'}>
           <button type="button" className="btn" onClick={openEnhanceSetup}><Wand2 size={13} /> Set up</button>
@@ -188,7 +217,7 @@ function EnhanceSettingsDrawer({ prefs, setPrefs }: { prefs: Preferences; setPre
             </Row>
           ) : null}
           <Row label="Style" description={level.value === 'faithful' ? 'Sticks closely to your words; adds only what fills the picture in.' : level.value === 'bold' ? 'Takes more creative liberties with light, framing and detail.' : 'Rich detail that stays true to what you asked for.'}>
-            <Segmented label="Style" value={level.value} onChange={(next) => save({ creativity: creativityLevels.find((item) => item.value === next)?.amount ?? 0.7 })} options={creativityLevels.map(({ value, label }) => ({ value, label }))} />
+            <Segmented label="Style" value={level.value} onChange={(next) => save({ creativity: creativityLevels.find((item) => item.value === next)?.amount ?? 0.7 })} options={creativityLevels.map(({ value, label }, index) => ({ value, label: <><HeatPips heat={index + 1} />{label}</> }))} />
           </Row>
           <Row label="Your instructions" description="Followed in every prompt it writes, over its own rules: a look you always want, words to avoid, a language for text in pictures." stacked>
             <textarea

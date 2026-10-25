@@ -2,11 +2,11 @@ import React from 'react';
 import { GridAutoplayButton } from './GridAutoplayButton';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useDragControls, useReducedMotion } from 'framer-motion';
-import { ArrowLeft, ArrowUp, Brush, Check, CheckCircle2, ChevronRight, Columns2, CircleStop, Dices, Download, Eye, EyeOff, History, ImagePlus, Info, LockKeyhole, MoreHorizontal, RefreshCw, RotateCcw, Search, Share, SlidersHorizontal, Sparkles, Square, Star, Trash2, Undo2, Wand2, X, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Brush, Check, CheckCircle2, ChevronRight, Columns2, CircleStop, Dices, Download, Eye, EyeOff, History, ImagePlus, Info, LockKeyhole, MoreHorizontal, RefreshCw, RotateCcw, Search, Share, SlidersHorizontal, Square, Star, Trash2, Undo2, Wand2, X, Zap } from 'lucide-react';
 import { cn, aspectIconStyle } from './format';
 import type { PromptEnhance } from './usePromptEnhance';
 import { familyLabel, modelAbilities, setupNote } from './components';
-import { EnhanceOverlay } from './EnhanceComposer';
+import { EmberGlyph, EnhanceOverlay, EnhanceStatus } from './EnhanceComposer';
 import { downloadUrl } from './GalleryTile';
 import { canUpscaleItem, shortLeft, upscaledWithRun, upscaleLeftLine, upscaleTooltip, useUpscaleClock } from './useUpscale';
 import { chooseVideoTier, rtxVideoTiers, useRtxOffered } from './rtx';
@@ -644,7 +644,7 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
         <div className="phone-compose-tools">
           {enhance?.busy ? (
             <>
-              <span className="phone-enhance-status" role="status"><Sparkles size={15} aria-hidden="true" /><span className="enhance-shimmer">{enhance.working}</span></span>
+              <span className="phone-enhance-status" role="status"><EnhanceStatus enhance={enhance} /></span>
               <button type="button" className="phone-compose-recent phone-enhance-stop" onClick={() => { haptic('tap'); enhance.stop(); }}><Square size={11} fill="currentColor" aria-hidden="true" /> Stop<HapticTarget /></button>
             </>
           ) : enhance?.settled ? (
@@ -661,7 +661,7 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
               ) : null}
               {enhance ? (
                 <button type="button" className="phone-compose-recent phone-compose-enhance" onClick={() => { haptic('tap'); enhance.run(); }}>
-                  <Sparkles size={15} /> {enhance.verb}<HapticTarget />
+                  <EmberGlyph size={15} /> {enhance.verb}<HapticTarget />
                 </button>
               ) : null}
             </>
