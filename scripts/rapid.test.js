@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { rapidDetails, rapidLabel, rapidSeedFrom, rapidState } from "../src/app/rapid.js";
+import { rapidLabel, rapidSeedFrom, rapidState, rapidSummary } from "../src/app/rapid.js";
 
 const ready = { capabilities: { rapid: true, rapidGuidance: true } };
 const on = { rapid: true };
@@ -26,7 +26,9 @@ test("off where the model, the setup or the run can't use it", () => {
   assert.equal(rapidState(ready, on, "", "", { startImage: true, cfg: 1 }).status, "image");
   assert.equal(rapidState({ capabilities: { rapidGuidance: true } }, on, "", "", { cfg: 1 }).status, "idle");
   assert.equal(rapidState(ready, on, "", "", { kind: "video" }).status, "model");
-  for (const status of ["on", "off", "parts", "seed", "image", "idle", "install", "model"]) assert.ok(rapidLabel(status));
+  for (const status of ["on", "off", "parts", "seed", "image", "install"]) assert.ok(rapidLabel(status));
+  assert.equal(rapidLabel("parts"), "Off", "parts switched off underneath read as off");
+  for (const status of ["idle", "model"]) assert.equal(rapidLabel(status), "", "no row to label");
 });
 
 test("the two parts switch on their own", () => {
@@ -44,20 +46,13 @@ test("Use settings remembers the seed of a Rapid picture only", () => {
   assert.equal(rapidSeedFrom({ rapid: true, seed: "77" }, { vary: true }), "");
 });
 
-test("the details panel says which parts of Rapid ran, and how", () => {
-  assert.deepEqual(rapidDetails({}), [], "nothing for a picture made without it");
-  assert.deepEqual(rapidDetails({ rapid: true, rapidAt: 0.7, rapidSmooth: false, rapidSmallSteps: 5, rapidFullSteps: 3, rapidSwitchNoise: 0.655, rapidGuidance: true, rapidCfgUntil: 0.4, rapidSpeed: "faster" }), [
-    ["Half-size start", "5 of 8 steps at half size"],
-    ["Switched at", "noise 0.66 (asked 0.7)"],
-    ["Smoothing step", "Off"],
-    ["Lighter guidance", "CFG until noise 0.4"],
-    ["Speed", "Faster"]
-  ]);
-  assert.deepEqual(rapidDetails({ rapid: true, rapidAt: 0.7, rapidSmooth: true }), [
-    ["Half-size start", "On"], ["Switched at", "noise 0.7"], ["Smoothing step", "On"], ["Speed", "Balanced"]
-  ], "an older picture without the node's report");
-  assert.deepEqual(rapidDetails({ rapidSkipped: "too few steps (1)" }), [["Half-size start", "Skipped: too few steps (1)"]]);
-  assert.deepEqual(rapidDetails({ rapidSkipped: "inpaint mask", rapidGuidance: true, rapidCfgUntil: 0.3 }), [
-    ["Half-size start", "Skipped: inpaint mask"], ["Lighter guidance", "CFG until noise 0.3"], ["Speed", "Balanced"]
-  ]);
+test("the details panel says in one line whether Rapid helped", () => {
+  assert.equal(rapidSummary({}), "", "nothing for a picture made without it");
+  assert.equal(rapidSummary({ rapid: true, rapidAt: 0.7, rapidSmallSteps: 5, rapidFullSteps: 3, rapidGuidance: true, rapidSpeed: "faster" }), "On · Faster");
+  assert.equal(rapidSummary({ rapid: true, rapidAt: 0.7 }), "On · Balanced", "an older picture without the node's report");
+  assert.equal(rapidSummary({ rapidSkipped: "too few steps (1)" }), "Not used: too few steps");
+  assert.equal(rapidSummary({ rapidSkipped: "inpaint mask (it only works on the whole picture)" }), "Not used: inpainting");
+  assert.equal(rapidSummary({ rapidSkipped: "the run starts at noise 0.60, too little to start small (image to image or upscale)" }), "Not used: start image");
+  assert.equal(rapidSummary({ rapidSkipped: "something new" }), "Not used: not for this run");
+  assert.equal(rapidSummary({ rapidSkipped: "inpaint mask", rapidGuidance: true }), "On · Balanced", "guidance still helped");
 });

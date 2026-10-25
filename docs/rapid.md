@@ -129,7 +129,7 @@ Each family can carry `rapid: { at }`, and a variant can override or disable it 
   - `prefs.rapid`: the half-size start.
   - `prefs.rapidGuidance`: Rapid Guidance.
   - `prefs.rapidSpeed`: `careful`, `balanced` (default) or `faster`.
-- **Settings › Features › Rapid:** a drawer with the master switch and, under it, a switch per part, the Speed choice, a note on seeds, and the user's models that have it. When the pack is missing, it lists the models waiting for it and shows the shared install panel (`RapidSetup`). Opened from the sidebar's "Set up", it opens straight at the install.
+- **Settings › Features › Rapid:** a drawer with one switch (its description carries the seed rule), the Speed choice, and the user's models that have it. The two parts have no switches of their own on screen: nobody picks between them, and a "parts off" state was a dead end. Switching Rapid on brings both parts back. When the pack is missing, it lists the models waiting for it and a button that opens the HEISS Nodes dialog.
 - **Seed rule** (`src/app/rapid.js`, `rapidState`; client side, since only the client knows how a seed got there). A part runs when all of these hold:
   - `prefs.rapidAll` and that part's own preference are on
   - the model's capability for that part is ready
@@ -142,11 +142,11 @@ Each family can carry `rapid: { at }`, and a variant can override or disable it 
   - "Vary" clears the seed, so Rapid is back on.
   - Clearing the seed clears `rapidSeed`. Undo (`restoreDraft`) carries `rapidSeed` too.
 - **Composer:**
-  - The sidebar shows a small **Rapid** row (`RapidRow.tsx`) with the master switch and what the next run gets: "Half-size start and guidance", "Half-size start", "Lighter guidance", or why it's off ("Off while the seed is fixed", "Off with a start image", "Nothing to speed up at CFG 1", "Its parts are off in Settings"). When only the pack is missing it shows "Set up", which opens Settings › Features. It's hidden for models that can't use it.
+  - The sidebar shows a small **Rapid** row (`RapidRow.tsx`) with the switch and the benefit, not the mechanism: "Up to twice as fast", or why it isn't helping the next run ("Paused for a fixed seed", "Not used with a start image"). When only the pack is missing it says "Faster pictures" with "Set up", which opens the HEISS Nodes dialog. It's hidden for models that can't use it, and where there's nothing to speed up (guidance alone at CFG 1).
   - Phone: the same row as a switch in the phone's settings.
   - The model menu shows a Rapid bolt on models that can use it, while Rapid is on.
 - **Retry** (`retry.ts`): reruns with the original run's parts, switch points and speed (`rapidAt`, `rapidSmooth`, `rapidCfgUntil`, `rapidSpeed`).
-- **Details panel** (`rapidDetails` in `rapid.js`, shown by `format.ts`): its own **Rapid** section, only on pictures Rapid had a part in. Half-size start ("5 of 8 steps at half size", or "Skipped:" and the node's reason), Switched at (the noise level the node reported, with the asked one when they differ), Smoothing step, Lighter guidance ("CFG until noise 0.3") and Speed. Older pictures without the node's report show "On" and the asked switch point.
+- **Details panel** (`rapidSummary` in `rapid.js`, shown by `format.ts`): one **Rapid** row under Sampling, only on pictures Rapid had a part in: "On · Balanced" (the speed), or "Not used:" and the node's reason in a few words (inpainting, start image, too few steps, picture too small). Switch points and step counts stay in the picture's settings for the bench and retries, not on screen.
 
 ### The smooth switch (found while testing)
 
@@ -229,7 +229,7 @@ The second part of Rapid, with its own switch: **HEISS Rapid Guidance** (`HeissR
 - It keeps CFG while the noise level is at or above `until` (`rapid.cfgUntil` per family, default 0.3).
 - Below that it samples at CFG 1, where ComfyUI skips the second, prompt-less model pass, so those steps cost half.
 - It applies to every image family on the shared graph, but only on runs with CFG above 1. Video, own graphs and runners are left out.
-- It's on by default, with its own switch under Rapid in Settings › Features. The sidebar's Rapid switch is a master switch over both parts (`prefs.rapidAll`); each part keeps its own setting underneath.
+- It's on by default. Its own preference (`prefs.rapidGuidance`, like `prefs.rapid` for the start) stays for scripts but has no switch on screen; the Rapid switch (`prefs.rapidAll`) covers both, and switching it on turns both parts back on.
 - The same seed rule applies to both parts.
 - Benchmark: `--rapid guide` (alone), `--with-guidance` (with on/fast), `--cfg-until a,b` (sweep).
 

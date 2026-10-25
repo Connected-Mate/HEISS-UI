@@ -7,51 +7,51 @@ import { requireHeissNodes } from './heissNodes';
 
 /**
  * HEISS Rapid in the composer (docs/rapid.md): the switch, and why it is off
- * for the next run when it is. Hidden for models it isn't for.
+ * for the next run when it is. Hidden for models it isn't for, and where it has
+ * nothing to speed up. Its two parts stay prefs for scripts; here it's one switch.
  */
 type RapidView = {
   rapid: { use: boolean; guidance: boolean; status: RapidStatus };
-  prefs: { rapidAll?: boolean; rapid?: boolean; rapidGuidance?: boolean };
-  setPrefs: (next: { rapidAll: boolean }) => void;
+  setPrefs: (next: { rapidAll: boolean; rapid?: boolean; rapidGuidance?: boolean }) => void;
   openSettings?: (section: 'features') => void;
 };
 
-const explainer = 'Starts each picture at half size, and drops prompt guidance for the last detail steps, which then cost half: faster, with the same memory. A seed comes out a little differently with it, so a seed you fix yourself runs without it. Its two parts have their own switches in Settings › Features.';
+const explainer = 'Makes pictures up to twice as fast, with the same look. A seed you type yourself runs without it, so it keeps giving the same picture.';
 
-/** Rapid as a whole; the parts keep their own settings underneath. */
-const enabledAll = (prefs: RapidView['prefs']) => prefs.rapidAll !== false;
+/** Rows only for models Rapid is for, and only while it has something to speed up. */
+const hidden = (status: RapidStatus) => status === 'model' || status === 'idle';
+
+/** The switch: on unless Rapid, or every part of it underneath, is switched off. */
+const enabled = (rapid: RapidView['rapid']) => rapid.status !== 'off' && rapid.status !== 'parts';
+
+/** Switching on brings back its parts too, so on always means on. */
+const switchTo = (setPrefs: RapidView['setPrefs'], next: boolean) => setPrefs(next ? { rapidAll: true, rapid: true, rapidGuidance: true } : { rapidAll: false });
 
 /** "Set up": the HEISS Nodes dialog installs the pack, then Rapid is on. */
-const setUp = (setPrefs: RapidView['setPrefs']) => requireHeissNodes('rapid', () => setPrefs({ rapidAll: true }));
-
-/** What the next run gets, in a few words. */
-function onLabel(rapid: RapidView['rapid']) {
-  if (rapid.status !== 'on') return rapidLabel(rapid.status);
-  return rapid.use && rapid.guidance ? 'Half-size start and guidance' : rapid.use ? 'Half-size start' : 'Lighter guidance';
-}
+const setUp = (setPrefs: RapidView['setPrefs']) => requireHeissNodes('rapid', () => switchTo(setPrefs, true));
 
 export function SidebarRapidRow({ view }: { view: RapidView }) {
-  const { rapid, prefs, setPrefs } = view;
-  if (rapid.status === 'model') return null;
-  const enabled = enabledAll(prefs);
+  const { rapid, setPrefs } = view;
+  if (hidden(rapid.status)) return null;
+  const label = rapidLabel(rapid.status);
   return (
     <div className={cn('rapid-row', rapid.status === 'on' && 'is-on')}>
       <Tip content={explainer}>
-        <span className="rapid-row-copy" tabIndex={0} aria-label={`Rapid: ${onLabel(rapid)}. ${explainer}`}>
+        <span className="rapid-row-copy" tabIndex={0} aria-label={`Rapid: ${label}. ${explainer}`}>
           <strong><Zap size={13} aria-hidden="true" /> Rapid</strong>
-          <small>{onLabel(rapid)}</small>
+          <small>{label}</small>
         </span>
       </Tip>
       {rapid.status === 'install'
         ? <button type="button" className="btn is-ghost rapid-row-setup" onClick={() => setUp(setPrefs)}>Set up</button>
-        : <Switch size="sm" label={`Rapid, ${onLabel(rapid)}`} checked={enabled} onChange={(next) => setPrefs({ rapidAll: next })} />}
+        : <Switch size="sm" label={`Rapid, ${label}`} checked={enabled(rapid)} onChange={(next) => switchTo(setPrefs, next)} />}
     </div>
   );
 }
 
 export function PhoneRapidRow({ view }: { view: RapidView }) {
-  const { rapid, prefs, setPrefs } = view;
-  if (rapid.status === 'model') return null;
+  const { rapid, setPrefs } = view;
+  if (hidden(rapid.status)) return null;
   if (rapid.status === 'install') {
     return (
       <div className="phone-group">
@@ -61,12 +61,12 @@ export function PhoneRapidRow({ view }: { view: RapidView }) {
       </div>
     );
   }
-  const enabled = enabledAll(prefs);
+  const on = enabled(rapid);
   return (
     <div className="phone-group">
-      <button type="button" role="switch" aria-checked={enabled} className="phone-row" onClick={() => setPrefs({ rapidAll: !enabled })}>
-        <Zap size={20} /><span>Rapid<small>{onLabel(rapid)}</small></span>
-        <span className={cn('phone-switch', enabled && 'is-on')} aria-hidden="true"><i /></span>
+      <button type="button" role="switch" aria-checked={on} className="phone-row" onClick={() => switchTo(setPrefs, !on)}>
+        <Zap size={20} /><span>Rapid<small>{rapidLabel(rapid.status)}</small></span>
+        <span className={cn('phone-switch', on && 'is-on')} aria-hidden="true"><i /></span>
       </button>
     </div>
   );

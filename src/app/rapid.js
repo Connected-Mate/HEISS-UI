@@ -38,17 +38,18 @@ export function rapidState(profile, prefs, seed, rapidSeed, run = {}) {
   return off(capabilities.rapid && prefs?.rapid === false && !run.startImage && !run.inpaint ? "parts" : "idle");
 }
 
-/** The composer's word for it. */
+/** The composer's word for it: what Rapid does, or why it isn't doing it for the next run. */
 export function rapidLabel(status) {
   return {
-    on: "On",
+    on: "Up to twice as fast",
     off: "Off",
-    seed: "Off while the seed is fixed",
-    image: "Off with a start image",
-    idle: "Nothing to speed up at CFG 1",
-    parts: "Its parts are off in Settings",
-    install: "Needs the HEISS UI Nodes",
-    model: "Not for this model"
+    // Its parts are switched off underneath (scripts and old settings): to the composer that's just off.
+    parts: "Off",
+    seed: "Paused for a fixed seed",
+    image: "Not used with a start image",
+    idle: "",
+    install: "Faster pictures",
+    model: ""
   }[status] || "";
 }
 
@@ -60,36 +61,27 @@ export function rapidSeedFrom(settings, { vary = false } = {}) {
 }
 
 const SPEED_LABELS = { careful: "Careful", faster: "Faster" };
-const level = (value) => Number(value).toFixed(2).replace(/0$/, "");
+
+// The node's own reasons for skipping (heiss_rapid.py), in a few words.
+const SKIP_WORDS = [
+  [/mask|inpaint|full-size image/, "inpainting"],
+  [/starts at noise|image to image|upscale/, "start image"],
+  [/too few steps/, "too few steps"],
+  [/too small/, "picture too small"]
+];
 
 /**
- * The details panel's Rapid section: whether each part ran on this picture and
- * with which settings, as [label, value] rows (empty when Rapid had no part in it).
+ * The details panel's Rapid row: whether it helped make this picture, in one
+ * line ("" when Rapid had no part in it). How it ran stays in the settings.
  * @param {Record<string, unknown> | null | undefined} settings the picture's recorded settings
- * @returns {Array<[string, string]>}
+ * @returns {string}
  */
-export function rapidDetails(settings) {
+export function rapidSummary(settings) {
   const s = settings || {};
-  /** @type {Array<[string, string]>} */
-  const rows = [];
-  if (s.rapid && Number(s.rapidCache) > 0) {
-    // Step reuse (ComfyUI's EasyCache) instead of the half-size start, for the models that one breaks.
-    rows.push(["Step reuse", Number(s.rapidCacheFrom) > 0 ? `From ${Math.round(Number(s.rapidCacheFrom) * 100)}% of the steps` : "On"]);
-  } else if (s.rapid) {
-    const small = Number(s.rapidSmallSteps);
-    const full = Number(s.rapidFullSteps);
-    // From the node's own report where there is one; older pictures only have what was asked for.
-    rows.push(["Half-size start", small > 0 && full >= 0 ? `${small} of ${small + full} steps at half size` : "On"]);
-    const at = Number(s.rapidSwitchNoise) || Number(s.rapidAt);
-    if (at > 0) rows.push(["Switched at", `noise ${level(at)}${s.rapidSwitchNoise && s.rapidAt && level(s.rapidSwitchNoise) !== level(s.rapidAt) ? ` (asked ${level(s.rapidAt)})` : ""}`]);
-    if (typeof s.rapidSmooth === "boolean") rows.push(["Smoothing step", s.rapidSmooth ? "On" : "Off"]);
-  } else if (s.rapidSkipped) {
-    rows.push(["Half-size start", `Skipped: ${s.rapidSkipped}`]);
+  if ((s.rapid && !s.rapidSkipped) || s.rapidGuidance) return `On · ${SPEED_LABELS[String(s.rapidSpeed)] || "Balanced"}`;
+  if (s.rapidSkipped) {
+    const reason = String(s.rapidSkipped);
+    return `Not used: ${SKIP_WORDS.find(([pattern]) => pattern.test(reason))?.[1] || "not for this run"}`;
   }
-  if (s.rapidGuidance) {
-    const until = Number(s.rapidCfgUntil);
-    rows.push(["Lighter guidance", Number.isFinite(until) && s.rapidCfgUntil !== undefined && s.rapidCfgUntil !== null ? `CFG until noise ${level(until)}` : "On"]);
-  }
-  if (rows.length && (s.rapid || s.rapidGuidance)) rows.push(["Speed", SPEED_LABELS[String(s.rapidSpeed)] || "Balanced"]);
-  return rows;
+  return "";
 }

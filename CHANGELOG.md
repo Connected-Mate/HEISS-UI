@@ -24,7 +24,7 @@ version opens with a `> ` summary line, which the update pill shows.
   come in about a second and a half. The first press sets it up in one
   dialog. Settings › Features sets the model, the style and standing
   instructions.
-- **Rapid: pictures in about half the time, same VRAM.** On Krea 2, Z-Image,
+- **Rapid: pictures up to twice as fast, same VRAM.** On Krea 2, Z-Image,
   Flux, Flux.2 Klein, Qwen-Image, Chroma and SDXL (Pony, Illustrious), the
   noisy first steps of a picture run at half size and the rest at full size,
   so every bit of detail is still drawn full size. On by default, in the

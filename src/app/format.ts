@@ -1,6 +1,6 @@
 import type React from 'react';
 import type { AspectPreset, GalleryItem, LoraSelection } from './types';
-import { rapidDetails } from './rapid.js';
+import { rapidSummary } from './rapid.js';
 
 export function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
@@ -164,9 +164,9 @@ export function generationDetailEntries(item: GalleryItem): GenerationDetailSect
     add("Scheduler", settings.scheduler);
     add("Seed", settings.seed);
     if (item.type === "image" && (item.referenceImage || settings.referenceImageName)) add("Denoise", settings.denoise);
+    // HEISS Rapid: whether it helped, in one line (rapid.js).
+    add("Rapid", rapidSummary(settings));
   });
-  // HEISS Rapid: which parts ran and how (rapid.js).
-  section("Rapid", (add) => rapidDetails(settings).forEach(([label, value]) => add(label, value)));
   section(item.type === "video" ? "Video" : "Image", (add) => {
     // The size of the picture shown: an upscale's own size when that's the one on screen.
     const upscaled = item.upscaleActive && item.upscale?.status === "done" && item.upscale.width && item.upscale.height ? item.upscale : null;

@@ -410,8 +410,6 @@ function upscaleSummary(status: UpscaleStatus | null, install: UpscaleInstall) {
 const profileName = (profile: Profile) => profile.displayName || profile.label;
 
 /** Models as small chips with their family, the first few shown and the rest a tap away. */
-type RapidSetupState = { installed: boolean; setup: null | (ShellPlan & { manager: boolean; pack: NodePackInfo; autoInstall: PackAutoInstall }) };
-
 /**
  * RTX upscaling for videos, inside Smart upscale's drawer: only on an NVIDIA
  * card. Where setup stands, the install for the missing part, what this
@@ -498,21 +496,6 @@ function InpaintSeamRow() {
         </div>
       )}
     </Row>
-  );
-}
-
-/** The HEISS UI Nodes install for Rapid, asked for only while some model is waiting on it. */
-function RapidSetup({ showToast: _showToast, onInstalled: _onInstalled }: { showToast: ShowToast; onInstalled: () => void }) {
-  const [state, setState] = React.useState<RapidSetupState | null>(null);
-  React.useEffect(() => {
-    apiJson<RapidSetupState>('/api/rapid/status').then(setState).catch(() => setState(null));
-  }, []);
-  if (!state?.setup) return null;
-  // Installed and kept current in one place: the HEISS Nodes dialog (models refresh when it's done).
-  return (
-    <div className="set-node-install">
-      <button type="button" className="btn is-primary" onClick={() => openHeissNodes('rapid')}><Download size={14} /> Set up HEISS UI Nodes</button>
-    </div>
   );
 }
 
@@ -933,7 +916,7 @@ export function SettingsDialog({ view, open, section, onSectionChange, onClose, 
   // Inpainting ships behind a release switch; while it's off its group stays away.
   const inpaintReleased = Boolean((models as Models | null)?.features?.inpainting);
   const inpaintModels = ((modelProfiles || []) as Profile[]).filter((profile) => profile.capabilities?.inpaint);
-  const rapidOn = prefs.rapidAll !== false;
+  const rapidOn = prefs.rapidAll !== false && (prefs.rapid !== false || prefs.rapidGuidance !== false);
   // Rapid is for pictures: every image model counts, whichever mode the composer is in.
   const imageProfiles = (((models as Models | null)?.profiles || []) as Profile[]).filter((profile) => profile.kind === 'image');
   const rapidModels = imageProfiles.filter((profile) => profile.capabilities?.rapid || profile.capabilities?.rapidGuidance);
@@ -1064,28 +1047,16 @@ export function SettingsDialog({ view, open, section, onSectionChange, onClose, 
             >
               <SwitchRow
                 label="Rapid"
-                description="Faster pictures with the same memory, in two parts you can switch on their own."
+                description="Pictures up to twice as fast, with the same look and memory. A seed you type yourself runs without it, so it keeps giving the same picture."
                 checked={rapidOn}
-                onChange={(next) => setPrefs({ rapidAll: next })}
+                // On brings back its parts too (they stay prefs for scripts), so on always means on.
+                onChange={(next) => setPrefs(next ? { rapidAll: true, rapid: true, rapidGuidance: true } : { rapidAll: false })}
               />
               {rapidOn ? (
                 <>
-                  <SwitchRow
-                    label="Half-size start"
-                    description="Works out the noisy first steps at half size and finishes at full size: they only settle the layout, so they don’t need the full size. Up to about 1.7× faster on larger pictures."
-                    checked={prefs.rapid !== false}
-                    onChange={(next) => setPrefs({ rapid: next })}
-                  />
-                  <SwitchRow
-                    label="Lighter guidance at the end"
-                    description="Follows the prompt at full strength (CFG) while the picture takes shape, then runs the last detail steps without it, which halves their cost. Only for models that use CFG above 1."
-                    checked={prefs.rapidGuidance !== false}
-                    onChange={(next) => setPrefs({ rapidGuidance: next })}
-                  />
-                  <Row label="Speed" description={prefs.rapidSpeed === 'faster' ? 'Starts small for longer and cuts guidance sooner: quicker, with a little more risk to small text and fine detail.' : prefs.rapidSpeed === 'careful' ? 'Switches to full size and full guidance earlier: a bit slower, the safest for small text.' : 'The switch points measured for each model.'}>
+                  <Row label="Speed" description={prefs.rapidSpeed === 'faster' ? 'Quicker, with a little more risk to small text and fine detail.' : prefs.rapidSpeed === 'careful' ? 'A bit slower, the safest for small text.' : 'Tuned for each model.'}>
                     <Segmented label="Rapid speed" value={prefs.rapidSpeed === 'faster' || prefs.rapidSpeed === 'careful' ? prefs.rapidSpeed : 'balanced'} onChange={(next) => setPrefs({ rapidSpeed: next })} options={[{ value: 'careful', label: 'Careful' }, { value: 'balanced', label: 'Balanced' }, { value: 'faster', label: 'Faster' }]} />
                   </Row>
-                  <Row label="Seeds" description="A seed frames a little differently with Rapid. A seed you fix yourself runs without it, so it gives the picture it always did; “Use settings” on a Rapid picture keeps it on, so the same picture comes back." />
                   {rapidModels.length ? (
                     <Row label="Your models with Rapid" stacked>
                       <ModelChips profiles={rapidModels} />
@@ -1096,7 +1067,9 @@ export function SettingsDialog({ view, open, section, onSectionChange, onClose, 
                       <Row label={rapidModels.length ? 'Waiting for the nodes' : 'Your models that can use it'} description="Rapid runs on the HEISS UI Nodes, a small custom node pack for ComfyUI." stacked>
                         <ModelChips profiles={rapidWaiting} />
                       </Row>
-                      <RapidSetup showToast={showToast} onInstalled={() => { refreshModels(false); refreshWorkflows(); }} />
+                      <div className="set-node-install">
+                        <button type="button" className="btn is-primary" onClick={() => openHeissNodes('rapid')}><Download size={14} /> Set up HEISS UI Nodes</button>
+                      </div>
                     </>
                   ) : null}
                   {!rapidModels.length && !rapidWaiting.length ? (

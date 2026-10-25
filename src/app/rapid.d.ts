@@ -8,4 +8,4 @@ export function rapidState(
 ): { use: boolean; guidance: boolean; status: RapidStatus };
 export function rapidLabel(status: RapidStatus): string;
 export function rapidSeedFrom(settings: Record<string, unknown> | null | undefined, options?: { vary?: boolean }): string;
-export function rapidDetails(settings: Record<string, unknown> | null | undefined): Array<[string, string]>;
+export function rapidSummary(settings: Record<string, unknown> | null | undefined): string;

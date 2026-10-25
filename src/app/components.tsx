@@ -600,7 +600,7 @@ function ModelAbilities({ profile, showInpaint = true, showRapid = true, onHover
     <span className="model-abilities" onPointerEnter={() => onHover?.(true)} onPointerLeave={() => onHover?.(false)}>
       {edits ? <Tip content="Edits from reference images" side="top"><span className="model-ability" aria-label="Edits from reference images"><ImagePlus size={13} strokeWidth={1.75} /></span></Tip> : null}
       {inpaints ? <Tip content="Inpainting: paint over part of an image to change only that" side="top"><span className="model-ability" aria-label="Inpainting"><Brush size={13} strokeWidth={1.75} /></span></Tip> : null}
-      {rapid ? <Tip content="Rapid: makes its pictures faster" side="top"><span className="model-ability" aria-label="Rapid"><Zap size={13} strokeWidth={1.75} /></span></Tip> : null}
+      {rapid ? <Tip content="Rapid: up to twice as fast" side="top"><span className="model-ability" aria-label="Rapid"><Zap size={13} strokeWidth={1.75} /></span></Tip> : null}
     </span>
   );
 }
