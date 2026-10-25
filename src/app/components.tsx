@@ -3,7 +3,7 @@ import { VideoPreview } from './VideoPreview';
 import { mediaUrl } from './mediaUrl';
 import { useDismiss } from './useDismiss';
 import { useScrollEdges } from './useScrollEdges';
-import { Brush, ChevronDown, ChevronRight, ImagePlus, Info, Layers, Minus, Plus, Search, Star, X, Zap } from 'lucide-react';
+import { Brush, ChevronDown, ChevronRight, ImagePlus, Info, Minus, Plus, Puzzle, Search, Star, X, Zap } from 'lucide-react';
 import { Select as FluidSelect, SelectContent as FluidSelectContent, SelectItem as FluidSelectItem, SelectTrigger as FluidSelectTrigger } from '@/components/ui/select';
 import { Tooltip as FluidTooltip } from '@/components/ui/tooltip';
 import { AnimatedNumber } from './AnimatedNumber';
@@ -657,8 +657,6 @@ function MenuLoras({ loras, onOpen }: { loras: ModelMenuLoras; onOpen: () => voi
           {shown.map((lora, index) => (
             <span key={`${lora.name}:${index}`} className="model-menu-lora">
               <span className="model-menu-lora-name">{loraDisplayName(lora.name)}</span>
-              {/* How strongly, drawn against 1 (the LoRA as trained); past 1 the bar is full and warm. */}
-              <span className={cn("model-menu-lora-meter", lora.strength > 1 && "is-over")} aria-hidden="true"><i style={{ width: `${Math.round(Math.min(1, Math.max(0, lora.strength)) * 100)}%` }} /></span>
               <span className="model-menu-lora-strength">{lora.strength.toFixed(2)}</span>
             </span>
           ))}
@@ -767,8 +765,8 @@ export function ModelPicker({ value, profiles, showInpaint = true, showRapid = t
           {compact ? (
             <>
               <span className="model-copy"><strong>{selected?.displayName || selected?.label || "No model"}</strong></span>
-              {/* The LoRAs riding on it, as a small count after the name; the menu's last card lists them. */}
-              {loraCount ? <b className="model-lora-tag" aria-hidden="true"><Layers size={11} strokeWidth={2.2} /><AnimatedNumber value={loraCount} /></b> : null}
+              {/* The LoRAs riding on it, as a small grey count after the name; the menu's last card lists them. */}
+              {loraCount ? <b className="model-lora-tag" aria-hidden="true"><Puzzle size={11} strokeWidth={2.2} /><AnimatedNumber value={loraCount} /></b> : null}
             </>
           ) : (
             <span className="model-copy">

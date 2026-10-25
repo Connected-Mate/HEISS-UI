@@ -6,7 +6,7 @@
    Images and Steps under the shapes as two rows of one kind, each with the
    same − value + pill; the preview window deals one frame per image.
 
-   LoRAs ride on the model button as a small ember count, and the model menu
+   LoRAs ride on the model button as a small grey count, and the model menu
    ends on a card that lists them and opens the LoRA list: a title and Edit,
    then one row per LoRA whose name starts under the title's.
 --------------------------------------------------------------------------- */
@@ -174,10 +174,12 @@
   height: 18px;
   padding: 0 6px 0 5px;
   border-radius: 6px;
-  background: rgb(255 154 82 / .13);
-  box-shadow: inset 0 0 0 1px rgb(255 154 82 / .2);
-  color: var(--ember);
-  font: 700 10.5px/1 var(--font-mono);
+  background: rgb(255 255 255 / .08);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1);
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .model-lora-tag svg { flex: none; }
@@ -224,16 +226,13 @@
 .model-menu-loras-list { display: grid; gap: 6px; }
 .model-menu-lora {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px 28px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   color: hsl(var(--foreground) / .86);
   font-size: 12px;
 }
 .model-menu-lora-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.model-menu-lora-meter { height: 3px; overflow: hidden; border-radius: 2px; background: rgb(255 255 255 / .1); }
-.model-menu-lora-meter i { display: block; height: 100%; border-radius: inherit; background: rgb(255 255 255 / .62); }
-.model-menu-lora-meter.is-over i { background: var(--ember); }
 .model-menu-lora-strength {
   justify-self: end;
   color: hsl(var(--muted-foreground));
