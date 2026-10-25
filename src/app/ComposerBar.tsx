@@ -275,7 +275,7 @@ export type ComposerBarProps = {
   countMeta: Record<string, number>;
   setCount: (value: number) => void;
   loraActiveCount: number;
-  /** The LoRAs on the current model, for the model menu's card; left out where the model takes none. */
+  /** The LoRAs on the current model, for the model menu's LoRA row; left out where the model takes none. */
   activeLoras?: LoraSelection[];
   /** Settings › Generation: Steps and Images inside the size button instead of beside it. */
   compactOptions?: boolean;

@@ -3,12 +3,11 @@ import { VideoPreview } from './VideoPreview';
 import { mediaUrl } from './mediaUrl';
 import { useDismiss } from './useDismiss';
 import { useScrollEdges } from './useScrollEdges';
-import { Brush, ChevronDown, ChevronRight, ImagePlus, Info, Minus, Plus, Puzzle, Search, Star, X, Zap } from 'lucide-react';
+import { Brush, ChevronDown, ImagePlus, Info, Minus, Plus, Puzzle, Search, Star, X, Zap } from 'lucide-react';
 import { Select as FluidSelect, SelectContent as FluidSelectContent, SelectItem as FluidSelectItem, SelectTrigger as FluidSelectTrigger } from '@/components/ui/select';
 import { Tooltip as FluidTooltip } from '@/components/ui/tooltip';
 import { AnimatedNumber } from './AnimatedNumber';
 import type { AspectPreset, AutoUpscale, LoraSelection, NativeSupport, Output, Profile, SavedSize } from './types';
-import { loraDisplayName } from './loras';
 import { MEGAPIXEL, presetRatio, type SideLimits } from './sizing';
 import { LinkedSizeFields, MegapixelField, SavedSizeRow, SizePreview, SizeTabs, sizeMenuModel, type MegapixelControl, type SizeRow, type SizeTier } from './SizeMenu';
 import { usePresence } from './usePresence';
@@ -634,35 +633,16 @@ function ModelAbilities({ profile, showInpaint = true, showRapid = true }: { pro
   );
 }
 
-/** The LoRAs on the chosen model, for the model menu's last card; left out where the model takes none. */
+/** The LoRAs on the chosen model, for the model menu's last row; left out where the model takes none. */
 export type ModelMenuLoras = { active: LoraSelection[]; onOpen: () => void };
-const menuLoraLimit = 3;
 
-/**
- * The model menu's last card: the LoRAs riding on this model, each with how
- * strongly, or a quiet way to add one. The whole card opens the LoRA list.
- */
+/** The model menu's last row, like Find more models: how many LoRAs ride on this model, and Edit. It opens the LoRA list. */
 function MenuLoras({ loras, onOpen }: { loras: ModelMenuLoras; onOpen: () => void }) {
-  const active = loras.active;
-  const shown = active.slice(0, menuLoraLimit);
-  const more = active.length - shown.length;
+  const count = loras.active.length;
   return (
-    <button type="button" className={cn("model-menu-loras", active.length > 0 && "has-active")} onClick={onOpen}>
-      <span className="model-menu-loras-head">
-        <strong>{active.length ? `${active.length} LoRA${active.length === 1 ? "" : "s"}` : "LoRAs"}</strong>
-        <em>{active.length ? "Edit" : "None on"}<ChevronRight size={13} aria-hidden="true" /></em>
-      </span>
-      {shown.length ? (
-        <span className="model-menu-loras-list">
-          {shown.map((lora, index) => (
-            <span key={`${lora.name}:${index}`} className="model-menu-lora">
-              <span className="model-menu-lora-name">{loraDisplayName(lora.name)}</span>
-              <span className="model-menu-lora-strength">{lora.strength.toFixed(2)}</span>
-            </span>
-          ))}
-          {more > 0 ? <span className="model-menu-lora is-more">and {more} more</span> : null}
-        </span>
-      ) : null}
+    <button type="button" className="model-menu-find model-menu-loras" onClick={onOpen}>
+      <span>{count ? `${count} LoRA${count === 1 ? "" : "s"}` : "No LoRAs"}</span>
+      <em>{count ? "Edit" : "Add"}</em>
     </button>
   );
 }
@@ -765,7 +745,7 @@ export function ModelPicker({ value, profiles, showInpaint = true, showRapid = t
           {compact ? (
             <>
               <span className="model-copy"><strong>{selected?.displayName || selected?.label || "No model"}</strong></span>
-              {/* The LoRAs riding on it, as a small grey count after the name; the menu's last card lists them. */}
+              {/* The LoRAs riding on it, as a small grey count after the name; the menu's last row says how many and opens them. */}
               {loraCount ? <b className="model-lora-tag" aria-hidden="true"><Puzzle size={11} strokeWidth={2.2} /><AnimatedNumber value={loraCount} /></b> : null}
             </>
           ) : (

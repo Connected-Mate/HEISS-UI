@@ -7,8 +7,7 @@
    same − value + pill; the preview window deals one frame per image.
 
    LoRAs ride on the model button as a small grey count, and the model menu
-   ends on a card that lists them and opens the LoRA list: a title and Edit,
-   then one row per LoRA whose name starts under the title's.
+   ends on a row that says how many, with Edit to open the LoRA list.
 --------------------------------------------------------------------------- */
 
 /* --- The button --------------------------------------------------------- */
@@ -186,65 +185,13 @@
 
 /* --- LoRAs at the foot of the model menu ------------------------------------ */
 
-.model-menu-loras {
-  display: grid;
-  gap: 8px;
-  width: 100%;
-  margin-top: 4px;
-  padding: 10px 12px;
-  border: 0;
-  border-radius: var(--r-item);
-  background: var(--well);
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / .5);
-  color: hsl(var(--foreground));
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--motion-fast) var(--motion-ease);
-}
-@media (hover: hover) {
-  .model-menu-loras:hover { background: linear-gradient(rgb(255 255 255 / .035), rgb(255 255 255 / .035)), var(--well); }
-  .model-menu-loras:hover .model-menu-loras-head em { color: hsl(var(--foreground)); }
-  .model-menu-loras:hover .model-menu-loras-head em svg { translate: 2px 0; }
-}
-.model-menu-loras:active { scale: .99; }
-.model-menu-loras:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.model-menu-loras-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.model-menu-loras-head strong { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; }
-.model-menu-loras-head em {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 1px;
-  color: hsl(var(--muted-foreground));
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 600;
-  transition: color var(--motion-fast) var(--motion-ease);
-}
-.model-menu-loras-head em svg { transition: translate var(--motion-base) var(--motion-spring); }
-.model-menu-loras-list { display: grid; gap: 6px; }
-.model-menu-lora {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  color: hsl(var(--foreground) / .86);
-  font-size: 12px;
-}
-.model-menu-lora-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.model-menu-lora-strength {
-  justify-self: end;
-  color: hsl(var(--muted-foreground));
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.model-menu-lora.is-more { display: block; color: hsl(var(--muted-foreground)); font-size: 12px; }
+/* One row like Find more models (25-model-folders.css): "4 LoRAs" and Edit. Under it, the
+   two read as one list: only the last row keeps the menu's rounded foot. */
+.model-menu .model-menu-find:has(+ .model-menu-loras) { border-radius: 0; }
+.model-menu .model-menu-find + .model-menu-loras { margin-top: 0; }
 
 @media (prefers-reduced-motion: reduce) {
-  .size-frame.is-card, .run-stepper button, .model-menu-loras-head em svg { transition: none; }
+  .size-frame.is-card, .run-stepper button { transition: none; }
 }
 
 /* The count on the front card's corner, popping in as it changes. */
