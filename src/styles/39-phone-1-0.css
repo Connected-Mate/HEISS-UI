@@ -94,3 +94,85 @@
 @media (forced-colors: active) {
   .phone-compose.is-enhance-live textarea { color: CanvasText; }
 }
+
+/* ------------------------------------- An imported workflow's More settings */
+
+/* The desktop sidebar's panel, laid out like the rest of the sheet: a section
+   title, each node as a card with a 52px row that opens it, thumb-sized steppers. */
+.phone-advanced-controls .wf-settings { gap: 0; margin-top: 20px; padding-top: 0; border-top: 0; }
+.phone-advanced-controls .wf-settings-head { margin: 0 6px 8px; min-height: 32px; }
+.phone-advanced-controls .wf-settings-head h4 { font-size: 13px; letter-spacing: 0; text-transform: none; }
+.phone-advanced-controls .wf-settings-head .btn { min-height: 36px; font-size: 13px; }
+.phone-advanced-controls .wf-settings-group { margin-bottom: 8px; border-radius: 18px; background: #1f1f1f; }
+.phone-advanced-controls .wf-settings-group summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 16px;
+  list-style: none;
+  color: hsl(var(--foreground));
+  font-size: 16px;
+  font-weight: 500;
+}
+.phone-advanced-controls .wf-settings-group summary::-webkit-details-marker { display: none; }
+.phone-advanced-controls .wf-settings-group summary::after {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: -4px 4px 0 auto;
+  border-right: 2px solid hsl(var(--muted-foreground));
+  border-bottom: 2px solid hsl(var(--muted-foreground));
+  transform: rotate(45deg);
+  transition: transform var(--motion-fast) var(--motion-ease), margin var(--motion-fast) var(--motion-ease);
+}
+.phone-advanced-controls .wf-settings-group[open] summary::after { margin-top: 4px; transform: rotate(-135deg); }
+.phone-advanced-controls .wf-settings-grid { gap: 8px; padding: 0 12px 12px; }
+.phone-advanced-controls .wf-settings .number-picker { height: 48px; border-radius: 14px; }
+.phone-advanced-controls .wf-settings .number-picker-btn { width: 44px; height: 42px; }
+.phone-advanced-controls .wf-settings .number-picker-label { font-size: 14px; }
+.phone-advanced-controls .wf-settings .number-picker-value,
+.phone-advanced-controls .wf-settings .number-picker-input { height: 42px; font-size: 16px; }
+.phone-advanced-controls .wf-settings .fluid-select-trigger { min-height: 48px; }
+.phone-advanced-controls .wf-settings input,
+.phone-advanced-controls .wf-settings textarea { font-size: 16px; }
+.phone-advanced-controls .wf-setting-toggle { min-height: 44px; font-size: 16px; }
+.phone-advanced-controls .wf-setting-toggle input { width: 20px; height: 20px; }
+
+/* An empty LoRA list needs no "Up to 8" over its own explanation. */
+.phone-loras .lora-head:not(:has(button)) { display: none; }
+
+/* The prompt box's chips and the steps pill look 36px tall but take a 44px tap. */
+.phone-compose-recent,
+.phone-step-default { position: relative; }
+.phone-compose-recent::after,
+.phone-step-default::after { content: ""; position: absolute; inset: -4px -2px; }
+/* At the recommended steps it is a label, not a button. */
+.phone-step-default.is-at { display: inline-flex; align-items: center; background: transparent; color: hsl(var(--muted-foreground)); font-weight: 550; }
+
+/* "3 files it needs aren’t here yet. Set it up ›" over Generate opens Advanced, where the setup is. */
+.phone-reason.is-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  margin: -6px 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ember);
+  font-weight: 550;
+}
+
+/* A switch row's description wraps rather than ending in "…". */
+.phone-row[role="switch"] small { white-space: normal; }
+
+/* The sign-in screen comes before the phone studio exists, so it can't lean on
+   body:has(.phone-shell): it sizes its own field for a thumb. */
+@media (max-width: 760px), (pointer: coarse) {
+  .device-gate .hidden-unlock-field { min-height: 56px; }
+  .device-gate .hidden-unlock-field button { min-height: 48px; font-size: 16px; }
+  .device-gate .empty-actions .reconnect-btn { min-height: 48px; padding-inline: 20px; font-size: 16px; }
+}

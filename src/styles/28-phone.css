@@ -852,6 +852,8 @@
 .phone-mode { margin-bottom: 6px; }
 .phone-advanced-controls .phone-section { margin-top: 20px; }
 .phone-advanced-controls .phone-control { margin-bottom: 10px; }
+/* The sidebar's card scrolls inside half its column; in a sheet the sheet scrolls, so the card is as tall as what it lists. */
+.phone-advanced-controls .model-setup.is-sidebar { max-height: none; min-height: 0; overflow: hidden; margin-top: 8px; }
 
 /* A native <select> laid invisibly over the row: the tap opens the phone's own picker. */
 .phone-select { position: relative; }

@@ -153,8 +153,8 @@ export function EmptyStage({ known, offline, restarting = false, device, retryin
             </>
           ) : copy === 'empty' ? (
             <>
-              <h2>No outputs yet</h2>
-              <p>Write a prompt below to start.</p>
+              <h2>Nothing here yet</h2>
+              <p>Describe what to make below, and it appears here.</p>
             </>
           ) : null}
         </div>

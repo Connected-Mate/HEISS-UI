@@ -75,18 +75,16 @@ function loraSetup(view: any) {
  */
 export function PhoneAdvancedControls({ view }: { view: any }) {
   const {
-    canUseStartImage, cfg, cfgMeta, changeMode, currentProfile, customSize, aspectLocked, denoise, denoiseMeta,
-    fps, fpsMeta, frameMeta, frames, height, heightMeta, loras, mode, models, profileOptions, sampler, scheduler, seed,
-    setCfg, setDenoise, setFps, setFrames, setHeight, setLoras, setSampler, setScheduler, setSeed, setTextEncoder, setVae,
-    setWeightDtype, setWidth, textEncoder, vae, weightDtype, width, widthMeta, loraLibrary, rememberedLoraStrength,
-    textEncoders, setTextEncoders, refreshModels, refreshWorkflows, showToast,
-    inpaintActive, inpaintStrength, setInpaintStrength, inpaintFeather, setInpaintFeather, sidebarReference
+    canUseStartImage, cfg, cfgMeta, changeMode, currentProfile, aspectLocked, denoise, denoiseMeta,
+    fps, fpsMeta, frameMeta, frames, height, loras, mode, models, profileOptions, sampler, scheduler, seed,
+    setCfg, setDenoise, setFps, setFrames, setLoras, setSampler, setScheduler, setSeed, setTextEncoder, setVae,
+    setWeightDtype, textEncoder, vae, weightDtype, width, loraLibrary, rememberedLoraStrength,
+    textEncoders, setTextEncoders, refreshModels, refreshWorkflows, showToast, sidebarReference,
+    inpaintActive, inpaintStrength, setInpaintStrength, inpaintFeather, setInpaintFeather
   } = view;
   const { loraOptions, loraLimit, loraUnavailable } = loraSetup(view);
   const samplers = profileOptions.samplers?.length ? profileOptions.samplers : models?.samplers?.length ? models.samplers : fallbackSamplers;
   const schedulers = profileOptions.schedulers?.length ? profileOptions.schedulers : models?.schedulers?.length ? models.schedulers : fallbackSchedulers;
-  const sizeStep = widthMeta.step || (mode === "video" ? 32 : 64);
-  const sizeMax = (meta: { max?: number }) => Math.min(meta.max ?? 4096, 2048);
   const encoderSlots = (currentProfile?.encoderSlots || []).filter((slot: { options: string[] }) => slot.options.length);
   const showVae = currentProfile?.capabilities.vae && (currentProfile.vaeBuiltIn || (profileOptions.vaes || []).length);
   const parts = encoderSlots.length || currentProfile?.capabilities.textEncoder || showVae || currentProfile?.capabilities.weightDtype;
@@ -100,19 +98,24 @@ export function PhoneAdvancedControls({ view }: { view: any }) {
 
       {currentProfile ? <ModelSetup key={currentProfile.id} profile={currentProfile} showToast={showToast} onInstalled={() => { refreshModels(false); refreshWorkflows(); }} /> : null}
 
-      <h3 className="phone-section">LoRAs</h3>
-      <div className="phone-loras">
-        <LoraPanel
-          loras={loras}
-          setLoras={setLoras}
-          options={loraOptions}
-          profile={currentProfile}
-          limit={loraLimit}
-          library={loraLibrary}
-          rememberedStrength={rememberedLoraStrength}
-          unavailableReason={loraUnavailable}
-        />
-      </div>
+      {/* An imported workflow without a LoRA loader shows no LoRAs at all, like the other controls it doesn't take. */}
+      {currentProfile?.id.startsWith("custom:") && !currentProfile.capabilities.lora ? null : (
+        <>
+          <h3 className="phone-section">LoRAs</h3>
+          <div className="phone-loras">
+            <LoraPanel
+              loras={loras}
+              setLoras={setLoras}
+              options={loraOptions}
+              profile={currentProfile}
+              limit={loraLimit}
+              library={loraLibrary}
+              rememberedStrength={rememberedLoraStrength}
+              unavailableReason={loraUnavailable}
+            />
+          </div>
+        </>
+      )}
 
       {/* An imported workflow shows only what its graph takes; built-in models have every one of these. */}
       {currentProfile?.capabilities.sampler !== false || currentProfile?.capabilities.cfg !== false ? <h3 className="phone-section">Sampling</h3> : null}
@@ -147,13 +150,8 @@ export function PhoneAdvancedControls({ view }: { view: any }) {
       ) : null}
       <PhoneRapidRow view={view} />
 
-      {customSize && !aspectLocked && currentProfile?.capabilities.size !== false ? (
-        <>
-          <h3 className="phone-section">Size</h3>
-          <PhoneSlider label="Width" value={width} min={Math.max(widthMeta.min ?? 64, 256)} max={sizeMax(widthMeta)} step={sizeStep} onChange={setWidth} format={(value) => `${value}px`} />
-          <PhoneSlider label="Height" value={height} min={Math.max(heightMeta.min ?? 64, 256)} max={sizeMax(heightMeta)} step={heightMeta.step || sizeStep} onChange={setHeight} format={(value) => `${value}px`} />
-        </>
-      ) : aspectLocked ? <p className="phone-note">The size follows the image being edited ({width}×{height}).</p> : null}
+      {/* A custom width and height are set in the size sheet, beside the frame they make. */}
+      {aspectLocked ? <p className="phone-note">The size follows the image being edited ({width}×{height}).</p> : null}
 
       {mode === "video" && (currentProfile?.capabilities.frames !== false || currentProfile?.capabilities.fps !== false) ? (
         <>

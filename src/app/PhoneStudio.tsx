@@ -2,10 +2,10 @@ import React from 'react';
 import { GridAutoplayButton } from './GridAutoplayButton';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useDragControls, useReducedMotion } from 'framer-motion';
-import { ArrowLeft, ArrowUp, Brush, Check, CheckCircle2, ChevronRight, Columns2, CircleStop, Dices, Download, Eye, EyeOff, History, ImagePlus, Info, LockKeyhole, MoreHorizontal, RefreshCw, RotateCcw, Search, Share, SlidersHorizontal, Square, Star, Trash2, Undo2, Wand2, X, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Box, Brush, Check, CheckCircle2, ChevronRight, Columns2, CircleStop, Dices, Download, Eye, EyeOff, History, ImagePlus, Info, LockKeyhole, MoreHorizontal, RefreshCw, RotateCcw, Search, Share, SlidersHorizontal, Square, Star, Trash2, Undo2, Wand2, X, Zap } from 'lucide-react';
 import { cn, aspectIconStyle } from './format';
 import type { PromptEnhance } from './usePromptEnhance';
-import { familyLabel, modelAbilities, setupNote } from './components';
+import { familyLabel, modelAbilities, setupDetail, setupNote } from './components';
 import { EmberGlyph, EnhanceOverlay, EnhanceStatus } from './EnhanceComposer';
 import { downloadUrl } from './GalleryTile';
 import { canUpscaleItem, shortLeft, upscaledWithRun, upscaleLeftLine, upscaleTooltip, useUpscaleClock } from './useUpscale';
@@ -407,7 +407,7 @@ export function PhoneShell({ view, galleryBody, canUseNegativePrompt, comfyOffli
   const [searchOpen, setSearchOpen] = React.useState(false);
   const restarting = Boolean(comfyStatus?.restarting);
   const connected = Boolean(comfyStatus?.connected);
-  const statusText = restarting ? 'ComfyUI is restarting' : comfyStatus?.busy ? 'ComfyUI is busy' : connected ? `ComfyUI connected${comfyStatus?.device ? ` · ${comfyStatus.device}` : ''}` : comfyStatus?.checked ? 'ComfyUI is offline' : 'Checking ComfyUI…';
+  const statusText = comfyStatus?.unreachable ? 'Can’t reach HEISS UI' : restarting ? 'ComfyUI is restarting' : comfyStatus?.busy ? 'ComfyUI is busy' : connected ? `ComfyUI connected${comfyStatus?.device ? ` · ${comfyStatus.device}` : ''}` : comfyStatus?.checked ? 'ComfyUI is offline' : 'Checking ComfyUI…';
   const workflowName = currentProfile?.displayName || currentProfile?.label || 'Choose a model';
   const quickGo = Boolean(prompt.trim()) && !generateDisabled && !comfyOffline && !restarting;
 
@@ -452,7 +452,7 @@ export function PhoneShell({ view, galleryBody, canUseNegativePrompt, comfyOffli
         <div className="phone-running" role="status">
           <RefreshCw size={14} className="spin" />
           <span>{runningLabel}</span>
-          <button type="button" className="phone-pill" onClick={cancelQueue}><CircleStop size={15} /> Stop all</button>
+          <button type="button" className="phone-pill" onClick={cancelQueue}><CircleStop size={15} /> {runningCount > 1 ? 'Stop all' : 'Stop'}</button>
         </div>
       ) : null}
 
@@ -562,7 +562,9 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
   const size = sizeMenuModel({ value: aspectPickerValue, options: aspectOptions || [], currentSize: aspectValue, defaultSize: defaultAspectSize, tier, native: currentProfile?.native, sizeMax, limits: customLimits, savedSizes, targetArea: sizeArea || 0, offerTwoK: Boolean(sizeTiers?.includes('2k')) });
   // A long run says so before it starts; a quick one needs no warning.
   const estimate = generationEstimate?.ms && generationEstimate.ms >= 45_000 ? `Takes ${estimatePhrase(generationEstimate)}.` : '';
-  const reason = restarting ? <>ComfyUI is restarting. <RestartEtaText fallback="Back in a few seconds." /></> : comfyOffline ? 'ComfyUI is offline.' : !prompt.trim() ? '' : generateDisabled ? generateDisabledReason : estimate;
+  // A model that still needs files says so in a sentence, with the way to get them one tap away.
+  const setup = currentProfile ? setupNote(currentProfile) : '';
+  const reason = restarting ? <>ComfyUI is restarting. <RestartEtaText fallback="Back in a few seconds." /></> : comfyOffline ? (comfyStatus?.unreachable ? 'Can’t reach the computer running HEISS UI. Check this phone is on the same network.' : 'ComfyUI is offline. Start it on the computer, then check again.') : !prompt.trim() ? '' : generateDisabled && setup ? '' : generateDisabled ? generateDisabledReason : estimate;
 
   const go = () => {
     haptic('tap');
@@ -584,6 +586,9 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
       footer={
         <>
           {reason ? <p className="phone-reason">{reason}</p> : null}
+          {!reason && !comfyOffline && !restarting && generateDisabled && setup ? (
+            <button type="button" className="phone-reason is-action" onClick={() => setSheet('advanced')}>{setupDetail(currentProfile)} Set it up <ChevronRight size={14} /></button>
+          ) : null}
           <button
             type="button"
             className={cn('phone-generate', restarting && 'is-restarting', comfyOffline && !restarting && 'is-offline')}
@@ -691,8 +696,8 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
 
       <div className="phone-group">
         <button type="button" className="phone-row" onClick={() => setSheet('workflow')}>
-          <SlidersHorizontal size={20} />
-          <span>{currentProfile?.displayName || currentProfile?.label || 'Choose a model'}<small>{currentProfile ? familyLabel(currentProfile) : 'Model'}</small></span>
+          <Box size={20} />
+          <span>{currentProfile?.displayName || currentProfile?.label || 'Choose a model'}<small className={cn(setup && 'is-setup')}>{setup || (currentProfile ? familyLabel(currentProfile) : 'Model')}</small></span>
           <ChevronRight size={18} className="phone-row-end" />
         </button>
         {(aspectOptions || []).length && !aspectLocked && currentProfile?.capabilities?.size !== false ? (
@@ -722,7 +727,7 @@ function CreateSheet({ view, open, onClose, canUseNegativePrompt, comfyOffline }
       {currentProfile?.capabilities?.steps === false ? null : <div className="phone-control">
         <span className="phone-control-label">Steps <b>{steps}</b></span>
         <input className="phone-slider" type="range" min={stepMin} max={stepMax} step={1} value={steps} aria-label="Steps" onChange={(event) => setSteps(Number(event.target.value))} />
-        <span className="phone-control-hint"><span>Faster</span>{stepDefault ? <button type="button" className="phone-step-default" onClick={() => setSteps(stepDefault)} disabled={steps === stepDefault}>Recommended {stepDefault}</button> : null}<span>More detail</span></span>
+        <span className="phone-control-hint"><span>Faster</span>{!stepDefault ? null : steps === stepDefault ? <span className="phone-step-default is-at">Recommended</span> : <button type="button" className="phone-step-default" onClick={() => { haptic('tap'); setSteps(stepDefault); }}>Recommended {stepDefault}<HapticTarget /></button>}<span>More detail</span></span>
       </div>}
 
       <button type="button" className="phone-link is-strong" onClick={() => setSheet('advanced')}>
@@ -1068,7 +1073,7 @@ function MoreSheet({ view, open, onClose, statusText }: { view: Record<string, a
           <SlidersHorizontal size={20} /><span>Use the full studio<small>All controls, laid out for a larger screen</small></span>
         </button>
       </div>
-      <p className="phone-note">Models, folders, downloads and updates are managed on the computer running HEISS UI.</p>
+      <p className="phone-note">New models, folders and updates are set up on the computer running HEISS UI.</p>
     </Sheet>
   );
 }

@@ -9,7 +9,7 @@ import "./styles.css";
 import { useModelFolders } from './app/useModelFolders';
 import type { AspectPreset, AutoUpscale, PreviousExit, SavedSize, ComfyStatus, GalleryItem, Health, LoraSelection, MediaInput, Mode, Models, OutputFolderReport, Paths, Preferences, Profile, InpaintMask, ReferenceAsset, ReferenceInpaint, ReferenceRole, ReferenceRoleControl, SelectedReferenceAsset, TouchGesture, UpdatePrefs, UpdateStatus, WorkflowPreferences, WorkflowSummary } from './app/types';
 import { fallbackAspectPresets } from './app/constants';
-import { apiJson, copyImage, copyText, loadDraft, loadPrefs, referenceAssetFromGallery, resolveReferenceAssets } from './app/api';
+import { ApiError, apiJson, copyImage, copyText, loadDraft, loadPrefs, referenceAssetFromGallery, resolveReferenceAssets } from './app/api';
 import { characterMeta, clampText, clientJobUuid, formatElapsed, generationDetailEntries, settingMax, textLength, titleFromPrompt } from './app/format';
 import { useGalleryColumnCount } from './app/gallery';
 import { normalizeLoras, sameBaseModel } from './app/loras';
@@ -932,7 +932,7 @@ function App() {
         const { found: _found, ...status } = data;
         setComfyStatusIfChanged({ ...status, checking: false, checked: true });
       })
-      .catch((error) => setComfyStatusIfChanged({ connected: false, checking: false, checked: true, error: error instanceof Error ? error.message : "Connection failed" }))
+      .catch((error) => setComfyStatusIfChanged({ connected: false, checking: false, checked: true, unreachable: !(error instanceof ApiError), error: error instanceof Error ? error.message : "Connection failed" }))
       .finally(() => { comfyStatusRequestRef.current = null; });
     comfyStatusRequestRef.current = request;
     return request;
