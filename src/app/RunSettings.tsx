@@ -5,6 +5,7 @@ import { Tip } from './components';
 import { usePresence } from './usePresence';
 import { useDismiss } from './useDismiss';
 import { RowReset } from './SizeMenu';
+import { AnimatedNumber } from './AnimatedNumber';
 import type { ControlDensity } from './components';
 
 /* ---------------------------------------------------------------------------
@@ -59,7 +60,11 @@ function useHold(stepBy: (direction: number) => void) {
   });
 }
 
-/** − value +, in the size menu's well: type it, arrow it, or hold an end. */
+/**
+ * − value +, in the size menu's well: type it, arrow it, or hold an end. The
+ * field is always there to type in, but until you do, its value rolls digit
+ * by digit over it like the sidebar's numbers (AnimatedNumber).
+ */
 function RunStepper({ label, number }: { label: string; number: RunNumber }) {
   const { value, min, max, step, onChange } = number;
   const clamp = (next: number) => Math.max(min, Math.min(max, Math.round(next / step) * step));
@@ -83,22 +88,25 @@ function RunStepper({ label, number }: { label: string; number: RunNumber }) {
   return (
     <div className="run-stepper">
       <button type="button" aria-label={`Fewer ${lower}`} disabled={value <= min} {...hold(-1)}><Minus size={12} strokeWidth={2.4} /></button>
-      <input
-        inputMode="numeric"
-        aria-label={label}
-        value={draft}
-        onFocus={(event) => { setEditing(true); event.currentTarget.select(); }}
-        onBlur={() => { setEditing(false); commit(); }}
-        onChange={(event) => setDraft(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') { event.preventDefault(); commit(); event.currentTarget.select(); }
-          if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-            event.preventDefault();
-            stepBy((event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 10 : 1));
-            setEditing(false);
-          }
-        }}
-      />
+      <span className={cn('run-stepper-value', editing && 'is-editing')}>
+        <input
+          inputMode="numeric"
+          aria-label={label}
+          value={draft}
+          onFocus={(event) => { setEditing(true); event.currentTarget.select(); }}
+          onBlur={() => { setEditing(false); commit(); }}
+          onChange={(event) => { setEditing(true); setDraft(event.target.value.replace(/[^0-9]/g, '').slice(0, 4)); }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') { event.preventDefault(); commit(); event.currentTarget.select(); }
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+              event.preventDefault();
+              stepBy((event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 10 : 1));
+              setEditing(false);
+            }
+          }}
+        />
+        {editing ? null : <span className="run-stepper-roll" aria-hidden="true"><AnimatedNumber value={value} /></span>}
+      </span>
       <button type="button" aria-label={`More ${lower}`} disabled={value >= max} {...hold(1)}><Plus size={12} strokeWidth={2.4} /></button>
     </div>
   );

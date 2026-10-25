@@ -123,6 +123,20 @@
   text-align: center;
 }
 .run-stepper input::selection { background: rgb(255 154 82 / .32); color: #fff; }
+/* The field's own text hides under the rolling number until it's typed in. */
+.run-stepper-value { position: relative; display: grid; height: 100%; min-width: 0; }
+.run-stepper-value:not(.is-editing) input { color: transparent; }
+.run-stepper-value:not(.is-editing) input::selection { background: transparent; color: transparent; }
+.run-stepper-roll {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: hsl(var(--foreground));
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+}
 
 /* The small menu of a workflow with no size: only the block, no line above it. */
 .aspect-menu.size-menu.run-menu { width: min(256px, calc(100vw - 24px)); }
