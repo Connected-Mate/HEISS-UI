@@ -15,6 +15,8 @@ import { importFromHistory, unwrapWorkflow, workflowFromMedia } from "./workflow
 import { nodePackMap, packStamps, resolveMissingNodes } from "./workflow-packs.js";
 import { missingModelRefs, modelNameList, planModels } from "./workflow-models.js";
 import { nodePacks } from "./node-packs.js";
+import { allCustomWorkflowRecords, detectWorkflowMetadata } from "./custom-workflows.js";
+import { writeJsonFile } from "./json-store.js";
 
 const repoKey = (url = "") => String(url).replace(/\.git$/, "").replace(/\/+$/, "").toLowerCase();
 const reviewed = new Map(Object.values(nodePacks).map((pack) => [repoKey(pack.repository), pack]));
@@ -101,8 +103,14 @@ export async function prepareImport(request, { info = {}, fetchers = {}, pageCon
   // Model files: only looked up online when something is missing.
   const list = missingModelRefs(graph, info).length ? modelList || await modelNameList().catch(() => ({ files: {} })) : { files: {} };
   const models = planModels(graph, info, { list });
+  // Read before ComfyUI knew all its nodes (offline, or add-ons still to come): the
+  // conversion and what was found are guesses. The import keeps its canvas copy and
+  // is read again once the nodes are there (settleProvisionalWorkflows).
+  const provisional = unknownTypes(graph, info).length > 0;
   return {
     ...preview,
+    provisional,
+    ...(provisional && !read.api && read.visual ? { visual: read.visual } : {}),
     source: read.source,
     thumbnail: read.thumbnail || "",
     conversion,
@@ -110,4 +118,52 @@ export async function prepareImport(request, { info = {}, fetchers = {}, pageCon
     packs,
     models
   };
+}
+
+/** Node types in a graph that ComfyUI's /object_info doesn't list (all of them when it's offline). */
+function unknownTypes(graph = {}, info = {}) {
+  return [...new Set(Object.values(graph || {}).map((node) => node?.class_type).filter((type) => type && !info?.[type]))];
+}
+
+/**
+ * Imports read before ComfyUI had their nodes, read again now that it has
+ * them: converted afresh from the canvas copy they kept, and the prompt, seed,
+ * size and More settings found again. What the person set at import (name,
+ * family, kind, file stand-ins) stays; a control found now wins over the guess
+ * made without the nodes. Returns how many were settled.
+ */
+export async function settleProvisionalWorkflows(info = {}, { pageConvert = null } = {}) {
+  if (!Object.keys(info || {}).length) return 0;
+  let settled = 0;
+  for (const record of allCustomWorkflowRecords({ dedupe: false })) {
+    const raw = record.raw;
+    const meta = raw?.heissUi;
+    if (record.source !== "custom" || !meta?.provisional || !record.path) continue;
+    try {
+      const { graph } = raw.visual ? await runnableGraph({ visual: raw.visual }, { info, pageConvert }) : { graph: raw.graph };
+      if (unknownTypes(graph, info).length) continue;
+      const found = detectWorkflowMetadata({ graph }, meta.name || record.name, info, { titles: raw.visual ? visualTitles(raw.visual) : {} });
+      const stillThere = (mapping) => [].concat(mapping || []).every((item) => graph[item?.node]?.inputs && item.input in graph[item.node].inputs);
+      const kept = Object.fromEntries(Object.entries(meta.controls || {}).filter(([key, mapping]) => !found.controls[key] && stillThere(mapping)));
+      const { provisional: _provisional, ...rest } = meta;
+      const { visual: _visual, ...file } = raw;
+      writeJsonFile(record.path, {
+        ...file,
+        graph,
+        heissUi: {
+          ...rest,
+          controls: { ...found.controls, ...kept },
+          settings: found.settings,
+          capabilities: { ...found.capabilities },
+          mediaInputs: meta.mediaInputs?.length ? meta.mediaInputs : found.mediaInputs,
+          loraStack: meta.loraStack || found.loraStack,
+          aspectPolicy: found.aspectPolicy
+        }
+      });
+      settled += 1;
+    } catch {
+      // Still unreadable: it stays provisional and is tried again next time.
+    }
+  }
+  return settled;
 }

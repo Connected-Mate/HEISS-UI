@@ -105,6 +105,21 @@ version opens with a `> ` summary line, which the update pill shows.
   the repaint and the soft edge reach now follows the size of what you
   painted (after Krita AI's defaults) instead of the crop's size.
 
+### Fixed
+- **Imported workflows: Try again and Use settings keep your More settings**,
+  and the picture's details list the ones you changed.
+- **Add-ons for an imported workflow finish setting up even after you close
+  Workflows.** You hear when it's ready, and if an install broke something the
+  undo offer waits for you instead of disappearing.
+- **Installing a workflow's add-ons waits for your generations to finish**
+  before it restarts ComfyUI, instead of stopping them.
+- **A workflow imported while ComfyUI was offline, or before its add-ons were
+  in, finds your prompt once they are.** One where HEISS finds no prompt says
+  so up front, with a way to pick it.
+- **Imported workflows show only the controls they use**: no Steps, CFG,
+  Seed or size that do nothing.
+- **More settings on the phone**, in Advanced settings.
+
 ## [0.18.1] - 2026-10-19
 
 > Bug fixes and a FLUX.3 prompt enhancer switch

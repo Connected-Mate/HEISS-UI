@@ -324,7 +324,8 @@ export function ComposerBar(props: ComposerBarProps) {
     ? <ModelPicker value={model} profiles={modelProfiles} showInpaint={showInpaint} showRapid={showRapid} onChange={chooseModel} menu={modelMenu} compact badges={profileBadges} density={density} onFindModels={comfyOffline ? undefined : onFindModels} onGetModels={comfyOffline ? undefined : onGetModels} strayCount={strayModelCount} emptyHint={comfyOffline ? "Start ComfyUI to see your models." : strayModelCount ? "Some models are in a folder ComfyUI doesn’t read." : "No usable models in ComfyUI yet. Add one to its models folder, or find yours."} />
     : comfyOffline ? null : <Skeleton className="composer-skeleton" />;
 
-  const aspectPicker = (density: ControlDensity) => aspectLocked ? null : (
+  // An imported workflow whose graph takes no size or steps gets no picker for them.
+  const aspectPicker = (density: ControlDensity) => aspectLocked || currentProfile?.capabilities.size === false ? null : (
     <AspectPicker
       value={aspectPickerValue}
       onChange={(value) => applyAspect(value)}
@@ -352,7 +353,7 @@ export function ComposerBar(props: ComposerBarProps) {
     />
   );
 
-  const stepsPicker = (density: ControlDensity) => (
+  const stepsPicker = (density: ControlDensity) => currentProfile?.capabilities.steps === false ? null : (
     <NumberPicker label="Steps" icon={<CircleDotDashed size={14} />} density={density} value={steps} onChange={setSteps} min={stepsMeta.min || 1} max={stepsMeta.max || 150} step={stepsMeta.step || 1} size="sm" />
   );
 

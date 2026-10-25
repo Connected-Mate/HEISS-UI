@@ -73,10 +73,10 @@ import { comfyPython, comfyRootDir, packInstallPlan } from './node-install.js';
 import { setupTips } from './setup-tips.js';
 import { linkModelFolders, modelFolderReport, unlinkModelFolder } from './model-folders.js';
 import { packInstallRoutes, packInstallState, startPackInstall } from './pack-installer.js';
-import { prepareImport } from './workflow-import.js';
+import { prepareImport, settleProvisionalWorkflows } from './workflow-import.js';
 import { recentFromHistory, savedWorkflowList } from './workflow-sources.js';
 import { convertWithComfyPage, resetComfyPage } from './comfy-page-convert.js';
-import { startWorkflowSetup, undoWorkflowSetup, workflowSetupState } from './workflow-setup.js';
+import { dismissWorkflowSetup, startWorkflowSetup, undoWorkflowSetup, workflowSetupState } from './workflow-setup.js';
 import { installHistory } from './install-safety.js';
 import { listDownload } from './workflow-models.js';
 import { cancelModelInstall, downloadPlan, installState, managerAvailable, managerInfo, nodeInstallPlan, normalizeQuality, noteSystemRam, startModelInstall, upscalePlan, upscaleQualities, upscaleStatus, upscaleTargets } from './upscale.js';
@@ -1030,6 +1030,8 @@ app.post("/api/output-dir/browse", async (req, res) => {
 app.get("/api/workflows", async (_req, res) => {
   try {
     const { info, stats } = await loadComfyContext().catch(() => ({ info: {}, stats: {} }));
+    // Imports read before ComfyUI had their nodes get read again once it has them.
+    await settleProvisionalWorkflows(info, { pageConvert }).catch(() => 0);
     const models = Object.keys(info || {}).length ? inferModels(info, stats) : demoMode ? mockModelResult() : offlineModelResult(comfyUrl);
     const preferences = loadWorkflowPreferences();
     res.json({ workflows: workflowSummaries({ info, profiles: models.profiles, preferences }), preferences });
@@ -1115,8 +1117,10 @@ app.post("/api/workflows/import", async (req, res) => {
     const { nodes: _nodes, guessed: _guessed, question: _question, confidence: _confidence, ...metadata } = req.body?.metadata || {};
     let normalized;
     if (req.body?.graph && typeof req.body.graph === "object") {
-      // A graph from the preview (history, an image, a converted file).
-      normalized = { graph: req.body.graph, heissUi: metadata };
+      // A graph from the preview (history, an image, a converted file). One read before
+      // ComfyUI had its nodes keeps its canvas copy, to be read again later.
+      const visual = req.body.visual && typeof req.body.visual === "object" ? req.body.visual : null;
+      normalized = { graph: req.body.graph, heissUi: req.body.provisional ? { ...metadata, provisional: true } : metadata, ...(req.body.provisional && visual ? { visual } : {}) };
     } else {
       const raw = req.body?.workflow || req.body;
       normalized = (Array.isArray(raw?.nodes) && Array.isArray(raw?.links)) || raw?.prompt
@@ -1138,7 +1142,20 @@ async function comfyLoadState() {
   return { loaded: loadedPacks(info), nodeTypes: Object.keys(info || {}) };
 }
 
+/** True once ComfyUI has nothing running or queued (asked every 2 s, for up to 30 minutes). */
+async function waitForComfyIdle(limitMs = 30 * 60_000) {
+  const until = Date.now() + limitMs;
+  while (Date.now() < until) {
+    const queue = await comfy("/queue", { timeout: 10_000 }).catch(() => null);
+    // No answer: nothing to protect (the restart then says ComfyUI isn't running).
+    if (!queue || (!queue.queue_running?.length && !queue.queue_pending?.length)) return true;
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  return false;
+}
+
 const setupDeps = {
+  waitForIdle: () => waitForComfyIdle(),
   comfyState: comfyLoadState,
   restartComfy: restartComfyNow,
   // The restart watcher reports once ComfyUI is back (or clearly isn't).
@@ -1171,6 +1188,11 @@ app.post("/api/workflows/setup", async (req, res) => {
 app.get("/api/workflows/setup", (req, res) => {
   if (!requireAdmin(req, res)) return;
   res.json({ ok: true, setup: workflowSetupState() });
+});
+
+app.post("/api/workflows/setup/seen", (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  res.json({ ok: true, setup: dismissWorkflowSetup(String(req.body?.id || "")) });
 });
 
 app.post("/api/workflows/setup/undo", async (req, res) => {

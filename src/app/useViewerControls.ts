@@ -100,6 +100,8 @@ export function useViewerControls(view: any) {
     if (itemSettings.weightDtype) setWeightDtype(String(itemSettings.weightDtype));
     // Save the stack under the workflow we're switching to, not the one we're leaving.
     setLoras(normalizeLoras(itemSettings.loras), matchingProfile?.id);
+    // An imported workflow's More settings come back as the picture had them.
+    if (matchingProfile?.settings?.length) view.replaceWorkflowSettings?.(matchingProfile.id, (itemSettings.workflowSettings || {}) as Record<string, string | number | boolean>);
     setStartImage(item.referenceImage || "");
     if (setStartImageId) setStartImageId(item.startImageId || item.referenceImage || "");
     setStartImageName(item.referenceImageName || String(itemSettings.referenceImageName || ""));

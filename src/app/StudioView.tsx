@@ -34,6 +34,7 @@ import { ActivityColumn } from './Activities';
 import { CopyIcon, useCopyFeedback } from './CopyFeedback';
 import { ViewerActions } from './ViewerActions';
 import { WorkflowGallery } from './WorkflowGallery';
+import { useWorkflowSetupWatch } from './workflowSetup';
 import { HiddenLockScreen, HiddenUnlockSheet } from './HiddenLock';
 import { HiddenSetupDialog } from './HiddenSetup';
 import { HiddenActionsContext } from './hiddenContext';
@@ -362,6 +363,8 @@ export function StudioView({ view }: { view: Record<string, any> }) {
     onOpen: (where) => (where === "starter" ? setGetModelsOpen(true) : setWorkflowGalleryOpen(true))
   });
   const thisComputer = useThisComputer();
+  // An imported workflow's add-ons install on after the Workflows window closes; how it ends is said from here.
+  useWorkflowSetupWatch({ enabled: thisComputer, showToast, onSettled: () => { refreshModels(false); refreshWorkflows(); }, onReview: () => setWorkflowGalleryOpen(true) });
   const updateActivity = useUpdateActivity({
     status: view.updateStatus,
     thisComputer,

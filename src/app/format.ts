@@ -157,6 +157,13 @@ export function generationDetailEntries(item: GalleryItem): GenerationDetailSect
     if (modelSection) modelSection.loras = loras;
     else sections.push({ title: "Model", rows: [], loras });
   }
+  // An imported workflow's More settings the run changed; the rest ran as the workflow saved them.
+  if (settings.workflowSettings && typeof settings.workflowSettings === "object") {
+    const labels = (settings.workflowSettingLabels || {}) as unknown as Record<string, string>;
+    section("More settings", (add) => {
+      for (const [key, value] of Object.entries(settings.workflowSettings as unknown as Record<string, unknown>)) add(labels[key] || key, typeof value === "boolean" ? (value ? "On" : "Off") : value);
+    });
+  }
   section("Sampling", (add) => {
     add("Steps", settings.steps);
     add("CFG", settings.cfg);

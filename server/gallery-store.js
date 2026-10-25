@@ -929,6 +929,20 @@ export function cleanupGalleryState(jobs) {
   saveGallery();
 }
 
+/** The More settings a run changed: plain values only, each with the name the sidebar showed. */
+function workflowSettingsRecord(body) {
+  const values = body.workflowSettings;
+  if (!values || typeof values !== "object" || Array.isArray(values)) return {};
+  const kept = Object.fromEntries(Object.entries(values)
+    .filter(([key, value]) => key.length <= 120 && ["string", "number", "boolean"].includes(typeof value))
+    .slice(0, 64)
+    .map(([key, value]) => [key, typeof value === "string" ? value.slice(0, 2000) : value]));
+  if (!Object.keys(kept).length) return {};
+  const names = body.workflowSettingLabels && typeof body.workflowSettingLabels === "object" ? body.workflowSettingLabels : {};
+  const labels = Object.fromEntries(Object.keys(kept).filter((key) => typeof names[key] === "string").map((key) => [key, names[key].slice(0, 120)]));
+  return { workflowSettings: kept, ...(Object.keys(labels).length ? { workflowSettingLabels: labels } : {}) };
+}
+
 export function generationSettings(body) {
   const settings = {
     workflow: body.workflow || "",
@@ -961,7 +975,10 @@ export function generationSettings(body) {
     ...(body.rapid && body.rapidReport?.active && body.rapidReport.smallSteps ? { rapidSmallSteps: body.rapidReport.smallSteps, rapidFullSteps: body.rapidReport.fullSteps, ...(body.rapidReport.switchNoise ? { rapidSwitchNoise: body.rapidReport.switchNoise } : {}) } : {}),
     ...(body.rapid && body.rapidReport?.active === false ? { rapidSkipped: body.rapidReport.reason || "skipped" } : {}),
     ...(body.rapidGuidance ? { rapidGuidance: true, rapidCfgUntil: body.rapidGuidance.until } : {}),
-    ...((body.rapid || body.rapidGuidance) && body.rapidSpeed ? { rapidSpeed: body.rapidSpeed } : {})
+    ...((body.rapid || body.rapidGuidance) && body.rapidSpeed ? { rapidSpeed: body.rapidSpeed } : {}),
+    // An imported workflow's More settings the person changed, with their names, so Try again,
+    // Use settings and the details panel see the run as it was made.
+    ...workflowSettingsRecord(body)
   };
   const loras = Array.isArray(body.loras)
     ? body.loras.filter((item) => item?.enabled !== false && item?.name).slice(0, 8).map((item) => ({

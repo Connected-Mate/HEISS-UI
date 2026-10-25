@@ -359,3 +359,24 @@ test("model plan: same file elsewhere is used, known names download, LoRAs are s
   assert.equal(running[7].inputs.lora_1.on, false);
   assert.ok(nameSimilarity("flux1-dev-fp8.safetensors", "flux1-dev-fp8-e4m3fn.safetensors") >= 0.6);
 });
+
+test("an import read while ComfyUI lacked its nodes is read again once it has them", async () => {
+  const { saveImportedWorkflow } = await import("./custom-workflows.js");
+  const { settleProvisionalWorkflows } = await import("./workflow-import.js");
+  const workflow = JSON.parse(fs.readFileSync(path.join(corpusDir, "sdxl_refiner_prompt_example.json"), "utf8"));
+  const preview = await prepareImport({ source: "file", workflow, filename: "refiner-later.json" }, { info: {} });
+  assert.equal(preview.provisional, true);
+  assert.ok(preview.visual, "the canvas copy rides along");
+  assert.equal(preview.detected.controls.prompt, undefined, "without the nodes the prompt can't be found");
+  const { nodes: _nodes, guessed: _guessed, question: _question, confidence: _confidence, ...metadata } = preview.detected;
+  const saved = saveImportedWorkflow({ graph: preview.graph, heissUi: { ...metadata, provisional: true }, visual: preview.visual }, metadata);
+  assert.equal(await settleProvisionalWorkflows({}), 0, "still offline: left alone");
+  assert.equal(await settleProvisionalWorkflows(info), 1);
+  const after = JSON.parse(fs.readFileSync(saved.path, "utf8"));
+  assert.deepEqual(keys(after.heissUi.controls.prompt), expected["sdxl_refiner_prompt_example.json"].prompt);
+  assert.equal(after.heissUi.provisional, undefined);
+  assert.equal(after.visual, undefined, "the canvas copy isn't kept once it's read");
+  assert.equal(await settleProvisionalWorkflows(info), 0, "settled once");
+  const full = await prepareImport({ source: "file", workflow, filename: "refiner.json" }, { info });
+  assert.equal(full.provisional, false);
+});

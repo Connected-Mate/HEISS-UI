@@ -7,6 +7,7 @@ import { cn } from './format';
 import { BetaTag, Field, StudioSelect as Select } from './components';
 import { Segmented } from './SettingsDialog';
 import { workflowState } from './workflowStatus';
+import { dismissWorkflowSetup, setWorkflowSetup, useWorkflowSetup } from './workflowSetup';
 import { ModelSetup } from './ModelSetup';
 import { peekDownloadReveal } from './useModelDownloads';
 import { ComfyRestart, useComfyRestarting } from './ComfyRestart';
@@ -435,6 +436,8 @@ export function WorkflowGallery({ view }: { view: any }) {
   const [checking, setChecking] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(Boolean(revealed));
+  // Each review card's Advanced drawer: "Choose the prompt" opens it.
+  const [advancedOpen, setAdvancedOpen] = useState<Record<number, boolean>>({});
   const fileInput = useRef<HTMLInputElement>(null);
   // The filter pills scroll sideways with a plain wheel; their scrollbar is hidden.
   const filtersWheelRef = useWheelRef<HTMLDivElement>(scrollSideways);
@@ -468,7 +471,7 @@ export function WorkflowGallery({ view }: { view: any }) {
   const settingUp = Boolean(setupSubject?.missing?.length);
 
   const openImport = () => { setImportStep(imports.length ? "review" : "choose"); setImportOpen(true); };
-  const closeImport = () => { setImportOpen(false); setImports([]); setImportStep("choose"); setPasteJson(""); };
+  const closeImport = () => { setImportOpen(false); setImports([]); setImportStep("choose"); setPasteJson(""); setAdvancedOpen({}); };
   const checkAgain = async () => {
     setChecking(true);
     try { refreshModels(false); await Promise.resolve(refreshWorkflows()); } finally { window.setTimeout(() => setChecking(false), 600); }
@@ -537,7 +540,8 @@ export function WorkflowGallery({ view }: { view: any }) {
 
   const [sources, setSources] = useState<{ loading: boolean; comfy: boolean; recent: ImportSourceItem[]; saved: SavedWorkflowItem[] }>({ loading: false, comfy: true, recent: [], saved: [] });
   const [showAllSaved, setShowAllSaved] = useState(false);
-  const [setup, setSetup] = useState<WorkflowSetupState | null>(null);
+  // Followed app-wide (workflowSetup.ts): the strip shows it while this window is open.
+  const setup = useWorkflowSetup();
 
   // The picker opens on what ComfyUI already has: recent runs and saved workflows.
   useEffect(() => {
@@ -549,29 +553,6 @@ export function WorkflowGallery({ view }: { view: any }) {
       .catch(() => { if (alive) setSources({ loading: false, comfy: false, recent: [], saved: [] }); });
     return () => { alive = false; };
   }, [importOpen, importStep]);
-
-  // A setup started earlier (or in another tab) is picked up, and followed while it runs.
-  useEffect(() => {
-    let alive = true;
-    let timer = 0;
-    const poll = async () => {
-      const data = await apiJson<{ setup: WorkflowSetupState | null }>("/api/workflows/setup").catch(() => null);
-      if (!alive) return;
-      const next = data?.setup || null;
-      setSetup((current) => {
-        if (current?.status === "running" && next && next.status === "done") {
-          showToast(`${next.workflowName || "Workflow"} is ready`, "success");
-          refreshModels(false);
-          refreshWorkflows();
-        }
-        // A finished setup from before this window opened isn't news.
-        return current || next?.status === "running" ? next : null;
-      });
-      if (next?.status === "running") timer = window.setTimeout(poll, 1500);
-    };
-    if (thisComputer && (setup?.status === "running" || !setup)) poll();
-    return () => { alive = false; window.clearTimeout(timer); };
-  }, [setup?.status, setup?.id, thisComputer]);
 
   const previewRequest = async (request: ImportRequest, raw: unknown = null) => {
     const data = await apiJson<{ preview: WorkflowImportPreview }>("/api/workflows/import/preview", {
@@ -640,7 +621,7 @@ export function WorkflowGallery({ view }: { view: any }) {
         await apiJson("/api/workflows/import", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ graph: item.preview.graph, filename: item.filename, metadata: { ...metadata, source: item.preview.source || "file", fileSwaps: files.fileSwaps, skippedLoras: files.skippedLoras, loraEntriesOff: files.loraEntriesOff } })
+          body: JSON.stringify({ graph: item.preview.graph, filename: item.filename, ...(item.preview.provisional ? { provisional: true, visual: item.preview.visual } : {}), metadata: { ...metadata, source: item.preview.source || "file", fileSwaps: files.fileSwaps, skippedLoras: files.skippedLoras, loraEntriesOff: files.loraEntriesOff } })
         });
         // Its model files download in the background, in the usual downloads list.
         for (const id of files.downloads) {
@@ -664,7 +645,7 @@ export function WorkflowGallery({ view }: { view: any }) {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ packs: [...packs.values()], approved, workflowName: names.join(", ") })
         });
-        setSetup(data.setup);
+        setWorkflowSetup(data.setup);
         showToast(count === 1 ? "Workflow imported. Getting its add-ons…" : `${count} workflows imported. Getting their add-ons…`, "success");
       } else {
         showToast(count === 1 ? "Workflow imported" : `${count} workflows imported`, "success");
@@ -681,7 +662,7 @@ export function WorkflowGallery({ view }: { view: any }) {
     setBusy(true);
     try {
       await apiJson("/api/workflows/setup/undo", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ snapshotId: setup.snapshotId }) });
-      setSetup(null);
+      dismissWorkflowSetup();
       showToast("Undone. ComfyUI is restarting with what it had before.", "success");
       refreshModels(false);
       refreshWorkflows();
@@ -749,7 +730,7 @@ export function WorkflowGallery({ view }: { view: any }) {
       }}
     >
       <section className={cn("wf-browse", mobileDetailsOpen && "is-hidden-mobile")}>
-        {setup ? <SetupStrip setup={setup} busy={busy} onUndo={undoSetup} onDismiss={() => setSetup(null)} /> : null}
+        {setup ? <SetupStrip setup={setup} busy={busy} onUndo={undoSetup} onDismiss={dismissWorkflowSetup} /> : null}
         <div className="wf-toolbar">
           <label className="wf-search">
             <Search size={14} />
@@ -921,9 +902,18 @@ export function WorkflowGallery({ view }: { view: any }) {
                     {imports.length > 1 ? <button type="button" className="modal-close" aria-label="Remove from import" onClick={() => setImports((current) => current.filter((_, i) => i !== index))}><X size={14} /></button> : null}
                   </div>
                   <PromptChoice item={item} onPick={(mappings) => answerPrompt(index, mappings)} />
-                  <p className="wf-found">
-                    {parts.length ? <>Follows your {parts.join(", ").replace(/, ([^,]*)$/, " and $1")}{more ? <>, with {more} more setting{more === 1 ? "" : "s"} in Advanced</> : null}.</> : "Runs as saved: nothing in it takes your prompt."}
-                  </p>
+                  {item.metadata.controls.prompt ? (
+                    <p className="wf-found">Follows your {parts.join(", ").replace(/, ([^,]*)$/, " and $1")}{more ? <>, with {more} more setting{more === 1 ? "" : "s"} in Advanced</> : null}.</p>
+                  ) : item.preview.provisional ? (
+                    // Read without all its nodes: the prompt is found once ComfyUI has them (server settleProvisionalWorkflows).
+                    <p className="wf-found">{status.state === "unchecked" ? "ComfyUI is offline, so HEISS connects your prompt once it’s back." : "HEISS connects your prompt once its add-ons are in."}</p>
+                  ) : (
+                    <div className="wf-noprompt" role="note">
+                      <strong>Doesn’t take your prompt</strong>
+                      <span>It runs exactly as saved, whatever you type.</span>
+                      <button type="button" className="btn" onClick={() => setAdvancedOpen((current) => ({ ...current, [index]: true }))}>Choose the prompt</button>
+                    </div>
+                  )}
                   <ImportAddOns item={item} onApprove={(key, on) => approvePack(index, key, on)} />
                   {item.preview.models ? <ImportFiles item={item} onChoose={(key, on) => chooseFile(index, key, on)} /> : missingFiles.length ? (
                     <p className="wf-found is-quiet">Needs {missingFiles.length === 1 ? "a model file" : `${missingFiles.length} model files`} ComfyUI doesn’t have yet: {missingFiles.map((part) => part.label).slice(0, 3).join(", ")}{missingFiles.length > 3 ? "…" : ""}. Its card says where each one goes.</p>
@@ -931,7 +921,7 @@ export function WorkflowGallery({ view }: { view: any }) {
                   {status.state === "missing-nodes" && item.preview.validation.missingNodes?.some((node) => !packsCover.has(node)) && !item.preview.packs?.unresolved?.length ? <p className="wf-found is-quiet">Won’t run until ComfyUI has: {item.preview.validation.missingNodes.filter((node) => !packsCover.has(node)).join(", ")}</p> : null}
                   {item.preview.warnings?.length ? <p className="wf-found is-quiet">{item.preview.warnings.join(" ")}</p> : null}
                   {item.preview.risks?.length ? <ImportRisks risks={item.preview.risks} /> : null}
-                  <details className="wf-mapping">
+                  <details className="wf-mapping" open={Boolean(advancedOpen[index])} onToggle={(event) => { const open = (event.currentTarget as HTMLDetailsElement).open; setAdvancedOpen((current) => current[index] === open ? current : { ...current, [index]: open }); }}>
                     <summary>Advanced</summary>
                     <div className="wf-review-row">
                       <div className="field"><span>Kind</span><Segmented label="Kind" value={item.metadata.kind} onChange={(next) => updateImport(index, { kind: next })} options={[{ value: "image", label: "Image" }, { value: "video", label: "Video" }]} /></div>

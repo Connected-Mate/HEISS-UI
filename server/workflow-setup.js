@@ -31,7 +31,8 @@ export function workflowSetupState() {
 /**
  * Starts a setup job. `packs`: resolver output the person approved (registry
  * packs need no approval; the route only passes unregistered ones the person
- * said yes to). `deps`: { comfyState, restartComfy, waitForRestart }.
+ * said yes to). `deps`: { comfyState, restartComfy, waitForRestart, waitForIdle }.
+ * waitForIdle resolves true once ComfyUI's queue is empty, false if it never was.
  */
 export function startWorkflowSetup({ packs = [], workflowName = "" }, deps) {
   if (job?.status === "running") throw new Error("Another setup is still running.");
@@ -45,6 +46,7 @@ export function startWorkflowSetup({ packs = [], workflowName = "" }, deps) {
     snapshotId: "",
     health: null,
     message: "",
+    seen: false,
     startedAt: Date.now(),
     finishedAt: 0
   };
@@ -83,6 +85,16 @@ async function run(current, packs, deps) {
     saveInstallSnapshot(snapshot);
     return;
   }
+  // A restart stops whatever ComfyUI is running, so it waits for the queue to empty first.
+  if (deps.waitForIdle) {
+    current.step = "Waiting for your generations to finish";
+    if (!await deps.waitForIdle()) {
+      Object.assign(current, { status: "needs-restart", step: "", message: "Its add-ons are installed. Restart ComfyUI when your generations are done to load them.", finishedAt: Date.now() });
+      snapshot.status = "installed";
+      saveInstallSnapshot(snapshot);
+      return;
+    }
+  }
   current.step = "Restarting ComfyUI";
   const restart = await deps.restartComfy();
   if (!restart.ok) {
@@ -113,6 +125,12 @@ async function run(current, packs, deps) {
   snapshot.health = health;
   saveInstallSnapshot(snapshot);
   Object.assign(current, { status: health.ok ? "done" : "regressed", step: "", finishedAt: Date.now() });
+}
+
+/** The person has seen how the last setup ended (OK, Keep it anyway): no window shows it again. */
+export function dismissWorkflowSetup(id = "") {
+  if (job && job.status !== "running" && (!id || job.id === id)) job.seen = true;
+  return view();
 }
 
 /** Undo for a regressed (or any recorded) install, then a restart so ComfyUI loads the old state. */

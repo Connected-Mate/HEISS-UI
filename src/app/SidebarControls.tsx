@@ -114,12 +114,15 @@ export function PhoneAdvancedControls({ view }: { view: any }) {
         />
       </div>
 
-      <h3 className="phone-section">Sampling</h3>
-      <div className="phone-group">
-        <PhoneSelect label="Sampler" value={sampler} options={samplers} onChange={setSampler} />
-        <PhoneSelect label="Scheduler" value={scheduler} options={schedulers} onChange={setScheduler} />
-      </div>
-      <PhoneSlider label="Prompt strength (CFG)" value={cfg} min={cfgMeta.min ?? 0} max={Math.min(cfgMeta.max ?? 30, 20)} step={cfgMeta.step || 0.5} onChange={setCfg} format={(value) => value.toFixed(1)} hint={<><span>Looser</span><span>Follows the prompt closely</span></>} />
+      {/* An imported workflow shows only what its graph takes; built-in models have every one of these. */}
+      {currentProfile?.capabilities.sampler !== false || currentProfile?.capabilities.cfg !== false ? <h3 className="phone-section">Sampling</h3> : null}
+      {currentProfile?.capabilities.sampler !== false ? (
+        <div className="phone-group">
+          <PhoneSelect label="Sampler" value={sampler} options={samplers} onChange={setSampler} />
+          <PhoneSelect label="Scheduler" value={scheduler} options={schedulers} onChange={setScheduler} />
+        </div>
+      ) : null}
+      {currentProfile?.capabilities.cfg !== false ? <PhoneSlider label="Prompt strength (CFG)" value={cfg} min={cfgMeta.min ?? 0} max={Math.min(cfgMeta.max ?? 30, 20)} step={cfgMeta.step || 0.5} onChange={setCfg} format={(value) => value.toFixed(1)} hint={<><span>Looser</span><span>Follows the prompt closely</span></>} /> : null}
       {inpaintActive ? (
         <>
           {currentProfile?.capabilities.denoise ? <PhoneSlider label="Inpaint strength" value={inpaintStrength} min={0.05} max={1} step={0.05} onChange={setInpaintStrength} format={(value) => `${Math.round(value * 100)}%`} hint={<><span>Touch it up</span><span>Paint it anew</span></>} /> : null}
@@ -129,17 +132,21 @@ export function PhoneAdvancedControls({ view }: { view: any }) {
         <PhoneSlider label="Change from the reference" value={denoise} min={denoiseMeta.min ?? 0} max={denoiseMeta.max ?? 1} step={denoiseMeta.step || 0.05} onChange={setDenoise} format={(value) => `${Math.round(value * 100)}%`} hint={<><span>Keep it close</span><span>Change a lot</span></>} />
       ) : null}
 
-      <h3 className="phone-section">Seed</h3>
-      <div className="phone-group phone-seed-field">
-        <label className="phone-row">
-          <span>Seed<small>{String(seed || "").trim() ? "The same picture every time" : "A new picture every time"}</small></span>
-          <input inputMode="numeric" pattern="[0-9]*" value={seed} placeholder="Random" aria-label="Seed" onChange={(event) => setSeed(event.target.value.replace(/[^0-9]/g, ""))} />
-        </label>
-        {String(seed || "").trim() ? <button type="button" className="phone-row" onClick={() => setSeed("")}><span>Back to random</span></button> : null}
-      </div>
+      {currentProfile?.capabilities.seed !== false ? (
+        <>
+          <h3 className="phone-section">Seed</h3>
+          <div className="phone-group phone-seed-field">
+            <label className="phone-row">
+              <span>Seed<small>{String(seed || "").trim() ? "The same picture every time" : "A new picture every time"}</small></span>
+              <input inputMode="numeric" pattern="[0-9]*" value={seed} placeholder="Random" aria-label="Seed" onChange={(event) => setSeed(event.target.value.replace(/[^0-9]/g, ""))} />
+            </label>
+            {String(seed || "").trim() ? <button type="button" className="phone-row" onClick={() => setSeed("")}><span>Back to random</span></button> : null}
+          </div>
+        </>
+      ) : null}
       <PhoneRapidRow view={view} />
 
-      {customSize && !aspectLocked ? (
+      {customSize && !aspectLocked && currentProfile?.capabilities.size !== false ? (
         <>
           <h3 className="phone-section">Size</h3>
           <PhoneSlider label="Width" value={width} min={Math.max(widthMeta.min ?? 64, 256)} max={sizeMax(widthMeta)} step={sizeStep} onChange={setWidth} format={(value) => `${value}px`} />
@@ -147,12 +154,17 @@ export function PhoneAdvancedControls({ view }: { view: any }) {
         </>
       ) : aspectLocked ? <p className="phone-note">The size follows the image being edited ({width}×{height}).</p> : null}
 
-      {mode === "video" ? (
+      {mode === "video" && (currentProfile?.capabilities.frames !== false || currentProfile?.capabilities.fps !== false) ? (
         <>
           <h3 className="phone-section">Video</h3>
-          <PhoneSlider label="Frames" value={frames} min={frameMeta.min || 1} max={Math.min(frameMeta.max ?? 240, 240)} step={frameMeta.step || 4} onChange={setFrames} />
-          <PhoneSlider label="Frames per second" value={fps} min={fpsMeta.min || 1} max={Math.min(fpsMeta.max ?? 60, 60)} step={fpsMeta.step || 1} onChange={setFps} />
+          {currentProfile?.capabilities.frames !== false ? <PhoneSlider label="Frames" value={frames} min={frameMeta.min || 1} max={Math.min(frameMeta.max ?? 240, 240)} step={frameMeta.step || 4} onChange={setFrames} /> : null}
+          {currentProfile?.capabilities.fps !== false ? <PhoneSlider label="Frames per second" value={fps} min={fpsMeta.min || 1} max={Math.min(fpsMeta.max ?? 60, 60)} step={fpsMeta.step || 1} onChange={setFps} /> : null}
         </>
+      ) : null}
+
+      {/* An imported workflow's other knobs, the same panel as the desktop sidebar's Advanced tab. */}
+      {currentProfile?.settings?.length ? (
+        <WorkflowSettingsPanel settings={currentProfile.settings} values={view.workflowSettings || {}} onChange={view.setWorkflowSetting} onReset={view.resetWorkflowSettings} />
       ) : null}
 
       {parts ? (
@@ -267,22 +279,29 @@ export function SidebarControls({ view }: { view: any }) {
                 <Switch label="FLUX.3 prompt helper" size="sm" checked={view.prefs?.promptEnhancer !== false} onChange={(next) => view.setPrefs({ promptEnhancer: next })} />
               </div>
             ) : null}
-            {mode === "video" ? (
+            {/* An imported workflow shows only what its graph takes; built-in models have every one of these. */}
+            {mode === "video" && (currentProfile?.capabilities.frames !== false || currentProfile?.capabilities.fps !== false) ? (
               <div className="number-row">
-                <NumberPicker label="Frames" value={frames} onChange={setFrames} min={frameMeta.min || 1} max={frameMeta.max ?? 240} step={frameMeta.step || 4} fill />
-                <NumberPicker label="FPS" value={fps} onChange={setFps} min={fpsMeta.min || 1} max={fpsMeta.max ?? 60} step={fpsMeta.step || 1} fill />
+                {currentProfile?.capabilities.frames !== false ? <NumberPicker label="Frames" value={frames} onChange={setFrames} min={frameMeta.min || 1} max={frameMeta.max ?? 240} step={frameMeta.step || 4} fill /> : null}
+                {currentProfile?.capabilities.fps !== false ? <NumberPicker label="FPS" value={fps} onChange={setFps} min={fpsMeta.min || 1} max={fpsMeta.max ?? 60} step={fpsMeta.step || 1} fill /> : null}
               </div>
             ) : null}
-            <div className="number-row">
-              <NumberPicker label="Steps" value={steps} onChange={setSteps} min={stepsMeta.min || 1} max={stepsMeta.max ?? 150} step={stepsMeta.step || 1} fill />
-              {mode === "image" ? (
-                <NumberPicker label="Images" value={count} onChange={setCount} min={countMeta.min || 1} max={countMeta.max ?? 8} step={countMeta.step || 1} fill />
-              ) : null}
-            </div>
-            <Field label="Seed"><input inputMode="numeric" value={seed} placeholder="Random" onChange={(event) => setSeed(event.target.value.replace(/[^0-9]/g, ""))} /></Field>
-            <p className="sidebar-hint">{String(seed || "").trim() ? "The same picture every time." : "A new picture every time."}</p>
+            {currentProfile?.capabilities.steps !== false || mode === "image" ? (
+              <div className="number-row">
+                {currentProfile?.capabilities.steps !== false ? <NumberPicker label="Steps" value={steps} onChange={setSteps} min={stepsMeta.min || 1} max={stepsMeta.max ?? 150} step={stepsMeta.step || 1} fill /> : null}
+                {mode === "image" ? (
+                  <NumberPicker label="Images" value={count} onChange={setCount} min={countMeta.min || 1} max={countMeta.max ?? 8} step={countMeta.step || 1} fill />
+                ) : null}
+              </div>
+            ) : null}
+            {currentProfile?.capabilities.seed !== false ? (
+              <>
+                <Field label="Seed"><input inputMode="numeric" value={seed} placeholder="Random" onChange={(event) => setSeed(event.target.value.replace(/[^0-9]/g, ""))} /></Field>
+                <p className="sidebar-hint">{String(seed || "").trim() ? "The same picture every time." : "A new picture every time."}</p>
+              </>
+            ) : null}
             <SidebarRapidRow view={view} />
-            {customSize && !aspectLocked ? (
+            {customSize && !aspectLocked && currentProfile?.capabilities.size !== false ? (
               <div className="number-row">
                 <NumberPicker label="Width" value={width} onChange={setWidth} min={widthMeta.min ?? 64} max={widthMeta.max ?? 4096} step={widthMeta.step || (mode === "video" ? 32 : 64)} fill />
                 <NumberPicker label="Height" value={height} onChange={setHeight} min={heightMeta.min ?? 64} max={heightMeta.max ?? 4096} step={heightMeta.step || (mode === "video" ? 32 : 64)} fill />
@@ -327,8 +346,12 @@ export function SidebarControls({ view }: { view: any }) {
               ) : null}
               {currentProfile?.capabilities.weightDtype ? <Field label="Weight type"><Select value={weightDtype} onChange={setWeightDtype} options={profileOptions.weightDtypes || models?.weightDtypes || []} /></Field> : null}
             </div>
-            <NumberPicker label="Prompt strength (CFG)" value={cfg} onChange={setCfg} min={cfgMeta.min ?? 0} max={cfgMeta.max ?? 30} step={cfgMeta.step || 0.5} precision={1} fill />
-            <div className="sidebar-scale-hint" aria-hidden="true"><span>Looser</span><span>Follows the prompt closely</span></div>
+            {currentProfile?.capabilities.cfg !== false ? (
+              <>
+                <NumberPicker label="Prompt strength (CFG)" value={cfg} onChange={setCfg} min={cfgMeta.min ?? 0} max={cfgMeta.max ?? 30} step={cfgMeta.step || 0.5} precision={1} fill />
+                <div className="sidebar-scale-hint" aria-hidden="true"><span>Looser</span><span>Follows the prompt closely</span></div>
+              </>
+            ) : null}
             {currentProfile?.capabilities.sampler !== false ? (
               <div className="advanced-grid">
                 <Field label="Sampler"><Select value={sampler} onChange={setSampler} options={profileOptions.samplers?.length ? profileOptions.samplers : models?.samplers?.length ? models.samplers : fallbackSamplers} /></Field>

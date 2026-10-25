@@ -61,7 +61,9 @@ export function retryRequest(item: GalleryItem, options: RetryOptions = {}): Ret
     ...(settings.rapid ? { rapid: true, ...(settings.rapidAt ? { rapidAt: Number(settings.rapidAt) } : {}), ...(typeof settings.rapidSmooth === 'boolean' ? { rapidSmooth: settings.rapidSmooth } : {}) } : {}),
     ...(settings.rapidGuidance ? { rapidGuidance: true, ...(settings.rapidCfgUntil !== undefined ? { rapidCfgUntil: Number(settings.rapidCfgUntil) } : {}) } : {}),
     ...((settings.rapid || settings.rapidGuidance) && settings.rapidSpeed ? { rapidSpeed: String(settings.rapidSpeed) } : {}),
-    ...(options.tiledDecode ? { tiledDecode: true } : {})
+    ...(options.tiledDecode ? { tiledDecode: true } : {}),
+    // An imported workflow's More settings, as the run had them.
+    ...(settings.workflowSettings && typeof settings.workflowSettings === 'object' ? { workflowSettings: settings.workflowSettings, workflowSettingLabels: settings.workflowSettingLabels || {} } : {})
   };
   const label = options.smaller ? 'Trying again smaller' : options.tiledDecode ? 'Trying again, decoding in tiles' : 'Trying again';
   return { kind, body, label };

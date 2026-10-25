@@ -196,7 +196,11 @@ export function useGenerationActions(view: any) {
         startImageId: canUseStartImage ? startImageId : "",
         startImageName,
         // An imported workflow's "More settings" the person changed; the rest keep the workflow's values.
-        ...(view.workflowSettings && Object.keys(view.workflowSettings).length ? { workflowSettings: view.workflowSettings } : {}),
+        ...(view.workflowSettings && Object.keys(view.workflowSettings).length ? {
+          workflowSettings: view.workflowSettings,
+          // Their names, so the picture's details can say what was changed.
+          workflowSettingLabels: Object.fromEntries((currentProfile?.settings || []).filter((setting: { key: string }) => Object.hasOwn(view.workflowSettings, setting.key)).map((setting: { key: string; label: string; group?: string }) => [setting.key, setting.group ? `${setting.group} · ${setting.label}` : setting.label]))
+        } : {}),
         privateVault: Boolean(hiddenSpace),
         // RTX upscale for a video run (server/rtx.js); the server drops it where the machine can't, and says why.
         rtxVideo: mode === "video" && !hiddenSpace && prefs.smartUpscale !== false && rtxOffered() && (prefs.videoUpscale === "2k" || prefs.videoUpscale === "4k")

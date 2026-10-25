@@ -46,3 +46,15 @@ test("legacy start image metadata is normalized into a media input", () => {
   assert.equal(workflow.capabilities.startImageRequired, true);
   assert.deepEqual(workflow.mediaInputs[0].control, { node: "1", input: "image" });
 });
+
+test("an imported workflow hides the studio controls its graph doesn't take", () => {
+  const workflow = metadataFromJson({
+    heissUi: { id: "seed-only", controls: { prompt: { node: "2", input: "text" }, seed: { node: "3", input: "seed" } } },
+    "2": { class_type: "CLIPTextEncode", inputs: { text: "" } },
+    "3": { class_type: "KSampler", inputs: { seed: 1, steps: 20, cfg: 7 } }
+  });
+  assert.equal(workflow.capabilities.seed, undefined, "connected: shown");
+  assert.equal(workflow.capabilities.steps, false);
+  assert.equal(workflow.capabilities.cfg, false);
+  assert.equal(workflow.capabilities.size, false);
+});

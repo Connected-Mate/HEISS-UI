@@ -278,10 +278,16 @@ export type WorkflowSetupState = {
   snapshotId: string;
   health: { ok: boolean; comfyDown: boolean; broke: string[]; lostNodes: string[]; newFailed: string[] } | null;
   message: string;
+  /** How it ended was seen (OK, Keep it anyway). */
+  seen?: boolean;
 };
 export type WorkflowPreferences = { favorites: string[]; lastUsed: Record<string, string>; thumbnails: Record<string, string> };
 export type WorkflowImportPreview = {
   filename?: string;
+  /** Read before ComfyUI had all its nodes: what was found is a guess, read again once they're there. */
+  provisional?: boolean;
+  /** The canvas copy a provisional import keeps for that second read. */
+  visual?: unknown;
   format?: string;
   hasHeissUi: boolean;
   detected: {
