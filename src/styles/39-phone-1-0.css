@@ -177,7 +177,7 @@
 .phone-row[role="switch"] small { white-space: normal; }
 
 /* The sign-in screen comes before the phone studio exists, so it can't lean on
-   body:has(.phone-shell): it sizes its own field for a thumb. */
+   body.has-phone-shell: it sizes its own field for a thumb. */
 @media (max-width: 760px), (pointer: coarse) {
   .device-gate .hidden-unlock-field { min-height: 56px; }
   .device-gate .hidden-unlock-field button { min-height: 48px; font-size: 16px; }

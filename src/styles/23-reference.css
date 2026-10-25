@@ -670,7 +670,8 @@
 .ref-selected.is-edit .ref-stack-thumb:is(:hover, :focus-visible) img,
 .ref-selected.is-edit .ref-stack-item.is-open .ref-stack-thumb img { filter: none; }
 /* The same in a row (phone, touch): beside the picture being edited, the others are greyed. */
-.composer-reference-slots:has(> .ref-selected.is-edit) .ref-selected:not(.is-edit) .ref-thumb img { filter: grayscale(1) brightness(.62); }
+/* A class, not `img`: a tag after :has() would join every :has() check on the page (see 28-phone.css). */
+.composer-reference-slots:has(> .ref-selected.is-edit) .ref-selected:not(.is-edit) .ref-thumb-img { filter: grayscale(1) brightness(.62); }
 
 /* Something Edit leaves out (the +, its divider, the phone row's empty slot): it folds to
    nothing in place, width and gap with it (Fold animates the way there). */

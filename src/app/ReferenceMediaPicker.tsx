@@ -532,7 +532,7 @@ function ReferenceSlot({ input, selected, open, busy, progress, fresh, paint, ro
       })}
       <Tip content={`${name} · Click to change`}>
         <button type="button" data-open-trigger className="ref-thumb" onClick={onOpen} aria-label={`Change ${label.toLowerCase()}, currently ${referenceName(selected.name)}`} aria-expanded={open}>
-          {image && !broken ? <img src={image} alt="" draggable={false} onError={() => setBroken(true)} /> : selected.source === "vault" ? <LockKeyhole size={14} /> : <ImageIcon size={15} />}
+          {image && !broken ? <img className="ref-thumb-img" src={image} alt="" draggable={false} onError={() => setBroken(true)} /> : selected.source === "vault" ? <LockKeyhole size={14} /> : <ImageIcon size={15} />}
         </button>
       </Tip>
       {/* Remove on the thumbnail's corner, where it's expected and far from Edit | Reference; Undo is in its toast. */}

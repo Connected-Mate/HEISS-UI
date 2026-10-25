@@ -122,6 +122,14 @@ version opens with a `> ` summary line, which the update pill shows.
   workflow just shows what it is.
 - What importing installed now lives in Settings › Library, Add-ons for
   workflows, each with an undo.
+- **Typing and scrolling take far less work in a big gallery.** Each
+  keystroke in the prompt used to make the browser restyle every button on
+  the page; now it touches a handful, which halves the work per key.
+  Scrolling the gallery restyles about a third as much, and the phone's
+  gallery does about a third less work in all, since its tiles no longer
+  carry the hover buttons a phone never shows. Dialogs cost nothing until
+  they first open, and the Workflows window loads once the studio is idle
+  instead of with the page.
 
 ### Fixed
 - **The viewer's details fit their panel.** Long LoRA and model names no

@@ -33,7 +33,6 @@ import { useGenerationActivity, useTilesOnScreen } from './GenerationActivity';
 import { ActivityColumn } from './Activities';
 import { CopyIcon, useCopyFeedback } from './CopyFeedback';
 import { ViewerActions } from './ViewerActions';
-import { WorkflowGallery } from './WorkflowGallery';
 import { useWorkflowSetupWatch } from './workflowSetup';
 import { HiddenLockScreen, HiddenUnlockSheet } from './HiddenLock';
 import { HiddenSetupDialog } from './HiddenSetup';
@@ -61,6 +60,11 @@ import { refreshPrompts, usePromptHistory } from './recentPrompts';
 import type { AutoUpscale, GalleryItem } from './types';
 import type { HiddenState } from './useHidden';
 import { memoLatest } from '@/lib/memo-latest';
+
+// Its own chunk: most visits never open it. Fetched once the studio is idle,
+// so the first open doesn't wait on it either.
+const loadWorkflowGallery = () => import('./WorkflowGallery');
+const WorkflowGallery = React.lazy(() => loadWorkflowGallery().then((module) => ({ default: module.WorkflowGallery })));
 
 // App rebuilds every prop on each render (a keystroke in the prompt, a poll);
 // these skip re-rendering unless their data actually changed.
@@ -173,6 +177,12 @@ export function StudioView({ view }: { view: Record<string, any> }) {
   // Phones get the simplified phone studio, unless someone chose the full one.
   const phoneDevice = usePhone();
   const phone = phoneDevice && !prefs.fullStudioOnPhone;
+  // Dialogs render outside the shell; this is what makes them phone-shaped (28-phone.css).
+  React.useLayoutEffect(() => {
+    if (!phone) return;
+    document.body.classList.add("has-phone-shell");
+    return () => document.body.classList.remove("has-phone-shell");
+  }, [phone]);
   // Recent prompts: ↑ in an empty prompt or the clock in the composer opens them.
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const hasPromptHistory = usePromptHistory(!phone).prompts.length > 0;
@@ -300,6 +310,15 @@ export function StudioView({ view }: { view: Record<string, any> }) {
   const viewerRef = React.useRef<HTMLDivElement | null>(null);
   useFocusTrap(viewerRef, Boolean(active));
   useHistoryDismiss(Boolean(workflowGalleryOpen), () => setWorkflowGalleryOpen(false));
+  React.useEffect(() => {
+    const prefetch = () => void loadWorkflowGallery().catch(() => null);
+    if (window.requestIdleCallback) {
+      const id = window.requestIdleCallback(prefetch, { timeout: 5000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const timer = window.setTimeout(prefetch, 3000);
+    return () => window.clearTimeout(timer);
+  }, []);
   const [settingsSection, setSettingsSection] = React.useState<SettingsSection>("general");
   const openSettings = React.useCallback((section?: SettingsSection) => {
     if (section) setSettingsSection(section);
@@ -575,7 +594,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
     <HiddenActionsContext.Provider value={hiddenActions}>
     <TileLongPressContext.Provider value={phoneTiles}>
     <FavoriteContext.Provider value={toggleFavorite}>
-    <div className={cn(phone ? "phone-shell" : prefs.zenMode ? "zen-shell" : "app-shell", showNegativePrompt && canUseNegativePrompt && "negative-open", hiddenSpace && "is-hidden-space", hiddenLocked && "is-hidden-locked", !hiddenLocked && (searchOpen || searchOn) && "is-searching", passageClass)}>
+    <div className={cn(phone ? "phone-shell" : prefs.zenMode ? "zen-shell" : "app-shell", zenControls && "controls-open", showNegativePrompt && canUseNegativePrompt && "negative-open", hiddenSpace && "is-hidden-space", hiddenLocked && "is-hidden-locked", !hiddenLocked && (searchOpen || searchOn) && "is-searching", passageClass)}>
       {phone ? <RunSheet run={runSheet} onClose={() => setRunSheet(null)} openItem={openItem} onShowInGallery={showRunInGallery} /> : null}
       {phone ? (
         <PhoneShell
@@ -1126,7 +1145,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
           </div>
         );
       })() : null}
-      {workflowGalleryOpen ? <WorkflowGallery view={{ ...view, onClose: () => setWorkflowGalleryOpen(false) }} /> : null}
+      {workflowGalleryOpen ? <React.Suspense fallback={null}><WorkflowGallery view={{ ...view, onClose: () => setWorkflowGalleryOpen(false) }} /></React.Suspense> : null}
       {/* Generation progress for screen readers: started, rendering, ready. */}
       <div className="sr-only" role="status" aria-live="polite">{view.status && view.status !== "Ready" && !/^Rendering|^Queued/.test(view.status) ? view.status : ""}</div>
       {/* Portaled to <body>: inside the fixed shell it would sit under every dialog's scrim. */}

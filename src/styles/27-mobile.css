@@ -20,7 +20,7 @@
 .zen-prompt:has(.composer-drawer, .model-menu, .aspect-menu, .ref-chip.is-open) { z-index: 14; }
 
 /* Chips above the dock (Group runs, Stop) must not sit on an open sidebar. */
-:is(.app-shell, .zen-shell):has(.zen-controls.open) .dock-transients {
+:is(.app-shell, .zen-shell).controls-open .dock-transients {
   opacity: 0;
   pointer-events: none;
 }

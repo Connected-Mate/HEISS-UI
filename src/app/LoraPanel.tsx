@@ -282,7 +282,7 @@ function LoraPicker({ options, profile, fitOf, baseOf, current, favorites, recen
                     aria-selected={checked}
                     aria-disabled={added || (multi && full && !checked) || undefined}
                     data-highlight={index === highlight}
-                    className={cn('lora-option', checked && 'is-selected', added && 'is-added', index === highlight && 'is-highlight')}
+                    className={cn('lora-option', checked && 'is-selected', added && 'is-added', index === highlight && 'is-highlight', !added && fitOf(row.name) === 'other' && baseOf(row.name) && 'is-other-model')}
                     onMouseEnter={() => setHighlight(index)}
                     onClick={() => choose(row.name)}
                   >

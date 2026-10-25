@@ -525,7 +525,7 @@
 .lora-option > em { flex: none; font-size: 11px; font-style: normal; color: hsl(var(--muted-foreground)); }
 /* Made for another model: named, a little dimmer, never hidden. */
 .lora-option > em.lora-fit { max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .75; }
-.lora-option:has(> em.lora-fit) .lora-option-copy strong { color: hsl(var(--foreground) / .7); }
+.lora-option.is-other-model .lora-option-copy strong { color: hsl(var(--foreground) / .7); }
 .lora-option-star {
   flex: none;
   width: 30px;

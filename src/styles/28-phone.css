@@ -146,7 +146,7 @@
     calc(max(12px, env(safe-area-inset-bottom)) + 96px)
     max(6px, env(safe-area-inset-left));
 }
-.phone-shell:has(.phone-running) .phone-gallery { padding-top: calc(max(6px, env(safe-area-inset-top)) + 110px); }
+.phone-shell .phone-running ~ .phone-gallery { padding-top: calc(max(6px, env(safe-area-inset-top)) + 110px); }
 .phone-gallery .empty.stage-empty { min-height: calc(100dvh - 200px); }
 /* The phone bar carries the way back; the lock screen's own button would sit under it. */
 .phone-shell .hidden-lockscreen-back { display: none; }
@@ -992,13 +992,16 @@
 
 /* ------------------------------------------- Shared dialogs, phone-shaped */
 
-/* Dialogs render outside the phone shell, so they key off the page holding it:
-   confirmations, the Hidden unlock and the rest come up as bottom sheets. */
-body:has(.phone-shell) .modal-scrim:has(.modal:not(.modal-sheet, .modal-wide)) {
+/* Dialogs render outside the phone shell, so they key off the page holding it
+   (StudioView marks <body> while the phone shell is up): confirmations, the
+   Hidden unlock and the rest come up as bottom sheets. A class rather than
+   body.has-phone-shell, which made every change anywhere on the page (a
+   keystroke, a tile scrolled in) restyle every button. */
+body.has-phone-shell .modal-scrim:has(.modal:not(.modal-sheet, .modal-wide)) {
   place-items: end stretch;
   padding: 0;
 }
-body:has(.phone-shell) .modal:not(.modal-sheet, .modal-wide) {
+body.has-phone-shell .modal:not(.modal-sheet, .modal-wide) {
   width: 100%;
   max-height: calc(100dvh - max(20px, env(safe-area-inset-top)) - var(--kb-inset, 0px));
   margin-bottom: var(--kb-inset, 0px);
@@ -1007,17 +1010,17 @@ body:has(.phone-shell) .modal:not(.modal-sheet, .modal-wide) {
   border-radius: 24px 24px 0 0;
   animation: phone-sheet-up var(--motion-slow) var(--motion-ease);
 }
-body:has(.phone-shell) .modal:not(.modal-sheet, .modal-wide)[data-state="closed"] { animation: phone-sheet-up var(--motion-fast) var(--motion-ease-in) reverse forwards; }
+body.has-phone-shell .modal:not(.modal-sheet, .modal-wide)[data-state="closed"] { animation: phone-sheet-up var(--motion-fast) var(--motion-ease-in) reverse forwards; }
 @keyframes phone-sheet-up { from { translate: 0 40px; opacity: 0; } }
-body:has(.phone-shell) .modal-close { width: 44px; height: 44px; }
-body:has(.phone-shell) .modal-foot { gap: 8px; }
-body:has(.phone-shell) .modal-foot .btn { flex: 1; min-height: 52px; font-size: 16px; }
-body:has(.phone-shell) .modal.has-hero .modal-hero { max-height: 180px; }
+body.has-phone-shell .modal-close { width: 44px; height: 44px; }
+body.has-phone-shell .modal-foot { gap: 8px; }
+body.has-phone-shell .modal-foot .btn { flex: 1; min-height: 52px; font-size: 16px; }
+body.has-phone-shell .modal.has-hero .modal-hero { max-height: 180px; }
 
 /* The Hidden password field, sized for a thumb. */
-body:has(.phone-shell) .hidden-unlock-field { min-height: 56px; }
-body:has(.phone-shell) .hidden-unlock-field button,
-body:has(.phone-shell) .hidden-unlock-primary { min-height: 48px; font-size: 16px; }
+body.has-phone-shell .hidden-unlock-field { min-height: 56px; }
+body.has-phone-shell .hidden-unlock-field button,
+body.has-phone-shell .hidden-unlock-primary { min-height: 48px; font-size: 16px; }
 
 /* A failed generation in the viewer: readable and with big buttons. */
 .scrim .viewer-stage:has(.viewer-phone-bar) .failure-panel { width: calc(100% - 16px); max-height: calc(100% - 24px); overflow-y: auto; }

@@ -323,9 +323,9 @@
 .phone-searchbar .phone-search { flex: 1; min-width: 0; min-height: 48px; margin: 0; background: #1b1b1b; box-shadow: 0 8px 24px rgb(0 0 0 / .4); }
 .phone-searchbar .phone-search-fav { color: hsl(var(--muted-foreground)); }
 .phone-searchbar .phone-search-fav.is-on { color: var(--ember); }
-.phone-shell:has(.phone-searchbar) .phone-gallery { padding-top: calc(max(6px, env(safe-area-inset-top)) + 110px); }
-.phone-shell:has(.phone-searchbar) .phone-running { top: calc(max(6px, env(safe-area-inset-top)) + 106px); }
-.phone-shell:has(.phone-searchbar):has(.phone-running) .phone-gallery { padding-top: calc(max(6px, env(safe-area-inset-top)) + 164px); }
+.phone-shell .phone-searchbar ~ .phone-gallery { padding-top: calc(max(6px, env(safe-area-inset-top)) + 110px); }
+.phone-shell .phone-searchbar ~ .phone-running { top: calc(max(6px, env(safe-area-inset-top)) + 106px); }
+.phone-shell .phone-searchbar ~ .phone-running ~ .phone-gallery { padding-top: calc(max(6px, env(safe-area-inset-top)) + 164px); }
 
 /* ------------------------------------------------------------------ Stars */
 
@@ -359,11 +359,11 @@
 .tile-star:hover { background: rgb(10 10 10 / .78); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .26), 0 2px 10px rgb(0 0 0 / .32); }
 .tile-star:active { scale: .92; }
 .tile-star.is-on { opacity: 1; color: var(--ember); }
-.tile-overlay:has(.tile-star) .tile-hover-actions { right: calc(8px + var(--star-room)); }
+.tile-overlay.has-star .tile-hover-actions { right: calc(8px + var(--star-room)); }
 @media (hover: hover) {
   .tile-motion-wrap:hover .tile-star,
   .tile-motion-wrap:focus-within .tile-star { opacity: 1; }
-  .tile-overlay:has(.tile-star) .tile-hover-actions { right: calc(2px + var(--star-room)); }
+  .tile-overlay.has-star .tile-hover-actions { right: calc(2px + var(--star-room)); }
 }
 @media (hover: none) {
   .tile-star { opacity: 1; }
@@ -374,7 +374,7 @@
   .tile-star svg { width: 15px; height: 15px; }
 }
 @media (max-width: 480px) {
-  .tile-overlay:has(.tile-star) .tile-hover-actions { right: calc(6px + var(--star-room)); }
+  .tile-overlay.has-star .tile-hover-actions { right: calc(6px + var(--star-room)); }
 }
 /* Touch phones in the full studio: More owns the corner, so only a set star shows, under it. */
 @media (hover: none) and (max-width: 620px) {

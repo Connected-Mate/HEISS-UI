@@ -29,13 +29,13 @@
   .app-shell .zen-control-button.gallery-search-button,
   .app-shell .zen-control-button.grid-autoplay-button,
   .app-shell .zen-control-button.stack-runs-button,
-  .app-shell:has(.grid-autoplay-button) .zen-control-button.stack-runs-button {
+  .app-shell .grid-autoplay-button ~ .zen-control-button.stack-runs-button {
     left: max(var(--deck-gap), env(safe-area-inset-left));
   }
   .app-shell .zen-control-button.gallery-search-button { bottom: calc(var(--deck-gap) + var(--deck-step)); }
   .app-shell .zen-control-button.grid-autoplay-button,
   .app-shell .zen-control-button.stack-runs-button { bottom: calc(var(--deck-gap) + 2 * var(--deck-step)); }
-  .app-shell:has(.grid-autoplay-button) .zen-control-button.stack-runs-button { bottom: calc(var(--deck-gap) + 3 * var(--deck-step)); }
+  .app-shell .grid-autoplay-button ~ .zen-control-button.stack-runs-button { bottom: calc(var(--deck-gap) + 3 * var(--deck-step)); }
 
   .zen-shell .zen-zoom-dock,
   .zen-shell .zen-zoom-dock.with-side {

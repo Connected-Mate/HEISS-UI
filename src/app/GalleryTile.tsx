@@ -61,7 +61,14 @@ export function downloadUrl(item: GalleryItem) {
   return params ? `${url}${url.includes("?") ? "&" : "?"}${params}` : url;
 }
 
-function UpscaleButton({ item, busy, onUpscale, onCancelUpscale, held = false }: { item: GalleryItem; busy: boolean; onUpscale: (item: GalleryItem) => void; onCancelUpscale: (item: GalleryItem) => void; held?: boolean }) {
+/**
+ * A phone tile's tooltip: none. Nothing hovers there, and the buttons a label
+ * would explain are hidden (28-phone.css), so mounting a tooltip for each is
+ * work that scrolling pays for and nobody sees.
+ */
+const NoTip: typeof Tip = ({ children }) => children;
+
+function UpscaleButton({ item, busy, onUpscale, onCancelUpscale, held = false, TileTip = Tip }: { item: GalleryItem; busy: boolean; onUpscale: (item: GalleryItem) => void; onCancelUpscale: (item: GalleryItem) => void; held?: boolean; TileTip?: typeof Tip }) {
   const state = item.upscale;
   const running = state?.status === "running";
   // The ring follows the learned time when there is one; SeedVR2's own count jumps in a few big steps.
@@ -71,7 +78,7 @@ function UpscaleButton({ item, busy, onUpscale, onCancelUpscale, held = false }:
   const active = Boolean(item.upscaleActive && state?.url);
   const tooltip = upscaleTooltip(item, clock.leftMs);
   return (
-    <Tip content={tooltip}>
+    <TileTip content={tooltip}>
       <button
         type="button"
         className={cn("tile-upscale", active && "is-active", running && "is-running", running && !ratio && "is-indeterminate", running && clock.ratio !== null && "is-timed", busy && "is-busy", held && "is-held")}
@@ -88,7 +95,7 @@ function UpscaleButton({ item, busy, onUpscale, onCancelUpscale, held = false }:
           </svg>
         ) : null}
       </button>
-    </Tip>
+    </TileTip>
   );
 }
 
@@ -121,6 +128,8 @@ function GalleryTileComponent({ cancelJob, copyPromptAndToast, deleteItem, forma
   // While selecting, a long press toggles too, so a slow tap never gets lost.
   const onLongPress = phoneTiles ? (selecting ? (selectable ? phoneTiles.toggle : null) : phoneTiles.onLongPress) : null;
   const press = useRef<{ timer: number; x: number; y: number; fired: boolean } | null>(null);
+  const starred = Boolean(star && canStar(item)) && item.status !== "pending";
+  const TileTip = phoneTiles ? NoTip : Tip;
   const cancelPress = () => { if (press.current) window.clearTimeout(press.current.timer); };
   const longPress = onLongPress && item.status !== "pending" ? {
     onPointerDown: (event: React.PointerEvent) => {
@@ -178,13 +187,15 @@ function GalleryTileComponent({ cancelJob, copyPromptAndToast, deleteItem, forma
       </button>
       {/* Controls are siblings of the tile's button, never inside it: a button
           inside a button is invalid and unreachable by keyboard. */}
-      <div ref={overlayRef} className={cn("tile-overlay", menuOpen && "is-menu-open", phoneTiles && "is-phone")}>
+      <div ref={overlayRef} className={cn("tile-overlay", menuOpen && "is-menu-open", phoneTiles && "is-phone", starred && "has-star")}>
         {selecting && selectable ? <span className={cn("tile-check", isSelected && "is-on")} aria-hidden="true">{isSelected ? <Check size={16} strokeWidth={3} /> : null}</span> : null}
-        {smartUpscale && onUpscale && canUpscaleItem(item, rtxVideos) ? <UpscaleButton item={item} busy={upscaleBusy} onUpscale={onUpscale} onCancelUpscale={onCancelUpscale} held={Boolean(upscaleNotice)} /> : null}
+        {smartUpscale && onUpscale && canUpscaleItem(item, rtxVideos) ? <UpscaleButton item={item} busy={upscaleBusy} onUpscale={onUpscale} onCancelUpscale={onCancelUpscale} held={Boolean(upscaleNotice)} TileTip={TileTip} /> : null}
         {upscaleNotice && onDismissUpscaleNotice ? <UpscaleNoticePopover notice={upscaleNotice} placement="tile" onDismiss={() => onDismissUpscaleNotice(item.id)} /> : null}
-        {item.status === "pending" ? <Tip content={item.progress?.upscaling ? "Stop the upscale · the picture stays" : "Stop generation"}><button type="button" className="tile-action" onClick={() => cancelJob(item.jobId)}>Stop</button></Tip> : null}
+        {item.status === "pending" ? <TileTip content={item.progress?.upscaling ? "Stop the upscale · the picture stays" : "Stop generation"}><button type="button" className="tile-action" onClick={() => cancelJob(item.jobId)}>Stop</button></TileTip> : null}
         {item.status !== "pending" ? (
           <>
+            {/* A phone tile has neither (28-phone.css): a long press opens its actions. */}
+            {phoneTiles ? null : <>
             <button type="button" className="tile-more" aria-label="More actions" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}><MoreHorizontal size={16} /></button>
             <span className="tile-hover-actions">
               {canMove ? (
@@ -196,13 +207,14 @@ function GalleryTileComponent({ cancelJob, copyPromptAndToast, deleteItem, forma
               {item.status === "done" ? <Tip content="Copy prompt" side="left"><button type="button" className="tile-icon" aria-label="Copy prompt" onClick={() => act(() => copyPromptAndToast(item))}><Copy size={14} /><span className="tile-menu-label">Copy prompt</span></button></Tip> : null}
               <Tip content={item.privateVault ? "Delete from Hidden" : item.library ? "Remove from gallery" : "Delete from gallery"} side="left"><button type="button" className="tile-delete" aria-label={item.privateVault ? "Delete from Hidden" : item.library ? "Remove from gallery" : "Delete from gallery"} onClick={() => act(() => deleteItem(item))}><Trash2 size={14} /><span className="tile-menu-label">{item.library ? "Remove" : "Delete"}</span></button></Tip>
             </span>
+            </>}
             {/* Its own corner: always there once starred, on hover otherwise. */}
-            {star && canStar(item) ? (
-              <Tip content={item.favorite ? "Unstar" : "Star"} side="left">
+            {star && starred ? (
+              <TileTip content={item.favorite ? "Unstar" : "Star"} side="left">
                 <button type="button" className={cn("tile-star", item.favorite && "is-on")} aria-label={item.favorite ? "Unstar" : "Star"} aria-pressed={Boolean(item.favorite)} onClick={() => act(() => star([item], !item.favorite))}>
                   <Star size={14} fill={item.favorite ? "currentColor" : "none"} />
                 </button>
-              </Tip>
+              </TileTip>
             ) : null}
           </>
         ) : null}

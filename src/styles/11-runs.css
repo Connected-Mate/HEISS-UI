@@ -212,12 +212,12 @@
 
 /* Beside search, or beside the video previews' pause when the gallery has videos. */
 .app-shell .zen-control-button.stack-runs-button { left: calc(var(--deck-gap) + 2 * var(--deck-h) + 16px); }
-.app-shell:has(.grid-autoplay-button) .zen-control-button.stack-runs-button { left: calc(var(--deck-gap) + 3 * var(--deck-h) + 24px); }
+.app-shell .grid-autoplay-button ~ .zen-control-button.stack-runs-button { left: calc(var(--deck-gap) + 3 * var(--deck-h) + 24px); }
 .stack-runs-button.is-on { color: #fff; background: rgb(44 44 44 / .94); }
 .stack-runs-button:disabled, .phone-icon:disabled { opacity: .4; cursor: default; }
 @media (max-width: 760px) {
   .app-shell .zen-control-button.stack-runs-button { left: calc(max(8px, env(safe-area-inset-left)) + 2 * var(--deck-h) + 16px); }
-  .app-shell:has(.grid-autoplay-button) .zen-control-button.stack-runs-button { left: calc(max(8px, env(safe-area-inset-left)) + 3 * var(--deck-h) + 24px); }
+  .app-shell .grid-autoplay-button ~ .zen-control-button.stack-runs-button { left: calc(max(8px, env(safe-area-inset-left)) + 3 * var(--deck-h) + 24px); }
 }
 
 /* ------------------------------------------------------------------- Zen */

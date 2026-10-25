@@ -60,6 +60,11 @@ export function Modal({
   }
   if (!open) openerRef.current = null;
   const opener = openerRef.current;
+  // A dialog that has never opened has nothing to show or animate out. The
+  // studio keeps a dozen of them rendered, and App renders on every keystroke.
+  const opened = React.useRef(open);
+  if (open) opened.current = true;
+  if (!opened.current) return null;
 
   return (
     <Dialog.Root open={open} onOpenChange={(next) => { if (!next && busy) return; onOpenChange(next); }}>
