@@ -127,6 +127,9 @@
   overflow-x: hidden;
   padding: 18px 20px;
   display: grid; gap: 18px;
+  /* One column the width of the panel: a long LoRA or model name wraps or
+     ellipsizes inside it instead of widening everything past the edge. */
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   /* Rows keep their full height and the body scrolls; with overflow:hidden
      children (the disclosure) auto rows would otherwise shrink to fit. */
@@ -273,7 +276,7 @@
 .detail-copy:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 /* Each LoRA as a card: its name, a hairline, its strength. */
-.detail-loras { display: grid; gap: 6px; margin: 2px 0 0; padding: 0; list-style: none; }
+.detail-loras { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin: 2px 0 0; padding: 0; list-style: none; }
 .detail-lora {
   display: flex;
   align-items: center;
@@ -310,6 +313,7 @@
 .settings-disclosure[open] summary::after { content: "-"; }
 .settings-disclosure .detail-section {
   display: grid; gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
   padding: 12px;
   border-top: 1px solid hsl(var(--border));
 }

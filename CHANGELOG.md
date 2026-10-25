@@ -118,6 +118,14 @@ version opens with a `> ` summary line, which the update pill shows.
   workflows, each with an undo.
 
 ### Fixed
+- **The viewer's details fit their panel.** Long LoRA and model names no
+  longer push the prompt, buttons and settings past the edge, and the
+  Previous and Next arrows move to the next picture with the details open
+  instead of closing them first. A built-in model's details no longer show
+  its internal workflow id.
+- The HEISS UI Nodes dialog shows its wordmark again instead of an empty
+  hero, and the Prompt enhance preview in Settings lines up with the rows
+  around it.
 - **Imported workflows: Try again and Use settings keep your More settings**,
   and the picture's details list the ones you changed.
 - **Add-ons for an imported workflow finish setting up even after you close

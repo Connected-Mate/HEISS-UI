@@ -973,8 +973,9 @@ export function StudioView({ view }: { view: Record<string, any> }) {
                 </div>
                 {hasNeighbors ? (
                   <>
-                    <Tip content="Previous"><button className="viewer-arrow prev" aria-label="Previous output" onClick={() => moveViewer(-1)}><ChevronLeft size={20} /></button></Tip>
-                    <Tip content="Next"><button className="viewer-arrow next" aria-label="Next output" onClick={() => moveViewer(1)}><ChevronRight size={20} /></button></Tip>
+                    {/* Controls, not empty stage: a press here keeps the details open (main.tsx closes them on the empty stage). */}
+                    <Tip content="Previous"><button data-open-trigger className="viewer-arrow prev" aria-label="Previous output" onClick={() => moveViewer(-1)}><ChevronLeft size={20} /></button></Tip>
+                    <Tip content="Next"><button data-open-trigger className="viewer-arrow next" aria-label="Next output" onClick={() => moveViewer(1)}><ChevronRight size={20} /></button></Tip>
                   </>
                 ) : null}
                 {showDetails ? (

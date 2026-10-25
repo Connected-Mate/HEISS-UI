@@ -330,7 +330,7 @@ export function HeatMark({ className }: { className?: string }) {
   }, []);
 
   return (
-    <div ref={wrapRef} className={className} style={{ aspectRatio: heatMarkAspect }} role="img" aria-label="HEISS UI">
+    <div ref={wrapRef} className={className ? `heat-mark ${className}` : "heat-mark"} style={{ aspectRatio: heatMarkAspect }} role="img" aria-label="HEISS UI">
       {failed
         ? <img className="about-mark-fallback" src="/heiss-lockup-white.svg" alt="" aria-hidden="true" draggable={false} />
         : <canvas ref={canvasRef} aria-hidden="true" />}

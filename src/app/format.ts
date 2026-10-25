@@ -149,7 +149,8 @@ export function generationDetailEntries(item: GalleryItem): GenerationDetailSect
   const model = settings.modelName || (String(item.model || "").startsWith("custom:") ? "" : item.model);
   section("Model", (add) => {
     add("Model", model ? fileStem(model) : "");
-    add("Workflow", settings.workflow);
+    // A built-in model's workflow is an internal id ("family:krea2"): the model line already says it.
+    add("Workflow", String(settings.workflow || "").startsWith("family:") ? "" : settings.workflow);
   });
   const loras = activeLoras(settings.loras).map((lora) => ({ name: fileStem(lora.name), strength: Number(lora.strength ?? 0.7).toFixed(2) }));
   if (loras.length) {

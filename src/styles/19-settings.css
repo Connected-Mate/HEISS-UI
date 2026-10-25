@@ -374,7 +374,10 @@
   text-align: center;
 }
 .about-mark { position: relative; width: 100%; max-width: 560px; cursor: crosshair; touch-action: none; }
-.about-mark canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+/* Every HeatMark's canvas fills its box exactly. Left to its own size it grows with
+   each backing-store resize (one device pixel per CSS pixel at 2x) until it's
+   millions of pixels tall and nothing shows, as the HEISS UI Nodes hero did. */
+.heat-mark canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .about-mark-fallback { position: absolute; inset: 0; margin: auto; width: 46%; height: 70%; object-fit: contain; opacity: 0.9; }
 .about-tagline { margin: 0; font-size: 13.5px; color: hsl(var(--muted-foreground)); }
 .about-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
