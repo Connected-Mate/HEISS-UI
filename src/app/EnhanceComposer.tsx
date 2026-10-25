@@ -254,9 +254,17 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
     if (!busy && area && phase === 'done') area.scrollTop = area.scrollHeight;
   }, [busy, phase, field]);
 
-  // The person's own words as they were when the run started: `original` becomes the new text as it is written.
+  // The person's own words as they were when the run started (`original` becomes the new text as it
+  // is written), and where the prompt was scrolled, so their layer shows exactly what was on screen.
   const before = useRef('');
+  const beforeScroll = useRef(0);
   if (busy && !text) before.current = original;
+  const wasWaiting = useRef(false);
+  useLayoutEffect(() => {
+    const waiting = busy && !text;
+    if (waiting && !wasWaiting.current) beforeScroll.current = field.current?.scrollTop || 0;
+    wasWaiting.current = waiting;
+  }, [busy, text, field]);
 
   return (
     <AnimatePresence>
@@ -273,38 +281,43 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
           <EnhanceAura phase={finishing ? 'done' : phase} pulse={text.length} timing={timing} words={countWords(text)} />
         </motion.div>
       ) : null}
-      {busy && box ? (
+      {/* Two layers over the prompt, each in its own box, so neither shifts the other: the person's
+          words while it thinks, dissolving where they are; then the new words, from the top. */}
+      {busy && box && !text ? (
         <motion.div
-          key="ghost"
-          ref={ghost}
-          className={cn('enhance-ghost', text ? 'is-writing' : 'is-waiting')}
+          key="before"
+          ref={(node: HTMLDivElement | null) => { if (node) node.scrollTop = beforeScroll.current; }}
+          className="enhance-ghost is-waiting"
           style={box}
           aria-hidden="true"
-          // In place at once, over the words it replaces: they don't blink out and back.
+          // In place at once, over the words it stands for: they don't blink out and back.
           initial={false}
-          exit={{ opacity: 0, transition: { duration: 0.2 } }}
+          exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, y: -4, filter: 'blur(3px)', transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } }}
         >
-          <AnimatePresence initial={false} mode="popLayout">
-            {text ? (
-              <motion.span key="words" className="enhance-ghost-words" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: reduced ? 0 : 0.35 }}>
-                <EnhanceWords text={text} />
-              </motion.span>
-            ) : (
-              // The person's words: dimming into the sheen at the start, dissolving as the new words arrive.
-              <motion.span
-                key="before"
-                className="enhance-ghost-before"
-                exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, y: -4, filter: 'blur(3px)', transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } }}
-              >
-                <span className="enhance-scan">{before.current.trim() || ' '}</span>
-                {reduced ? null : (
-                  <motion.span className="enhance-ghost-plain" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
-                    {before.current.trim() || ' '}
-                  </motion.span>
-                )}
+          <span className="enhance-ghost-before">
+            <span className="enhance-scan">{before.current.trim() || ' '}</span>
+            {/* The same words in full colour on top, fading: they dim into the sheen instead of switching. */}
+            {reduced ? null : (
+              <motion.span className="enhance-ghost-plain" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
+                {before.current.trim() || ' '}
               </motion.span>
             )}
-          </AnimatePresence>
+          </span>
+        </motion.div>
+      ) : null}
+      {busy && box && text ? (
+        <motion.div
+          key="words"
+          ref={ghost}
+          className="enhance-ghost is-writing"
+          style={box}
+          aria-hidden="true"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: { duration: 0.2 } }}
+          transition={{ duration: reduced ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <EnhanceWords text={text} />
         </motion.div>
       ) : null}
     </AnimatePresence>
