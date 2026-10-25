@@ -217,7 +217,21 @@ export function noteComfyFetchError(error) {
   if (error?.name === "AbortError") return;
   comfyUnreachableUntil = Date.now() + 5000;
   noteComfyState(false, error);
+  // Refused, not slow: the process is gone (stopped or restarting), and whatever it held in memory with it.
+  if (!isComfyTimeout(error)) for (const listener of goneListeners) listener();
 }
+
+/*
+ * Who wants to know what happened to ComfyUI's memory (enhance-timing.js):
+ * that ComfyUI went away, and that other work was queued, which may push a
+ * loaded model out. Listeners, so this module imports nothing of theirs.
+ */
+const goneListeners = new Set();
+const workListeners = new Set();
+export function onComfyGone(listener) { goneListeners.add(listener); return () => goneListeners.delete(listener); }
+export function onComfyWork(listener) { workListeners.add(listener); return () => workListeners.delete(listener); }
+// The enhancer's own runs (prompt-enhance.js) are what is being timed, not work that evicts it.
+const enhancerRun = /"client_id":"heiss-enhance-/;
 
 /**
  * How long one request to ComfyUI may take before it counts as unanswered.
@@ -247,6 +261,9 @@ export async function comfy(pathname, options = {}) {
     throw error;
   }
   noteComfyReachable();
+  if (response.ok && pathname === "/prompt" && String(init.method || "").toUpperCase() === "POST" && !enhancerRun.test(String(init.body || ""))) {
+    for (const listener of workListeners) listener();
+  }
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     const raw = `Comfy ${response.status}: ${text || response.statusText}`;

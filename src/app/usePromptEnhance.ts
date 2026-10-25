@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { enhanceVerb, enhanceWorking, loadEnhanceStatus, openEnhanceSetup, requireEnhance, streamEnhance, type EnhanceTarget } from './promptEnhance';
+import { enhanceVerb, enhanceWorking, loadEnhanceStatus, openEnhanceSetup, requireEnhance, streamEnhance, type EnhanceExpectation, type EnhanceTarget } from './promptEnhance';
 import type { Mode, Profile } from './types';
 import type { ShowToast } from './toast';
 
@@ -12,6 +12,9 @@ import type { ShowToast } from './toast';
  */
 export type EnhancePhase = 'idle' | 'queued' | 'loading' | 'writing' | 'done';
 
+/** The run's clock, on this page's `performance.now()`: when ComfyUI started it, when the first words came, and what to expect. */
+export type EnhanceTiming = { expect: EnhanceExpectation; startedAt: number; firstTextAt: number };
+
 export type PromptEnhance = {
   phase: EnhancePhase;
   busy: boolean;
@@ -23,6 +26,8 @@ export type PromptEnhance = {
   target: EnhanceTarget | '';
   /** After a finished run, until the prompt is edited: Undo and Try again are offered. */
   settled: boolean;
+  /** Once ComfyUI has started the run: how long it should take, for the rim to fill over. */
+  timing: EnhanceTiming | null;
   run: () => void;
   again: () => void;
   stop: () => void;
@@ -43,6 +48,7 @@ export function usePromptEnhance({ prompt, setPrompt, mode, profile, imageId, li
   const [phase, setPhase] = useState<EnhancePhase>('idle');
   const [text, setText] = useState('');
   const [target, setTarget] = useState<EnhanceTarget | ''>('');
+  const [timing, setTiming] = useState<EnhanceTiming | null>(null);
   const original = useRef('');
   const result = useRef('');
   const controller = useRef<AbortController | null>(null);
@@ -60,6 +66,7 @@ export function usePromptEnhance({ prompt, setPrompt, mode, profile, imageId, li
     original.current = from;
     setText('');
     setTarget('');
+    setTiming(null);
     setPhase('loading');
     try {
       const finished = await streamEnhance({
@@ -67,8 +74,16 @@ export function usePromptEnhance({ prompt, setPrompt, mode, profile, imageId, li
         image: imageId ? { assetId: imageId } : null, again
       }, (event) => {
         if (event.type === 'start') setTarget(event.target);
-        else if (event.type === 'queued' || event.type === 'loading') setPhase(event.type);
-        else if (event.type === 'text') { setText(event.text); setPrompt(limit > 0 ? event.text.slice(0, limit) : event.text); setPhase('writing'); }
+        else if (event.type === 'queued' || event.type === 'loading') {
+          setPhase(event.type);
+          // Timed from here, not from the press: time queued behind a render was never part of it.
+          if (event.type === 'loading' && event.expect) setTiming({ expect: event.expect, startedAt: performance.now(), firstTextAt: 0 });
+        } else if (event.type === 'text') {
+          setTiming((current) => (current && !current.firstTextAt ? { ...current, firstTextAt: performance.now() } : current));
+          setText(event.text);
+          setPrompt(limit > 0 ? event.text.slice(0, limit) : event.text);
+          setPhase('writing');
+        }
       }, stop.signal);
       if (controller.current !== stop) return;
       const next = limit > 0 ? finished.slice(0, limit) : finished;
@@ -125,7 +140,7 @@ export function usePromptEnhance({ prompt, setPrompt, mode, profile, imageId, li
   useEffect(() => () => controller.current?.abort(), []);
 
   return {
-    phase, busy, text, verb, target,
+    phase, busy, text, verb, target, timing,
     working: busy ? enhanceWorking(target, phase === 'queued' ? 'queued' : phase === 'writing' ? 'writing' : 'loading') : '',
     settled: phase === 'done',
     run, again, stop, undo, dismiss

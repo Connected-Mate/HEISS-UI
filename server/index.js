@@ -17,7 +17,7 @@ import { promisify } from "node:util";
 import { printBanner } from './banner.js';
 import { releaseStatus, requestRestart, saveUpdatePrefs, startReleaseUpdate, warmReleaseCheck } from './updater.js';
 import { PORT_IN_USE_CODE, removeForeignLaunchers } from './release-swap.js';
-import { allowLanActions, comfy, comfyOutputDir, comfyRecentlyUnreachable, comfyUrl, demoMode, hasNode, host, inDotFolder, isComfyTimeout, lan, lanListening, localOutputFile, normalizeComfyUrl, noteComfyFetchError, noteComfyReachable, noteComfySilent, optionsFor, outputMediaPattern, port, requestedPort, root, saveLanSetting, setComfyFolderPaths, setComfyOutputDir, setComfyUrl, setListeningPort } from './comfy.js';
+import { allowLanActions, comfy, comfyOutputDir, comfyRecentlyUnreachable, comfyUrl, demoMode, hasNode, host, inDotFolder, isComfyTimeout, lan, lanListening, localOutputFile, normalizeComfyUrl, noteComfyFetchError, noteComfyReachable, noteComfySilent, onComfyGone, onComfyWork, optionsFor, outputMediaPattern, port, requestedPort, root, saveLanSetting, setComfyFolderPaths, setComfyOutputDir, setComfyUrl, setListeningPort } from './comfy.js';
 import { canAdmin, clientOf, deviceSession, studioPasswordSet } from './access.js';
 import { limitedCheck, registerAccessRoutes } from './access-routes.js';
 import { requestGuard } from './request-guard.js';
@@ -63,7 +63,8 @@ import { applyLoraOps, clearLoraState, loadLoraLibrary, loadLoraStack, saveLoraL
 import { inpaintInputNames, prepareInpaint } from './inpaint.js';
 import { bytesForReference, deleteUploadedReference, listReferenceAssets, readMultipartImage, readUploadedReference, referenceAssetFromGallery, resolveReferenceAssets, saveUploadedReference, stageReferenceAssets, uploadBufferToComfy } from './reference-assets.js';
 import { prepareInputImage } from './input-image-sizing.js';
-import { enhanceModel, enhancePlan, enhancerChoices, finishPrompt, loadEnhanceSettings, runEnhance, saveEnhanceSettings } from './prompt-enhance.js';
+import { enhanceModel, enhancePlan, enhancerChoices, finishPrompt, loadEnhanceSettings, promptLength, runEnhance, saveEnhanceSettings } from './prompt-enhance.js';
+import { expectEnhance, noteComfyGone, noteComfyWork, noteEnhanceRan, recordEnhanceRun } from './enhance-timing.js';
 import { nodePack, nodePacks } from './node-packs.js';
 import { beginComfyRestart, comfyRestartStartedAt, comfyRestarting, finishComfyRestart, lastComfyRestart, noteComfyRestart } from './comfy-restart.js';
 import { failedPacks, loadedPacks, logTextFromRaw, packLabel, restartChanges } from './restart-insights.js';
@@ -1090,6 +1091,10 @@ async function savedWorkflowFile(relative = "") {
   return body instanceof ArrayBuffer ? Buffer.from(body).toString("utf8") : body;
 }
 
+// What happens to ComfyUI's memory, for prompt enhance's learned timing.
+onComfyGone(noteComfyGone);
+onComfyWork(noteComfyWork);
+
 const importFetchers = {
   history: () => comfy("/history?max_items=200", { timeout: 20_000 }),
   saved: savedWorkflowFile
@@ -2100,6 +2105,13 @@ app.post("/api/enhance", async (req, res) => {
   const stop = new AbortController();
   res.on("close", () => { if (!res.writableFinished) stop.abort(); });
   send({ type: "start", target });
+  // Timed from when ComfyUI starts it (enhance-timing.js): the rim fills over the expected time,
+  // and a run that finished whole teaches the next one.
+  const timing = { model: status.model, image: Boolean(staged), target, asked: promptLength(target, family, (text.match(/\S+/g) || []).length) };
+  let expected = null;
+  let startedAt = 0;
+  let firstAt = 0;
+  let recorded = false;
   try {
     await runEnhance({
       model: status.model,
@@ -2111,11 +2123,27 @@ app.post("/api/enhance", async (req, res) => {
       seed: crypto.randomInt(0, 2 ** 31)
     }, {
       signal: stop.signal,
-      emit: (event) => send(event.text === undefined ? event : { ...event, text: finishPrompt(target, event.text, family) })
+      emit: (event) => {
+        const now = performance.now();
+        if (event.type === "loading" && !startedAt) {
+          startedAt = now;
+          expected = expectEnhance(timing);
+          send({ ...event, expect: expected });
+          return;
+        }
+        if (event.type === "text" && !firstAt) firstAt = now;
+        if (event.type === "done" && expected && startedAt && firstAt) {
+          const words = (String(event.text || "").match(/\S+/g) || []).length;
+          recorded = Boolean(recordEnhanceRun({ ...timing, situation: expected.situation, startMs: firstAt - startedAt, writeMs: now - firstAt, words }));
+        }
+        send(event.text === undefined ? event : { ...event, text: finishPrompt(target, event.text, family) });
+      }
     });
   } catch (error) {
     if (!error.stopped) send({ type: "error", error: error.message || "Prompt enhance failed." });
   } finally {
+    // Stopped or failed once ComfyUI had started it: nothing learned, but the model is loaded all the same.
+    if (startedAt && !recorded) noteEnhanceRan(status.model);
     if (staged?.temporary) await forgetComfyRun({ inputNames: [staged.comfyName] });
     res.end();
   }

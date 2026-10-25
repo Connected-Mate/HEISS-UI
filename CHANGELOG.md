@@ -89,6 +89,12 @@ version opens with a `> ` summary line, which the update pill shows.
   main model can be stood in for by one of the same family you have.
 
 ### Changed
+- **Prompt enhance shows how far along it is.** A quiet warm line traces the
+  prompt's edge and closes the ring as the new prompt finishes, timed from
+  how long enhancing takes on your computer: HEISS learns it as you use it,
+  separately for a first run that loads the model, one right after another,
+  and one after a render, with or without a picture. Time waiting behind a
+  render isn't counted. Its status reads in the app's usual type again.
 - **The phone gets 1.0's new parts made for it.** Prompt enhance writes the
   new prompt in word by word with the heat round the Create card, says what
   it's doing, and has a plain Stop; its button names what it will do

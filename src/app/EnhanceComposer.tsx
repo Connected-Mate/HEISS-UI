@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { RotateCcw, Undo2, X } from 'lucide-react';
 import { Tip } from './components';
 import { cn } from './format';
-import type { EnhancePhase, PromptEnhance } from './usePromptEnhance';
+import type { EnhancePhase, EnhanceTiming, PromptEnhance } from './usePromptEnhance';
 
 /**
  * Prompt enhance in the composer (usePromptEnhance.ts): the pixel flame that
@@ -81,19 +81,48 @@ export function EnhanceWords({ text, cursor = true }: { text: string; cursor?: b
 
 export const countWords = (text: string) => (text.match(/\S+/g) || []).length;
 
+/** Past its expected time a run keeps creeping toward the end, but never reaches it before it's done. */
+export function easedShare(x: number) {
+  if (!(x > 0)) return 0;
+  return x < 0.8 ? x : 0.8 + 0.17 * (1 - Math.exp(-(x - 0.8) / 0.35));
+}
+
 /**
- * The fuse: a short run of heat round the edge with a stepped tail. It idles
- * while the model loads and speeds up with every piece of text that arrives,
- * so a fast model visibly burns hotter. `pulse` is anything that grows as the
- * words come (the text's length).
+ * How far along a run is, 0 to 1, from what the server expected
+ * (enhance-timing.js). Until the first words its share is the expected wait
+ * over the whole; after them, the words written so far or the time spent
+ * writing, whichever is further. Null with nothing to go on.
  */
-export function EnhanceAura({ phase, pulse }: { phase: EnhancePhase; pulse: number }) {
+export function enhanceProgress(timing: EnhanceTiming | null | undefined, words: number, now: number) {
+  if (!timing) return null;
+  const { startMs, writeMs, words: expectedWords } = timing.expect;
+  const total = Math.max(1, startMs + writeMs);
+  const waiting = startMs / total;
+  if (!timing.firstTextAt) return waiting * easedShare((now - timing.startedAt) / Math.max(1, startMs));
+  const written = Math.max(words / Math.max(1, expectedWords), (now - timing.firstTextAt) / Math.max(1, writeMs));
+  return waiting + (1 - waiting) * easedShare(written);
+}
+
+/**
+ * The rim: heat traced along the prompt's edge. Once the server says how long
+ * the run should take, it fills from the top-left corner round the whole edge
+ * over that time, at an even pace along the outline (an SVG stroke, so the
+ * corners and the long sides move alike): a faint ember line under it, the
+ * trail behind cooling in steps, a white-hot tip with a bloom. Words arriving
+ * stoke it. With nothing expected (queued, the Settings preview) it runs as a
+ * fuse round the edge. Done, it closes the ring and flares.
+ */
+export function EnhanceAura({ phase, pulse, timing = null, words = 0 }: { phase: EnhancePhase; pulse: number; timing?: EnhanceTiming | null; words?: number }) {
   const reduced = useReducedMotion();
   const node = useRef<HTMLDivElement | null>(null);
+  const svg = useRef<SVGSVGElement | null>(null);
+  const head = useRef<HTMLElement | null>(null);
+  const [box, setBox] = useState({ w: 0, h: 0, r: 0 });
   const heat = useRef(0);
   const seen = useRef(pulse);
-  const writing = useRef(phase === 'writing');
-  writing.current = phase === 'writing';
+  // The loop reads the latest of these without restarting.
+  const live = useRef({ phase, timing, words });
+  live.current = { phase, timing, words };
 
   useEffect(() => {
     const grown = pulse - seen.current;
@@ -101,29 +130,91 @@ export function EnhanceAura({ phase, pulse }: { phase: EnhancePhase; pulse: numb
     if (grown > 0) heat.current = Math.min(1, heat.current + 0.14 + grown * 0.012);
   }, [pulse]);
 
+  // The outline follows the prompt's own box and corner radius.
+  useLayoutEffect(() => {
+    const aura = node.current;
+    if (!aura) return;
+    const measure = () => {
+      const rect = aura.getBoundingClientRect();
+      const radius = parseFloat(getComputedStyle(aura).borderTopLeftRadius) || 0;
+      setBox((current) => (current.w === rect.width && current.h === rect.height && current.r === radius ? current : { w: rect.width, h: rect.height, r: radius }));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(aura);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const aura = node.current;
-    if (!aura || reduced) return;
-    let angle = 0;
+    const outline = svg.current;
+    if (!aura || !outline || !box.w || reduced) return;
+    const measure = outline.querySelector<SVGRectElement>('[data-part="base"]');
+    // Every drawn layer, the blurred glow's own SVG included.
+    const paths = Array.from(aura.querySelectorAll<SVGRectElement>('rect[data-part]:not([data-part="base"])'));
+    if (!measure) return;
+    const length = measure.getTotalLength();
+    if (!length) return;
+    let shown = 0;
+    let loop = 0;
     let before = performance.now();
     let frame = 0;
+    const draw = (from: number, to: number) => {
+      // A dash pattern exactly one outline long repeats seamlessly, so a fuse can run past the start corner.
+      for (const path of paths) {
+        const part = path.dataset.part;
+        const span = to - from;
+        const piece = part === 'tip' ? Math.min(span, length * 0.012) : part === 'warm' || part === 'flame' ? Math.min(span, length * 0.09) : span;
+        path.style.strokeDasharray = `${piece} ${length - piece}`;
+        path.style.strokeDashoffset = `${-(to - piece)}`;
+      }
+      const point = measure.getPointAtLength(((to % length) + length) % length);
+      if (head.current) head.current.style.transform = `translate(${point.x}px, ${point.y}px)`;
+    };
     const step = (now: number) => {
       const seconds = Math.min(0.05, (now - before) / 1000);
       before = now;
+      const { phase: current, timing: clock, words: written } = live.current;
       heat.current = Math.max(0, heat.current - seconds * 0.9);
-      angle = (angle + seconds * ((writing.current ? 140 : 60) + heat.current * 420)) % 360;
-      aura.style.setProperty('--enhance-turn', `${angle.toFixed(2)}deg`);
       aura.style.setProperty('--enhance-heat', heat.current.toFixed(3));
+      const expected = current === 'done' ? 1 : enhanceProgress(clock, written, now);
+      if (expected === null) {
+        // Nothing expected yet: a fuse of a third of the edge, burning faster as the words come.
+        loop = (loop + seconds * (0.16 + heat.current * 0.5)) % 1;
+        draw(length * loop - length * 0.32, length * loop);
+      } else {
+        // Eases toward where the run should be, never backwards.
+        shown = Math.max(shown, shown + (expected - shown) * (1 - Math.exp(-seconds * 7)));
+        if (current === 'done' && expected - shown < 0.002) shown = 1;
+        draw(0, length * Math.min(1, shown));
+      }
       frame = requestAnimationFrame(step);
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [reduced]);
+  }, [box, reduced]);
 
+  const inset = 0.75;
+  const rect = { x: inset, y: inset, width: Math.max(0, box.w - inset * 2), height: Math.max(0, box.h - inset * 2), rx: Math.max(0, box.r - inset) };
   return (
-    <div ref={node} className={cn('enhance-aura', reduced && 'is-still')} data-phase={phase}>
-      <div className="enhance-glow"><i /></div>
-      <i className="enhance-edge" />
+    <div ref={node} className={cn('enhance-aura', reduced && 'is-still', phase === 'done' && 'is-done')} data-phase={phase}>
+      <i className="enhance-bloom" aria-hidden="true" />
+      {box.w ? (
+        // The glow blurs as a whole SVG: a filter on a shape inside one isn't drawn everywhere (Safari).
+        <svg className="enhance-rim enhance-rim-glow-layer" width={box.w} height={box.h} aria-hidden="true">
+          <rect {...rect} data-part="glow" className="enhance-rim-glow" />
+          <rect {...rect} data-part="flame" className="enhance-rim-flame" />
+        </svg>
+      ) : null}
+      {box.w ? (
+        <svg ref={svg} className="enhance-rim" width={box.w} height={box.h} aria-hidden="true">
+          <rect {...rect} data-part="base" className="enhance-rim-base" />
+          <rect {...rect} data-part="trail" className="enhance-rim-trail" />
+          <rect {...rect} data-part="warm" className="enhance-rim-warm" />
+          <rect {...rect} data-part="tip" className="enhance-rim-tip" />
+        </svg>
+      ) : null}
+      <i ref={head as React.RefObject<HTMLElement>} className="enhance-head" aria-hidden="true" />
     </div>
   );
 }
@@ -136,7 +227,18 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
   const reduced = useReducedMotion();
   const ghost = useRef<HTMLDivElement | null>(null);
   const [box, setBox] = useState<React.CSSProperties | null>(null);
-  const { busy, text, phase } = enhance;
+  const { busy, text, phase, timing } = enhance;
+  // A finished run's rim closes and flares before it fades, instead of vanishing mid-stroke.
+  const [finishing, setFinishing] = useState(false);
+  const wasBusy = useRef(busy);
+  useEffect(() => {
+    const ended = wasBusy.current && !busy && phase === 'done';
+    wasBusy.current = busy;
+    if (!ended || reduced) return;
+    setFinishing(true);
+    const timer = window.setTimeout(() => setFinishing(false), 700);
+    return () => { window.clearTimeout(timer); setFinishing(false); };
+  }, [busy, phase, reduced]);
 
   // The ghost sits exactly on the textarea, with its type, so the words land where they will stay.
   useLayoutEffect(() => {
@@ -162,7 +264,7 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
 
   return (
     <AnimatePresence>
-      {busy ? (
+      {busy || finishing ? (
         <motion.div
           key="aura"
           className="enhance-aura-shell"
@@ -172,7 +274,7 @@ export function EnhanceOverlay({ enhance, field, original }: { enhance: PromptEn
           exit={{ opacity: 0, scale: reduced ? 1 : 1.012, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
-          <EnhanceAura phase={phase} pulse={text.length} />
+          <EnhanceAura phase={finishing ? 'done' : phase} pulse={text.length} timing={timing} words={countWords(text)} />
         </motion.div>
       ) : null}
       {busy && box ? (

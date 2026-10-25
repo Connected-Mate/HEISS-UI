@@ -1,13 +1,9 @@
 /* Prompt enhance (src/app/EnhanceComposer.tsx), as cooling metal: a pixel
-   flame on the mark's grid, a fuse of heat round the prompt that burns faster
-   as the words come, and the words landing hot and cooling to white behind a
-   block cursor. One hue, the ember; steps, not blurs; mono for status. */
+   flame, heat traced round the prompt's rim that fills over the time the run
+   is expected to take (server/enhance-timing.js), and the words landing hot
+   and cooling to white behind a block cursor. One hue, the ember; steps, not
+   blurs. Status reads in the app's own type. */
 
-@property --enhance-turn {
-  syntax: "<angle>";
-  inherits: true;
-  initial-value: 0deg;
-}
 @property --enhance-heat {
   syntax: "<number>";
   inherits: true;
@@ -17,15 +13,6 @@
 :root {
   --ember-hot: #ffc08a;
   --ember-white: #fff1e4;
-  /* The fuse: a bright head and a tail that cools in steps, on a faint edge. */
-  --enhance-fuse: conic-gradient(from var(--enhance-turn),
-    transparent 0deg 250deg,
-    rgb(255 154 82 / .1) 250deg 274deg,
-    rgb(255 154 82 / .24) 274deg 298deg,
-    rgb(255 154 82 / .46) 298deg 320deg,
-    rgb(255 154 82 / .75) 320deg 340deg,
-    var(--ember-hot) 340deg 353deg,
-    var(--ember-white) 353deg 360deg);
 }
 
 /* ------------------------------------------------------------ The flame */
@@ -67,7 +54,7 @@
 .enhance-toggle.is-busy:hover .ember-glyph .cell { opacity: 0; animation: none; }
 .enhance-toggle.is-busy:hover .ember-glyph .stop { opacity: 1; }
 
-/* ------------------------------------------------------------ The fuse */
+/* ------------------------------------------------------------ The rim */
 
 .enhance-aura-shell,
 .enhance-aura {
@@ -78,45 +65,79 @@
 .enhance-aura-shell { inset: -1px; }
 .enhance-aura { inset: 0; }
 
-/* Light behind the glass: under the prompt's frosted surface (its ::before sits at -1). */
-.enhance-glow {
-  position: absolute;
-  inset: -6px;
-  z-index: -2;
-  border-radius: inherit;
-  filter: blur(16px);
-  opacity: calc(.4 + var(--enhance-heat) * .6);
-}
-.enhance-glow i,
-.enhance-edge {
+.enhance-rim {
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  overflow: visible;
+  fill: none;
+  stroke-linecap: round;
 }
-.enhance-glow i { padding: 9px; background: var(--enhance-fuse); }
-/* Heat rising off the bottom edge, stronger as the words come faster. */
-.enhance-aura::after {
+.enhance-rim rect { fill: none; }
+/* The fuse it burns along: a barely-there ember line round the whole edge. */
+.enhance-rim-base { stroke: rgb(255 154 82 / .08); stroke-width: 1; }
+/* Behind the line, a soft warmth on the glass, a little stronger where it is still burning. */
+.enhance-rim-glow-layer {
+  filter: blur(6px);
+  opacity: calc(.16 + var(--enhance-heat) * .16);
+}
+.enhance-rim-glow { stroke: rgb(255 140 80 / .4); stroke-width: 4; }
+.enhance-rim-flame { stroke: rgb(255 176 120 / .55); stroke-width: 5; }
+/* What has burnt: a quiet cooled line. */
+.enhance-rim-trail { stroke: rgb(255 154 82 / .3); stroke-width: 1; }
+/* The stretch just behind the tip, a touch warmer. */
+.enhance-rim-warm { stroke: rgb(255 192 138 / .55); stroke-width: 1.25; }
+/* The tip: warm, not white. */
+.enhance-rim-tip { stroke: rgb(255 214 180 / .8); stroke-width: 1.5; }
+
+/* A small soft glow where it burns. */
+.enhance-head {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  will-change: transform;
+}
+.enhance-head::before {
   content: "";
+  position: absolute;
+  left: -12px;
+  top: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 214 180 / .38) 0, rgb(255 154 82 / .14) 40%, transparent 70%);
+  transform: scale(calc(.8 + var(--enhance-heat) * .2));
+}
+/* A faint warmth under the bottom edge while it works. */
+.enhance-bloom {
   position: absolute;
   inset: -22px;
   z-index: -3;
   border-radius: calc(var(--r-panel) + 22px);
-  background: radial-gradient(ellipse 55% 70% at 50% 100%, rgb(255 120 60 / .2), transparent 70%);
+  background: radial-gradient(ellipse 55% 70% at 50% 100%, rgb(255 120 60 / .07), transparent 70%);
   filter: blur(10px);
-  opacity: calc(.35 + var(--enhance-heat) * .65);
+  opacity: calc(.4 + var(--enhance-heat) * .3);
 }
-/* A crisp line on the glass: the fuse over a faint ember edge. */
-.enhance-edge {
-  z-index: 2;
-  padding: 1.25px;
-  background: var(--enhance-fuse), linear-gradient(rgb(255 154 82 / .16) 0 0);
+
+/* Done: the ring closes with a gentle warm-up, then the shell fades out. */
+.enhance-aura.is-done .enhance-rim-glow-layer { animation: enhance-flare 700ms var(--motion-ease) both; }
+.enhance-aura.is-done .enhance-rim-trail { stroke: rgb(255 154 82 / .45); transition: stroke 300ms var(--motion-ease); }
+.enhance-aura.is-done .enhance-head { opacity: 0; transition: opacity 250ms var(--motion-ease); }
+@keyframes enhance-flare {
+  0% { opacity: .2; }
+  40% { opacity: .38; }
+  100% { opacity: 0; }
 }
-/* No motion: an even edge rather than a fuse stopped in one corner. */
-.enhance-aura.is-still .enhance-edge { background: rgb(255 154 82 / .55); }
-.enhance-aura.is-still .enhance-glow i { background: rgb(255 154 82 / .35); }
+
+/* No motion: an even, steady edge rather than a tip frozen somewhere. */
+.enhance-aura.is-still .enhance-rim-base { stroke: rgb(255 154 82 / .35); }
+.enhance-aura.is-still .enhance-rim-glow-layer { opacity: .15; }
+.enhance-aura.is-still .enhance-rim-trail,
+.enhance-aura.is-still .enhance-rim-warm,
+.enhance-aura.is-still .enhance-rim-tip,
+.enhance-aura.is-still .enhance-rim-flame,
+.enhance-aura.is-still .enhance-head { display: none; }
 
 .zen-prompt.is-enhancing { border-color: transparent; }
 /* The person's words stay in the textarea underneath until the new ones are done. */
@@ -188,10 +209,10 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  font: 500 10.5px/1 var(--font-mono);
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: hsl(var(--foreground) / .82);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: hsl(var(--foreground) / .86);
   white-space: nowrap;
 }
 .enhance-status-label { overflow: hidden; text-overflow: ellipsis; }
@@ -359,7 +380,6 @@
   transition: color var(--motion-slow) var(--motion-ease), background var(--motion-slow) var(--motion-ease);
 }
 .enhance-hero-card.is-writing .enhance-hero-spark { color: var(--ember-hot); background: var(--ember-soft); }
-.enhance-hero .enhance-glow { z-index: -2; }
 
 .enhance-choices { display: grid; gap: 2px; margin: 4px 0 0; padding: 0; list-style: none; }
 .enhance-choice button {
@@ -451,16 +471,16 @@
   border-radius: inherit;
   background: var(--well);
 }
-.enhance-preview .enhance-aura::after { display: none; }
-.enhance-preview .enhance-glow { inset: -3px; filter: blur(10px); }
+.enhance-preview .enhance-bloom { display: none; }
+.enhance-preview .enhance-rim-glow-layer { filter: blur(5px); }
 .enhance-preview-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font: 500 10.5px/1 var(--font-mono);
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
   color: hsl(var(--muted-foreground));
 }
 .enhance-preview-head span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

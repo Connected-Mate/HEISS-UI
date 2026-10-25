@@ -79,9 +79,15 @@ export async function saveEnhanceSettings(patch: Partial<EnhanceSettings>) {
 
 export type EnhanceRequest = { prompt: string; kind: 'image' | 'video'; family: string; variant: string; editing: boolean; image?: { assetId: string } | null; again?: boolean };
 
+/**
+ * What a run should take, learned on the server (enhance-timing.js), sent when
+ * ComfyUI starts it: until the first words, and from them to the last.
+ */
+export type EnhanceExpectation = { situation: 'cold' | 'warm' | 'after-render' | 'idle'; startMs: number; writeMs: number; words: number; learned: boolean };
+
 export type EnhanceEvent =
   | { type: 'start'; target: EnhanceTarget }
-  | { type: 'queued' } | { type: 'loading' }
+  | { type: 'queued' } | { type: 'loading'; expect?: EnhanceExpectation }
   | { type: 'text'; text: string } | { type: 'done'; text: string }
   | { type: 'error'; error: string };
 
