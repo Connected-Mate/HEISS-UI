@@ -16,15 +16,35 @@ import type { EnhancePhase, PromptEnhance } from './usePromptEnhance';
 const isMac = typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent);
 export const enhanceShortcut = isMac ? '⌘E' : 'Ctrl+E';
 
-/** The flame on the mark's pixel grid: [x, y] cells, and how far up each sits, so heat can rise through it. */
-const FLAME: Array<[number, number]> = [[2, 0], [1, 1], [2, 1], [1, 2], [2, 2], [3, 2], [0, 3], [1, 3], [2, 3], [3, 3], [4, 3], [1, 4], [2, 4], [3, 4]];
+/**
+ * The flame on a seven-by-seven pixel grid, top row first: a leaning tip, a
+ * side flick, a hollow core and a round foot, so it reads as fire and not as
+ * a little tree. Drawn solid: at this size the mark's cell gaps turn it into
+ * a dotted grid.
+ */
+const FLAME_ROWS = [
+  '....X..',
+  '...XX..',
+  '..XXX.X',
+  '.XXXXXX',
+  '.XX.XXX',
+  '.X...X.',
+  '..XXX..'
+];
+const FLAME: Array<[number, number]> = FLAME_ROWS.flatMap((row, y) => [...row].flatMap((cell, x) => (cell === 'X' ? [[x, y] as [number, number]] : [])));
+const FLAME_SIZE = FLAME_ROWS.length;
 
-/** Prompt enhance's glyph: a five-by-five pixel flame. Lit, heat climbs through it a row at a time. */
+/**
+ * Prompt enhance's glyph: the pixel flame. Lit, heat climbs through it a row at
+ * a time. It snaps to whole device pixels per cell (`size` rounds to a multiple
+ * of seven), so its edges stay crisp instead of going soft and grey.
+ */
 export function EmberGlyph({ size = 14, lit = false, className }: { size?: number; lit?: boolean; className?: string }) {
+  const box = Math.max(1, Math.round(size / FLAME_SIZE)) * FLAME_SIZE;
   return (
-    <svg className={cn('ember-glyph', lit && 'is-lit', className)} width={size} height={size} viewBox="0 0 5 5" shapeRendering="crispEdges" aria-hidden="true">
-      {FLAME.map(([x, y]) => <rect key={`${x}${y}`} className="cell" x={x + 0.08} y={y + 0.08} width={0.84} height={0.84} style={{ '--i': 4 - y } as React.CSSProperties} />)}
-      <rect className="stop" x={1.08} y={1.08} width={2.84} height={2.84} />
+    <svg className={cn('ember-glyph', lit && 'is-lit', className)} width={box} height={box} viewBox={`0 0 ${FLAME_SIZE} ${FLAME_SIZE}`} shapeRendering="crispEdges" aria-hidden="true">
+      {FLAME.map(([x, y]) => <rect key={`${x}-${y}`} className="cell" x={x} y={y} width={1} height={1} style={{ '--i': FLAME_SIZE - 1 - y } as React.CSSProperties} />)}
+      <rect className="stop" x={2} y={2} width={3} height={3} />
     </svg>
   );
 }
