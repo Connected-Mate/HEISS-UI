@@ -16,6 +16,7 @@ import { useHiddenActions } from './hiddenContext';
 import type { UpscaleNotice } from './useUpscale';
 import { useDismiss } from './useDismiss';
 import { HapticTarget } from './phoneControls';
+import { galleryItemDragType } from "./ReferenceMediaPicker";
 import { sharesWithoutSettings } from './shareSettings';
 
 /**
@@ -161,6 +162,15 @@ function GalleryTileComponent({ cancelJob, copyPromptAndToast, deleteItem, forma
           if (item.status !== "pending") openItem(item);
         }}
         aria-pressed={selecting && selectable ? isSelected : undefined}
+        // A finished picture drags onto the prompt bar as a reference (ReferenceMediaPicker).
+        draggable={item.status === "done" && item.type === "image" && !selecting}
+        onDragStart={(event) => {
+          if (item.status !== "done" || item.type !== "image") return;
+          event.dataTransfer.setData(galleryItemDragType, item.id);
+          event.dataTransfer.effectAllowed = "copy";
+          const picture = event.currentTarget.querySelector("img");
+          if (picture) event.dataTransfer.setDragImage(picture, picture.width / 2, picture.height / 2);
+        }}
       >
         {item.status === "pending" || item.status === "done" ? (
           <GenerationMedia item={item} muted>

@@ -10,6 +10,9 @@ import { deleteReferenceAsset, listReferenceAssets, referenceAssetFromGallery, u
 import type { MediaInput, ReferenceAsset, ReferenceInpaint, ReferenceRoleControl, SelectedReferenceAsset } from "./types";
 import { InpaintStudio } from "./InpaintStudio";
 import { SafeImg } from './SafeImg';
+
+/** A gallery picture being dragged (GalleryTile): its gallery id, used as a reference when dropped on the prompt bar. */
+export const galleryItemDragType = "application/x-heiss-gallery-item";
 import { showToastTone } from './toast';
 
 type PickerTab = "generation" | "hidden" | "upload";
@@ -702,7 +705,7 @@ export function ReferenceSlots({ inputs, inpaint = null, role = null, selected, 
   // What the window's drag/paste listeners and a finishing upload read: always this render's.
   // (Through a ref, so a parent's new onError each render doesn't re-add the listeners, which
   // dropped the drop overlay's pending clear and left it on screen.)
-  const live = React.useRef<{ upload: (file: File | undefined, slot: string) => Promise<ReferenceAsset | null>; targetSlot: () => string; openSlot: string; blockedMessage: string; usableIds: string; onError?: (message: string) => void }>(null!);
+  const live = React.useRef<{ upload: (file: File | undefined, slot: string) => Promise<ReferenceAsset | null>; pickGalleryItem: (galleryItemId: string, slot: string) => Promise<ReferenceAsset | null>; targetSlot: () => string; openSlot: string; blockedMessage: string; usableIds: string; onError?: (message: string) => void }>(null!);
   const upload = React.useCallback(async (file: File | undefined, slot: string) => {
     if (!file || !slot || uploadSlot) return null;
     if (!isImageFile(file)) { live.current.onError?.("Choose an image file"); return null; }
@@ -731,11 +734,29 @@ export function ReferenceSlots({ inputs, inpaint = null, role = null, selected, 
    * uploads", over the prompt bar "use as reference", anywhere else nothing.
    * The indicator's spotlight tracks the pointer; a drop lands with a pulse.
    */
-  live.current = { upload, targetSlot, openSlot, blockedMessage, usableIds, onError };
+  // A gallery picture dropped on the prompt bar: no upload, the server copies it into the references.
+  const pickGalleryItem = React.useCallback(async (galleryItemId: string, slot: string) => {
+    if (!galleryItemId || !slot || uploadSlot) return null;
+    setUploadSlot(slot);
+    try {
+      const asset = await referenceAssetFromGallery(galleryItemId);
+      if (!live.current.usableIds.split(" ").includes(slot)) { live.current.onError?.(live.current.blockedMessage); return null; }
+      onSelect(slot, asset);
+      setFreshSlot(slot);
+      window.setTimeout(() => setFreshSlot(""), inputs.find((input) => input.id === slot)?.follows ? 1600 : 700);
+      return asset;
+    } catch (error) {
+      live.current.onError?.(error instanceof Error ? error.message : "Couldn’t use this image");
+      return null;
+    } finally {
+      setUploadSlot("");
+    }
+  }, [inputs, onSelect, uploadSlot]);
+  live.current = { upload, pickGalleryItem, targetSlot, openSlot, blockedMessage, usableIds, onError };
   React.useEffect(() => {
     if (!host || !inputs.length) return;
     // Names aren't readable mid-drag, so an untyped file counts until the drop checks it.
-    const hasImage = (event: DragEvent) => Array.from(event.dataTransfer?.items || []).some((item) => item.kind === "file" && (!item.type || item.type.startsWith("image/")));
+    const hasImage = (event: DragEvent) => Boolean(event.dataTransfer?.types.includes(galleryItemDragType)) || Array.from(event.dataTransfer?.items || []).some((item) => item.kind === "file" && (!item.type || item.type.startsWith("image/")));
     const targetOf = (event: DragEvent): "" | "prompt" | "popover" => {
       const node = event.target instanceof Element ? event.target : null;
       if (node?.closest(".reference-popover")) return "popover";
@@ -767,6 +788,16 @@ export function ReferenceSlots({ inputs, inpaint = null, role = null, selected, 
       const target = targetOf(event);
       window.clearTimeout(clearTimer);
       setDropTarget("");
+      const galleryId = event.dataTransfer?.getData(galleryItemDragType) || "";
+      if (galleryId && target) {
+        event.preventDefault();
+        setLanding(true);
+        window.setTimeout(() => setLanding(false), 520);
+        const into = live.current.targetSlot();
+        if (!into) { live.current.onError?.(live.current.blockedMessage); return; }
+        live.current.pickGalleryItem(galleryId, into).then((asset) => { if (asset) setOpenSlot(""); });
+        return;
+      }
       const file = Array.from(event.dataTransfer?.files || []).find(isImageFile);
       if (!file || !target) return;
       event.preventDefault();
