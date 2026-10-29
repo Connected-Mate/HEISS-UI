@@ -14,7 +14,7 @@ import { keptMessage, missedUpscaleState, pairRunOutputs, runUpscaleState } from
 import { writeCivitaiParameters } from './civitai.js';
 import { markWorkflowUsed } from './workflow-catalog.js';
 import { remainingMs, RunTimer, slowSteps } from './generation-timing.js';
-import { gptViewUrl, makeImages } from './gptimage.js';
+import { gptViewUrl, makeImages, rememberThreads } from './gptimage.js';
 import { generationEstimate, generationWarm, recordGeneration, recordUpscale, upscaleEstimate } from './timings.js';
 import { upscaleLeftMs, upscaleWork } from './upscale-timing.js';
 
@@ -828,6 +828,8 @@ export async function runGptJob(id, body, references = []) {
   } finally {
     clearInterval(ticker);
   }
+  // Saved or stopped, these runs are settled: recovery (gpt-recover.js) leaves them alone.
+  rememberThreads(results.map((item) => item?.threadId).filter(Boolean));
   const status = jobs.get(id)?.status;
   if (controller.signal.aborted || status === "canceling" || status === "canceled") {
     setTerminalJob(id, { status: "canceled" });

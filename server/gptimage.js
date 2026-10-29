@@ -10,12 +10,51 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { comfyOutputDir } from "./comfy.js";
+import { comfyOutputDir, root } from "./comfy.js";
 import { loadSharp } from "./sharp-loader.js";
 
 export const gptSubfolder = "gptimage";
+/** Codex threads of runs in flight here, so recovery (gpt-recover.js) never takes a picture a run is about to save. */
+export const activeThreads = new Set();
 const codexBin = process.env.HEISS_CODEX_BIN || "codex";
-const codexHome = process.env.CODEX_HOME ? path.resolve(process.env.CODEX_HOME) : path.join(os.homedir(), ".codex");
+export const codexHome = process.env.CODEX_HOME ? path.resolve(process.env.CODEX_HOME) : path.join(os.homedir(), ".codex");
+const dataDir = process.env.HEISS_DATA_DIR || process.env.JAI_DATA_DIR ? path.resolve(process.env.HEISS_DATA_DIR || process.env.JAI_DATA_DIR) : path.join(root, "data");
+export const knownThreadsPath = path.join(dataDir, "gpt-threads.json");
+/** Names this studio's data folder in every brief, so recovery never takes another copy's pictures. */
+export const studioTag = `heiss-${crypto.createHash("sha256").update(path.resolve(dataDir)).digest("hex").slice(0, 10)}`;
+
+/**
+ * Codex threads the studio has settled: saved into the gallery, stopped by
+ * the person, or recovered. Anything else that drew a picture from a studio
+ * brief was lost on the way (the server stopped mid-run) and gpt-recover.js
+ * brings it back.
+ */
+let knownThreads = null;
+export function knownThreadSet() {
+  if (!knownThreads) {
+    try {
+      knownThreads = new Set(JSON.parse(fs.readFileSync(knownThreadsPath, "utf8")).threads || []);
+    } catch {
+      knownThreads = null;
+      return null;
+    }
+  }
+  return knownThreads;
+}
+export function rememberThreads(ids = []) {
+  const set = knownThreadSet() || (knownThreads = new Set());
+  let changed = false;
+  for (const id of ids) if (id && !set.has(id)) { set.add(id); changed = true; }
+  if (!changed) return;
+  try {
+    fs.mkdirSync(path.dirname(knownThreadsPath), { recursive: true });
+    const temp = `${knownThreadsPath}.${process.pid}.tmp`;
+    fs.writeFileSync(temp, JSON.stringify({ threads: [...set] }));
+    fs.renameSync(temp, knownThreadsPath);
+  } catch (error) {
+    console.warn(`  [HEISS] Couldn’t save the GPT Image run list: ${error.message}`);
+  }
+}
 const runTimeoutMs = Math.max(60_000, Number(process.env.HEISS_GPT_TIMEOUT_MS || 6 * 60 * 1000));
 const maxReferences = 8;
 // One prompt per image, a few at once: the subscription rate-limits beyond that.
@@ -47,6 +86,7 @@ export function agentPrompt({ prompt, width, height, referenceCount = 0, mode = 
   } else {
     lines.push("Pass the user's request to image_gen word for word.");
   }
+  lines.push(`Run tag (bookkeeping only, not part of the image): ${studioTag}`);
   lines.push("", "USER REQUEST:", String(prompt || "").trim());
   return lines.join("\n");
 }
@@ -85,7 +125,7 @@ function newestPng(dir, since) {
 }
 
 /**
- * One image from one agent prompt. Resolves to the PNG Codex wrote;
+ * One image from one agent prompt. Resolves to { file, threadId }: the PNG Codex wrote and its thread;
  * `signal` aborts the agent.
  */
 export function runAgentImage({ prompt, references = [], width, height, workDir, signal }) {
@@ -111,10 +151,14 @@ export function runAgentImage({ prompt, references = [], width, height, workDir,
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      // Released a little later: the picture is saved by then, and recovery sees it as known.
+      if (threadId) setTimeout(() => activeThreads.delete(threadId), 60_000).unref?.();
       signal?.removeEventListener?.("abort", onAbort);
       fn(value);
     };
     const onAbort = () => {
+      // Stopped on purpose: whatever this thread still draws is not wanted back.
+      if (threadId) rememberThreads([threadId]);
       child.kill("SIGTERM");
       finish(reject, Object.assign(new Error("Canceled"), { canceled: true }));
     };
@@ -129,7 +173,10 @@ export function runAgentImage({ prompt, references = [], width, height, workDir,
       while ((index = buffered.indexOf("\n")) >= 0) {
         const line = buffered.slice(0, index);
         buffered = buffered.slice(index + 1);
-        threadId ||= threadIdFrom(line);
+        if (!threadId) {
+          threadId = threadIdFrom(line);
+          if (threadId) activeThreads.add(threadId);
+        }
         try {
           const event = JSON.parse(line);
           if (event?.type === "item.completed" && event.item?.type === "agent_message") lastMessage = String(event.item.text || "");
@@ -137,7 +184,7 @@ export function runAgentImage({ prompt, references = [], width, height, workDir,
           // The turn is over: take the picture now. Codex can linger a while after its last turn.
           if (event?.type === "turn.completed" && threadId) {
             const file = newestPng(path.join(codexHome, "generated_images", threadId), startedAt);
-            if (file) { child.kill("SIGTERM"); finish(resolve, file); }
+            if (file) { child.kill("SIGTERM"); finish(resolve, { file, threadId }); }
           }
         } catch { /* not an event */ }
       }
@@ -146,7 +193,7 @@ export function runAgentImage({ prompt, references = [], width, height, workDir,
     child.on("error", (error) => finish(reject, new Error(friendlyError(error.message))));
     child.on("close", (code) => {
       const file = threadId ? newestPng(path.join(codexHome, "generated_images", threadId), startedAt) : "";
-      if (file) { finish(resolve, file); return; }
+      if (file) { finish(resolve, { file, threadId }); return; }
       finish(reject, new Error(friendlyError(`${stderr} ${lastMessage}`, code)));
     });
     child.stdin.end(prompt);
@@ -206,11 +253,11 @@ export async function makeImages({ prompt, count = 1, width, height, references 
       const index = next++;
       if (signal?.aborted) return;
       try {
-        const file = await runAgentImage({ prompt: brief, references: files, width, height, workDir, signal });
+        const { file, threadId } = await runAgentImage({ prompt: brief, references: files, width, height, workDir, signal });
         const fitted = await fitToSize(fs.readFileSync(file), width, height);
         const name = `${safeStem(prompt)}-${Date.now()}-${crypto.randomBytes(3).toString("hex")}.png`;
         fs.writeFileSync(path.join(outDir, name), fitted.buffer);
-        results[index] = { index, filename: name, width: fitted.width, height: fitted.height };
+        results[index] = { index, filename: name, width: fitted.width, height: fitted.height, threadId };
         onImage(results[index]);
       } catch (error) {
         if (error?.canceled) return;

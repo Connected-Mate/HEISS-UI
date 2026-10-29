@@ -43,6 +43,7 @@ import { civitaiPrefs, saveCivitaiPrefs } from './civitai.js';
 import { emptyTrash, restoreTrash, scheduleTrashPurge, trashGalleryItems, trashSummary } from './gallery-trash.js';
 import { jobs, queueClearsAt, runGptJob, runJob, runMockJob, setTerminalJob } from './jobs.js';
 import { codexReady } from './gptimage.js';
+import { startGptRecovery } from './gpt-recover.js';
 import { cancelPrompt, cancelPrompts } from './comfy-queue.js';
 import { loraInfos } from './lora-info.js';
 import { hfEndpoint, hfTokenStatus, saveHfToken } from './hf-access.js';
@@ -2586,6 +2587,8 @@ startServers(app, {
       const found = answering || demoMode ? "" : await findComfy({ current: comfyUrl });
       if (!(found && adoptFoundComfy(found)) && !answering && !demoMode) console.log(`    ComfyUI isn’t answering at ${comfyUrl} yet. The studio connects once it starts.\n`);
     }).catch(() => {});
+    // GPT Image: pictures a stopped server never saved come back into the gallery.
+    if (gptMode) startGptRecovery();
     // Tells scripts/start.mjs this version runs, so a fresh update is kept, and where to open it.
     process.send?.({ type: "ready", version: appVersion, url: `http://${shownHost}:${pagePort}` });
   }

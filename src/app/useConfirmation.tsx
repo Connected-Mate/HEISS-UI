@@ -16,6 +16,7 @@ export function useConfirmation(enabled: boolean) {
   const resolveRef = useRef<((value: boolean) => void) | null>(null);
   const promptResolveRef = useRef<((value: string | null) => void) | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const actionRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // A second request while one is open waits its turn instead of being refused.
@@ -78,11 +79,12 @@ export function useConfirmation(enabled: boolean) {
         title={pending?.title}
         description={pending?.description}
         hideClose
-        initialFocus={cancelRef}
+        // Enter confirms (the action has focus); a removal that can't be undone starts on Cancel instead.
+        initialFocus={pending?.irreversible ? cancelRef : actionRef}
         footer={
           <>
             <button ref={cancelRef} className="btn" onClick={() => settle(false)}>Cancel</button>
-            <button className={pending?.destructive ? 'btn is-danger' : 'btn is-primary'} onClick={() => settle(true)}>{pending?.action}</button>
+            <button ref={actionRef} className={pending?.destructive ? 'btn is-danger' : 'btn is-primary'} onKeyDown={(event) => { if (event.repeat) event.preventDefault(); }} onClick={() => settle(true)}>{pending?.action}</button>
           </>
         }
       />
