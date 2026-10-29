@@ -2046,7 +2046,9 @@ app.get("/api/jobs/:id", (req, res) => {
     res.json({ status: safeJob.status, privateVault: true });
     return;
   }
-  res.json({ ...safeJob, items: revealGalleryItemsForRequest(safeJob.items || []) });
+  // Runs that only tick their gallery tile (GPT Image) say how far along they are here too, for the whiteboard.
+  const progress = safeJob.progress || (["queued", "running"].includes(safeJob.status) ? gallery.find((item) => item.jobId === req.params.id && item.progress)?.progress : undefined);
+  res.json({ ...safeJob, ...(progress ? { progress } : {}), items: revealGalleryItemsForRequest(safeJob.items || []) });
 });
 
 app.post("/api/jobs/:id/cancel", async (req, res) => {

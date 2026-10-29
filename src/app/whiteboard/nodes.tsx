@@ -2,6 +2,8 @@ import React from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, Handle, NodeResizer, Position, type EdgeProps, type NodeProps } from '@xyflow/react';
 import { ChevronLeft, ChevronRight, ImageOff, Minus, Plus, Sparkles, Square, X } from 'lucide-react';
 import { cn } from '../format';
+import { serverClockOffset } from '../api';
+import type { Progress } from '../types';
 import { boardAspects, maxCount, maxReferences, type BoardAspect, type BoardEdge, type GenerateNode, type ImageNode, type ImageNodeData } from './board';
 
 export type BoardActions = {
@@ -22,6 +24,8 @@ export type Lineage = { nodes: Set<string>; links: Set<string> } | null;
 export const BoardActionsContext = React.createContext<BoardActions | null>(null);
 export const BoardReferencesContext = React.createContext<Map<string, ReferenceList>>(new Map());
 export const BoardLineageContext = React.createContext<Lineage>(null);
+/** How far each running prompt is, as the server tells it (/api/jobs/:id progress), by node id. */
+export const BoardProgressContext = React.createContext<Map<string, Progress>>(new Map());
 const useActions = () => React.useContext(BoardActionsContext)!;
 const noReferences: ReferenceList = [];
 const useReferences = (nodeId: string) => React.useContext(BoardReferencesContext).get(nodeId) || noReferences;
@@ -43,6 +47,21 @@ const expectedMs = 45_000;
 export function runShare(startedAt: number | undefined, now: number) {
   if (!startedAt) return 0.02;
   return Math.max(0.02, Math.min(0.97, 1 - Math.exp(-(now - startedAt) / expectedMs)));
+}
+
+/**
+ * Where a run stands: the server's own estimate when it has one (start and
+ * expected end, on its clock), drawn smoothly between polls; otherwise the
+ * curve above from when this browser sent it.
+ */
+export function runStanding(progress: Progress | undefined, startedAt: number | undefined, now: number) {
+  const serverNow = now + serverClockOffset;
+  if (progress?.runStartedAt && progress.endsAt && progress.endsAt > progress.runStartedAt) {
+    const share = Math.max(0.02, Math.min(0.97, (serverNow - progress.runStartedAt) / (progress.endsAt - progress.runStartedAt)));
+    return { share, elapsed: serverNow - progress.runStartedAt, left: Math.max(0, progress.endsAt - serverNow), phase: progress.phase || 'Generating' };
+  }
+  if (progress?.max) return { share: Math.max(0.02, Math.min(0.97, progress.value / progress.max)), elapsed: now - (startedAt || now), left: 0, phase: progress.phase || 'Generating' };
+  return { share: runShare(startedAt, now), elapsed: now - (startedAt || now), left: 0, phase: 'Generating' };
 }
 
 function Thumb({ src, alt }: { src: string; alt: string }) {
@@ -87,7 +106,9 @@ export const GenerateNodeView = React.memo(function GenerateNodeView({ id, data,
   const empty = !data.prompt.trim();
   const dim = lineage && !lineage.nodes.has(id);
   const now = useNow(running);
-  const share = running ? runShare(data.startedAt, now) : 0;
+  const progress = React.useContext(BoardProgressContext).get(id);
+  const standing = runStanding(progress, data.startedAt, now);
+  const share = running ? standing.share : 0;
   const reason = actions.blocked || (empty ? 'Write a prompt first' : '');
   const promptId = `wb-prompt-${id}`;
   return (
@@ -159,7 +180,7 @@ export const GenerateNodeView = React.memo(function GenerateNodeView({ id, data,
       {running ? (
         <div className="wb-progress nodrag" role="status">
           <div className="wb-progress-track" aria-hidden><i style={{ transform: `scaleX(${share})` }} /></div>
-          <span className="wb-progress-text">Generating{data.count > 1 ? ` ${data.count} images` : ''} · {formatSeconds(now - (data.startedAt || now))}</span>
+          <span className="wb-progress-text">{standing.phase}{data.count > 1 ? ` · ${data.count} images` : ''} · {formatSeconds(standing.elapsed)}{standing.left > 3000 ? ` · about ${formatSeconds(standing.left)} left` : ''}</span>
           <button type="button" className="wb-cancel" onClick={() => actions.cancel(id)}><Square size={10} fill="currentColor" /> Stop</button>
         </div>
       ) : (

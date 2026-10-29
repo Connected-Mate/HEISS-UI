@@ -26,7 +26,7 @@ import { cn } from '../format';
 import { uploadReferenceAsset } from '../api';
 import type { ConfirmAction, PromptText } from '../useConfirmation';
 import type { ShowToast } from '../toast';
-import type { GalleryItem, Job, ReferenceAsset } from '../types';
+import type { GalleryItem, Job, Progress, ReferenceAsset } from '../types';
 import {
   BoardConflict,
   boardApi,
@@ -53,7 +53,7 @@ import {
   type ImageNodeData,
   type StoredBoard
 } from './board';
-import { BoardActionsContext, BoardLineageContext, BoardReferencesContext, edgeTypes, nodeTypes, type BoardActions, type ReferenceList } from './nodes';
+import { BoardActionsContext, BoardLineageContext, BoardProgressContext, BoardReferencesContext, edgeTypes, nodeTypes, type BoardActions, type ReferenceList } from './nodes';
 import { GalleryPicker } from './GalleryPicker';
 
 export type WhiteboardProps = {
@@ -438,6 +438,16 @@ function Canvas({ initial, boards, onClose, onRenamed, onSaved, onSwitch, onCrea
 
   // ---- Generating.
   const posting = React.useRef(new Set<string>());
+  // Kept beside the nodes, not in them: a tick of progress isn't a change to the board to save.
+  const [progress, setProgress] = React.useState<Map<string, Progress>>(new Map());
+  const noteProgress = React.useCallback((genId: string, value: Progress | undefined) => {
+    setProgress((current) => {
+      if (!value && !current.has(genId)) return current;
+      const next = new Map(current);
+      if (value) next.set(genId, value); else next.delete(genId);
+      return next;
+    });
+  }, []);
   const polling = React.useRef(new Set<string>());
   const patchGenerate = React.useCallback((id: string, patch: Partial<GenerateNode['data']>) => {
     setNodes((current) => current.map((node) => node.id === id && node.type === 'generate' ? { ...node, data: { ...node.data, ...patch } } as GenerateNode : node));
@@ -494,6 +504,8 @@ function Canvas({ initial, boards, onClose, onRenamed, onSaved, onSwitch, onCrea
           patchGenerate(genId, { status: 'error', error: 'Lost the connection to HEISS UI. The image may still finish in the gallery.' });
           return;
         }
+        if (job.status === 'queued' || job.status === 'running') { noteProgress(genId, job.progress); continue; }
+        noteProgress(genId, undefined);
         if (job.status === 'done') {
           placeResults(genId, job.outputs || [], prompt);
           patchGenerate(genId, { status: 'done', error: undefined });
@@ -505,8 +517,9 @@ function Canvas({ initial, boards, onClose, onRenamed, onSaved, onSwitch, onCrea
       }
     } finally {
       polling.current.delete(jobId);
+      if (mountedRef.current) noteProgress(genId, undefined);
     }
-  }, [patchGenerate, placeResults]);
+  }, [noteProgress, patchGenerate, placeResults]);
 
   // A board opened while its prompts were running picks the runs back up.
   React.useEffect(() => {
@@ -756,6 +769,7 @@ function Canvas({ initial, boards, onClose, onRenamed, onSaved, onSwitch, onCrea
     <BoardActionsContext.Provider value={actions}>
     <BoardReferencesContext.Provider value={referenceMap}>
     <BoardLineageContext.Provider value={lineage}>
+    <BoardProgressContext.Provider value={progress}>
       <div
         ref={wrapperRef}
         className={cn('wb-canvas', dropping && 'is-dropping', zoom < 0.4 && 'is-far')}
@@ -889,6 +903,7 @@ function Canvas({ initial, boards, onClose, onRenamed, onSaved, onSwitch, onCrea
         ) : null}
       </div>
       <GalleryPicker open={pickerOpen} onOpenChange={setPickerOpen} onAdd={(assets) => addAssets(assets)} showToast={showToast} />
+    </BoardProgressContext.Provider>
     </BoardLineageContext.Provider>
     </BoardReferencesContext.Provider>
     </BoardActionsContext.Provider>
