@@ -17,7 +17,7 @@ import { promisify } from "node:util";
 import { printBanner } from './banner.js';
 import { releaseStatus, requestRestart, saveUpdatePrefs, startReleaseUpdate, warmReleaseCheck } from './updater.js';
 import { PORT_IN_USE_CODE, removeForeignLaunchers } from './release-swap.js';
-import { allowLanActions, lan, lanListening, saveLanSetting, demoMode, comfy, comfyRecentlyUnreachable, inDotFolder, localOutputFile, outputMediaPattern, comfyOutputDir, comfyUrl, host, noteComfyFetchError, noteComfyReachable, noteComfySilent, isComfyTimeout, normalizeComfyUrl, optionsFor, port, root, setComfyFolderPaths, setComfyOutputDir, setComfyUrl, requestedPort, setListeningPort } from './comfy.js';
+import { allowLanActions, lan, lanListening, saveLanSetting, demoMode, gptMode, comfy, comfyRecentlyUnreachable, inDotFolder, localOutputFile, outputMediaPattern, comfyOutputDir, comfyUrl, host, noteComfyFetchError, noteComfyReachable, noteComfySilent, isComfyTimeout, normalizeComfyUrl, optionsFor, port, root, setComfyFolderPaths, setComfyOutputDir, setComfyUrl, requestedPort, setListeningPort } from './comfy.js';
 import { canAdmin, clientOf, deviceSession, studioPasswordSet } from './access.js';
 import { limitedCheck, registerAccessRoutes } from './access-routes.js';
 import { requestGuard } from './request-guard.js';
@@ -40,7 +40,8 @@ import { forgetItemVideoPreviews, forgetPrivateVideoPreviews, getComfyVideoPoste
 import { sendMediaBuffer } from './media-response.js';
 import { civitaiPrefs, saveCivitaiPrefs } from './civitai.js';
 import { emptyTrash, restoreTrash, scheduleTrashPurge, trashGalleryItems, trashSummary } from './gallery-trash.js';
-import { jobs, queueClearsAt, runJob, runMockJob, setTerminalJob } from './jobs.js';
+import { jobs, queueClearsAt, runGptJob, runJob, runMockJob, setTerminalJob } from './jobs.js';
+import { codexReady } from './gptimage.js';
 import { cancelPrompt, cancelPrompts } from './comfy-queue.js';
 import { loraInfos } from './lora-info.js';
 import { hfEndpoint, hfTokenStatus, saveHfToken } from './hf-access.js';
@@ -61,7 +62,7 @@ import { adoptHiddenRuns, forgetHiddenRunKeys, settleHiddenRuns, withoutHiddenRu
 import { sendGalleryExport } from './gallery-export.js';
 import { applyLoraOps, clearLoraState, loadLoraLibrary, loadLoraStack, saveLoraLibrary, saveLoraStack } from './lora-stacks.js';
 import { inpaintInputNames, prepareInpaint } from './inpaint.js';
-import { deleteUploadedReference, listReferenceAssets, readMultipartImage, readUploadedReference, referenceAssetFromGallery, saveUploadedReference, stageReferenceAssets } from './reference-assets.js';
+import { bytesForReference, deleteUploadedReference, listReferenceAssets, readMultipartImage, readUploadedReference, referenceAssetFromGallery, saveUploadedReference, stageReferenceAssets } from './reference-assets.js';
 import { nodePack, nodePacks } from './node-packs.js';
 import { beginComfyRestart, comfyRestartStartedAt, comfyRestarting, finishComfyRestart, lastComfyRestart, noteComfyRestart } from './comfy-restart.js';
 import { failedPacks, loadedPacks, logTextFromRaw, packLabel, restartChanges } from './restart-insights.js';
@@ -711,6 +712,12 @@ function adoptFoundComfy(found) {
 let lastComfyAnswer = { url: "", version: "", device: "" };
 
 app.get("/api/comfy/status", async function comfyStatus(req, res) {
+  // GPT Image: the "server" is the ChatGPT sign-in Codex holds; there is no ComfyUI to ask.
+  if (gptMode) {
+    const ready = codexReady();
+    res.json({ connected: ready, engine: "gptimage", url: "chatgpt", latencyMs: 0, version: "GPT Image", device: "ChatGPT subscription", ...(ready ? {} : { error: "Signed out of ChatGPT: run codex login" }) });
+    return;
+  }
   const startedAt = performance.now();
   const sentAt = Date.now();
   const controller = new AbortController();
@@ -1641,7 +1648,7 @@ app.post("/api/generate", async (req, res) => {
   let isMockJob = false;
   let context = null;
   try {
-    context = await loadComfyContext();
+    if (!gptMode) context = await loadComfyContext();
   } catch (error) {
     // Placeholder generations are only for agent and UI testing without a GPU.
     if (!demoMode) {
@@ -1679,6 +1686,29 @@ app.post("/api/generate", async (req, res) => {
       startImageId: String(req.body?.startImageId || ""),
       startImageName: String(req.body?.startImageName || "")
     };
+  }
+  // GPT Image: every attached reference goes to the agent as a file, read now so a gone one fails before the run.
+  let gptReferences = [];
+  if (gptMode) {
+    if (body.kind !== "image") {
+      res.status(400).json({ ok: false, error: "GPT Image makes pictures only." });
+      return;
+    }
+    if (!codexReady()) {
+      res.status(503).json({ ok: false, error: "Sign in to ChatGPT first: run `codex login` in a terminal, then try again." });
+      return;
+    }
+    const ids = [...new Set([...(req.body?.referenceAssets || []).map((item) => String(item?.assetId || "")), String(req.body?.startImageId || "")].filter(Boolean))].slice(0, 8);
+    try {
+      gptReferences = [];
+      for (const assetId of ids) gptReferences.push(await bytesForReference(req, assetId));
+    } catch (error) {
+      res.status(400).json({ ok: false, error: error.message });
+      return;
+    }
+    body.referenceAssets = ids.map((assetId, index) => ({ slot: "reference", assetId, name: gptReferences[index]?.name || "" }));
+    body.startImageId = ids[0] || "";
+    body.startImageName = gptReferences[0]?.name || "";
   }
   // What is made from a Hidden image stays hidden, wherever it was asked for.
   const fromHidden = [...(req.body?.referenceAssets || []).map((item) => item?.assetId), req.body?.startImageId].some((id) => String(id || "").startsWith("vault:"));
@@ -1775,7 +1805,12 @@ app.post("/api/generate", async (req, res) => {
   setGallery(dedupeGallery([...items, ...gallery]).slice(0, galleryLimit));
   jobs.set(id, { status: "queued", kind: body.kind, prompt: body.prompt, outputs: [], items, startedAt: body.startedAt, privateVault: body.privateVault, vaultKey: body.privateVault ? requestKey : null });
   res.json({ jobId: id, items, hidden: body.privateVault, revision: galleryRevisionValue(), ...(inpaintSkipped ? { notice: "Nothing painted showed up in the mask, so this ran as a normal edit of the whole picture." } : {}) });
-  if (isMockJob) {
+  if (gptMode) {
+    setTimeout(() => runGptJob(id, body, gptReferences).catch((error) => {
+      setTerminalJob(id, { status: "error", error: error.message });
+      updateGalleryJob(id, { status: "error", filename: error.message });
+    }), 0);
+  } else if (isMockJob) {
     setTimeout(() => runMockJob(id, body), 0);
   } else {
     setTimeout(() => runJob(id, body, { prepare: body.autoUpscale ? (graph) => smartUpscalePrepare(graph, body) : null }).catch(() => null), 0);
@@ -1974,6 +2009,7 @@ app.post("/api/jobs/:id/cancel", async (req, res) => {
     return;
   }
   jobs.set(req.params.id, { ...job, status: "canceling" });
+  job.abort?.();
   // Its pictures are saved and only Smart upscale is left: they stay, and runJob delivers them.
   if (!job.keepsPicture) updateGalleryJob(req.params.id, { status: "canceled" });
   // Without a prompt id yet, runJob takes it back out of ComfyUI as soon as /prompt answers.
@@ -2067,6 +2103,7 @@ function cancelOwnJobs() {
   for (const [id, job] of jobs) {
     if (job.status === "queued" || job.status === "running" || job.status === "canceling") {
       if (job.promptId) promptIds.push(job.promptId);
+      job.abort?.();
       // Only upscaling now: its pictures stay, and runJob delivers them once ComfyUI lets go.
       if (job.keepsPicture) {
         jobs.set(id, { ...job, status: "canceling" });

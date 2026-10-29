@@ -137,10 +137,10 @@ export function printBanner({ version = "", url = "", comfyUrl = "" } = {}, stre
   const pad = "  ";
   const info = [
     "",
-    `${pad}${dim("local studio for ComfyUI", depth)}${version ? dim(`  ·  v${version}`, depth) : ""}`,
+    `${pad}${dim(process.env.HEISS_ENGINE === "gptimage" ? "local studio for GPT Image" : "local studio for ComfyUI", depth)}${version ? dim(`  ·  v${version}`, depth) : ""}`,
     "",
     `${pad}${ember("➜", depth)}  Open      ${url}`,
-    `${pad}${dim("➜", depth)}  ComfyUI   ${dim(comfyUrl, depth)}`,
+    process.env.HEISS_ENGINE === "gptimage" ? `${pad}${dim("➜", depth)}  Images    ${dim("ChatGPT subscription, through Codex", depth)}` : `${pad}${dim("➜", depth)}  ComfyUI   ${dim(comfyUrl, depth)}`,
     ""
   ];
   const write = (lines) => stream.write(lines.map((line) => `${pad}${line}`).join("\n") + "\n");

@@ -92,7 +92,8 @@ export function localOutputFile(filename, subfolder = "", type = "output") {
 }
 
 // Resolved, so a hand-written `D:/x` becomes `D:\x` on Windows (Explorer opens its default view otherwise).
-export let comfyOutputDir = process.env.COMFY_OUTPUT_DIR ? path.resolve(process.env.COMFY_OUTPUT_DIR) : "";
+// The GPT Image engine has no ComfyUI to own an output folder, so its pictures default to ~/Pictures/HEISS.
+export let comfyOutputDir = process.env.COMFY_OUTPUT_DIR ? path.resolve(process.env.COMFY_OUTPUT_DIR) : process.env.HEISS_ENGINE === "gptimage" ? path.join(os.homedir(), "Pictures", "HEISS") : "";
 
 /**
  * Turn whatever got pasted into a folder path: Explorer's "Copy as path" wraps it
@@ -173,7 +174,9 @@ export function modelFolders(kind, subfolders = [kind]) {
 // from the socket address alone.
 export const allowLanActions = process.env.HEISS_ALLOW_LAN === "1" || process.env.JAI_ALLOW_LAN === "1" || lanListening;
 /** Fake models and placeholder generations when ComfyUI is unreachable. A dev opt-in for agent and UI testing without a GPU. */
-export const demoMode = process.env.HEISS_DEMO === "1";
+/** GPT Image engine (gptimage.js): images come from a local Codex agent on the ChatGPT subscription, no ComfyUI. */
+export const gptMode = process.env.HEISS_ENGINE === "gptimage";
+export const demoMode = process.env.HEISS_DEMO === "1" || gptMode;
 
 /*
  * Whether ComfyUI just failed to answer. On Windows a refused localhost

@@ -34,7 +34,7 @@ export function ConnectedCard({ at, device }: { at: number; device?: string }) {
   useEffect(() => {
     if (!at || at === played) return;
     played = at;
-    toast.success('ComfyUI connected', { id: 'comfy-connected', description: device || 'Ready to generate', glyph: <ConnectedGlyph />, duration: SHOW_MS });
+    toast.success(device === 'ChatGPT subscription' ? 'ChatGPT connected' : 'ComfyUI connected', { id: 'comfy-connected', description: device || 'Ready to generate', glyph: <ConnectedGlyph />, duration: SHOW_MS });
   }, [at, device]);
   return null;
 }

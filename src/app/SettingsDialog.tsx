@@ -696,6 +696,8 @@ export function SettingsDialog({ view, open, section, onSectionChange, onClose, 
     health, refreshHealth, models, refreshModels, refreshWorkflows, modelFolders,
     updateStatus, updateBusy, checkForUpdates, installUpdate, restartForUpdate, restartHeiss, restarting, setUpdatePrefs, refreshUpdateStatus, workflows, modelProfiles
   } = view;
+  // GPT Image draws in ChatGPT: no ComfyUI models to manage, no ComfyUI upscaling or inpainting.
+  const gptEngine = (models as { engine?: string } | null)?.engine === 'gptimage';
   const current = SETTINGS_SECTIONS.find((item) => item.id === section) || SETTINGS_SECTIONS[0];
 
   // Models nothing picked up, plus the ones you assigned by hand so they can be undone.
@@ -789,7 +791,7 @@ export function SettingsDialog({ view, open, section, onSectionChange, onClose, 
   return (
     <Modal open={open} onOpenChange={(next) => { if (!next) onClose(); }} size="sheet" className="settings-modal" bodyClassName="set-layout" title="Settings">
       <nav className="set-nav" aria-label="Settings sections">
-        {SETTINGS_SECTIONS.filter((item) => thisComputer || item.id !== 'models').map((item) => {
+        {SETTINGS_SECTIONS.filter((item) => (thisComputer || item.id !== 'models') && !(gptEngine && (item.id === 'models' || item.id === 'features'))).map((item) => {
           const Icon = item.icon;
           return (
             <button key={item.id} type="button" className={cn('set-nav-item', section === item.id && 'active')} aria-current={section === item.id ? 'page' : undefined} aria-controls="settings-panel" data-section={item.id} onClick={() => onSectionChange(item.id)}>

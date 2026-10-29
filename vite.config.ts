@@ -24,7 +24,7 @@ function precompress(): Plugin {
 // proxied request reaches it from 127.0.0.1 (see server/client-trust.js).
 const devProxyToken = process.env.HEISS_DEV_PROXY_TOKEN || "";
 const api: ProxyOptions = {
-  target: "http://127.0.0.1:8787",
+  target: `http://127.0.0.1:${process.env.PORT || 8787}`,
   configure(proxy) {
     if (!devProxyToken) return;
     proxy.on("proxyReq", (proxyReq, req) => {

@@ -96,6 +96,7 @@ const ZenStrip = memoLatest(function ZenStrip({ items, activeId, stripRef, onPoi
 });
 
 function comfyStatusLabel(status: any) {
+  if (status?.engine === "gptimage") return status.connected ? "ChatGPT connected · GPT Image on your subscription" : "Signed out of ChatGPT · run codex login in a terminal";
   if (status?.restarting) return "ComfyUI is restarting…";
   if (status?.checking) return "Checking ComfyUI…";
   if (status?.busy) return `ComfyUI is busy${status.device ? ` · ${status.device}` : ""} · slow to answer, runs carry on`;
@@ -119,6 +120,8 @@ function ComfyConnectionDot({ status, retrying, onClick }: { status: any; retryi
 
 export function StudioView({ view }: { view: Record<string, any> }) {
   const { active, applyAllSettings, applyLoras, applyAspect, aspectOptions, aspectPickerValue, aspectValue, aspectLocked, defaultAspectSize, canUseStartImage, cancelJob, cancelQueue, characterMeta, clickViewer, comfyStatus, galleryGroups, stackRuns, openRuns, setRunOpen, unstackRun, copyToClipboard, copyItemToClipboard, count, countMeta, currentProfile, customSize, deleteItem, zenGallery, formatElapsed, galleryColumnCount, galleryLoaded, galleryCrossing, galleryStageRef, generate, generateDisabled, generateDisabledReason, generationDetailEntries, goLatestZen, hasMoreGallery, height, heightMeta, isDraggingViewer, loadMoreGalleryItems, loraActiveCount, mode, model, modelProfiles, models, moveViewer, moveViewerTouch, moveZen, negative, negativeLimit, onGalleryScroll, openItem, prefs, hiddenSpace, hideItems, unhideItems, profileBadges, prompt, promptLimit, refreshComfyStatus, removeReferenceAsset, renderedGallery, resetViewer, runningCount, selectReferenceAsset, setActive, setCount, setHeight, setNegative, setPrompt, setSettings, setShowDetails, setShowGenerationSettings, setShowNegativePrompt, setSteps, setWidth, setWorkflowGalleryOpen, setZenControls, setZenGalleryOpen, setZenMode, showDetails, settings, showGenerationSettings, showNegativePrompt, showToast, sidebarControls, startViewerDrag, startViewerTouch, steps, stepsMeta, stopViewerDrag, submitZenPrompt, useOutputAsStartImage, viewerDragEndRef, viewerDragRef, viewerPan, viewerZoom, wheelViewer, width, widthMeta, workflowGalleryOpen, zenControls, zenDisplayItem, zenGalleryOpen, zenItem, zenPromptRef, zenStripRef, dragViewer, dragZenStrip, endViewerTouch, selectZenItem, startZenStripDrag, stopZenStripDrag, titleFromPrompt, zoomViewer, clampText, promptRemaining, chooseModel, pickModel, modelMenu, visibleGallery, upscaleBusyIds, activateUpscale, cancelUpscale, upscaleDisplayUrl, upscaleSetup, upscaleStatus, upscaleInstall, upscaleUnavailableReason, health, setPrefs, upscaleNotices, dismissUpscaleNotice, refreshModels, refreshWorkflows, modelFolders } = view;
+  // Smart upscale runs through ComfyUI, which the GPT Image engine does without.
+  const smartUpscaleOn = prefs.smartUpscale !== false && comfyStatus?.engine !== "gptimage";
   // Smart upscale works on images, and only while it is on in Settings.
   const strayModelCount = modelFolders?.strayCount || 0;
   const canUseNegativePrompt = currentProfile?.capabilities?.negativePrompt !== false;
@@ -258,7 +261,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
   const phoneItemActions: PhoneItemActions = {
     star: (item) => toggleFavorite([item], !item.favorite),
     showToast,
-    smartUpscale: prefs.smartUpscale !== false,
+    smartUpscale: smartUpscaleOn,
     upscaleBusy: (item) => Boolean(upscaleBusyIds?.has(item.id)),
     upscale: activateUpscale,
     cancelUpscale,
@@ -502,7 +505,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
               items={renderedGallery}
               openItem={openItem}
               scrollRef={galleryStageRef}
-              smartUpscale={prefs.smartUpscale !== false}
+              smartUpscale={smartUpscaleOn}
               upscaleBusyIds={upscaleBusyIds}
               onUpscale={activateUpscale}
               onCancelUpscale={cancelUpscale}
@@ -1037,7 +1040,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
                     </Tip>
                   ) : null}
                   {canUseStartImage && active.status === "done" && active.type === "image" && active.url && !active.vaultLocked && !active.library ? <Tip content="Use as reference image"><button className="icon-button" aria-label="Use as reference image" onClick={() => useOutputAsStartImage(active)}><ImagePlus size={15} /></button></Tip> : null}
-                  {prefs.smartUpscale !== false && canUpscaleItem(active) ? (
+                  {smartUpscaleOn && canUpscaleItem(active) ? (
                     <span className="upscale-notice-anchor">
                     {upscaleNotices?.get(active.id) ? <UpscaleNoticePopover notice={upscaleNotices.get(active.id)} placement="viewer" onDismiss={() => dismissUpscaleNotice(active.id)} /> : null}
                     <ViewerUpscaleButton item={active} busy={Boolean(upscaleBusyIds?.has(active.id))} onCancel={cancelUpscale} onActivate={activateUpscale} />

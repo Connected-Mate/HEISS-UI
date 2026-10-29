@@ -14,6 +14,7 @@ import { keptMessage, missedUpscaleState, pairRunOutputs, runUpscaleState } from
 import { writeCivitaiParameters } from './civitai.js';
 import { markWorkflowUsed } from './workflow-catalog.js';
 import { remainingMs, RunTimer, slowSteps } from './generation-timing.js';
+import { gptViewUrl, makeImages } from './gptimage.js';
 import { generationEstimate, generationWarm, recordGeneration, recordUpscale, upscaleEstimate } from './timings.js';
 import { upscaleLeftMs, upscaleWork } from './upscale-timing.js';
 
@@ -796,6 +797,73 @@ export function runMockJob(id, body) {
       }, 400);
     }
   }, 350);
+}
+
+/**
+ * A run on the GPT Image engine (gptimage.js): one agent prompt per image,
+ * progress estimated from how long an image usually takes.
+ */
+export async function runGptJob(id, body, references = []) {
+  const controller = new AbortController();
+  const job = jobs.get(id);
+  if (job) job.abort = () => controller.abort();
+  const count = Math.max(1, Math.min(8, Number(body.count || 1)));
+  const expectedMs = 45_000;
+  const startedAt = Date.now();
+  updateGalleryJob(id, { status: "running", progress: { step: 1, maxSteps: 100, nodeName: "GPT Image" } }, { persist: false });
+  const ticker = setInterval(() => {
+    const share = 1 - Math.exp(-(Date.now() - startedAt) / expectedMs);
+    updateGalleryJob(id, { progress: { step: Math.max(1, Math.min(97, Math.round(share * 100))), maxSteps: 100, nodeName: "GPT Image" } }, { persist: false });
+  }, 1000);
+  let results = [];
+  try {
+    results = await makeImages({ prompt: body.prompt, count, width: Number(body.width || 1024), height: Number(body.height || 1024), references, signal: controller.signal });
+  } finally {
+    clearInterval(ticker);
+  }
+  const status = jobs.get(id)?.status;
+  if (controller.signal.aborted || status === "canceling" || status === "canceled") {
+    setTerminalJob(id, { status: "canceled" });
+    updateGalleryJob(id, { status: "canceled" });
+    return;
+  }
+  const completedAt = new Date().toISOString();
+  const outputs = results.filter((item) => item?.filename).map((item, index) => ({
+    id: `${id}-${index}`,
+    jobId: id,
+    index,
+    url: gptViewUrl(item.filename),
+    filename: item.filename,
+    type: "image",
+    status: "done",
+    completedAt,
+    elapsedMs: Date.now() - startedAt,
+    width: item.width,
+    height: item.height,
+    model: body.model || "gpt-image",
+    prompt: body.prompt,
+    negative: ""
+  }));
+  if (!outputs.length) {
+    const error = results.find((item) => item?.error)?.error || "The image couldn’t be made.";
+    setTerminalJob(id, { status: "error", error });
+    updateGalleryJob(id, { status: "error", error, filename: error });
+    return;
+  }
+  if (body.privateVault) {
+    try {
+      const { items } = await storeHiddenOutputs(jobs.get(id)?.vaultKey, outputs, body, gallery.filter((item) => item.jobId === id));
+      removeGalleryJob(id);
+      setTerminalJob(id, { status: "done", outputs: items });
+    } catch (error) {
+      setTerminalJob(id, { status: "error", error: error.message });
+      updateGalleryJob(id, { status: "error", filename: "Couldn’t save to Hidden" });
+    }
+    return;
+  }
+  replaceGalleryJob(id, outputs, body, jobs);
+  markWorkflowUsed(body.profileId || body.model || "", outputs[0]?.url || "");
+  setTerminalJob(id, { status: "done", outputs });
 }
 
 export { runJob };

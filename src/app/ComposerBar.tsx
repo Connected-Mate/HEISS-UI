@@ -334,7 +334,9 @@ export function ComposerBar(props: ComposerBarProps) {
     />
   );
 
-  const stepsPicker = (density: ControlDensity) => (
+  // GPT Image has no sampler: nothing to step, and no negative prompt to offer.
+  const gptEngine = currentProfile?.family === "gptimage";
+  const stepsPicker = (density: ControlDensity) => gptEngine ? null : (
     <NumberPicker label="Steps" icon={<CircleDotDashed size={14} />} density={density} value={steps} onChange={setSteps} min={stepsMeta.min || 1} max={stepsMeta.max || 150} step={stepsMeta.step || 1} size="sm" />
   );
 
@@ -400,7 +402,7 @@ export function ComposerBar(props: ComposerBarProps) {
       </AnimatePresence>
       <div className="zen-prompt-actions" ref={rowRef} data-density-level={level}>
         <div className="prompt-left-actions" data-fluid-group>
-          <Tip content={!canUseNegativePrompt ? "This model doesn’t use a negative prompt" : showNegativePrompt ? "Hide negative prompt" : "Show negative prompt"}>
+          {gptEngine ? null : <Tip content={!canUseNegativePrompt ? "This model doesn’t use a negative prompt" : showNegativePrompt ? "Hide negative prompt" : "Show negative prompt"}>
             <button
               data-open-trigger
               type="button"
@@ -412,7 +414,7 @@ export function ComposerBar(props: ComposerBarProps) {
               <ChevronUp size={13} className={cn(!showNegativePrompt && "flip")} />
               {plan.negative.density === "full" ? "Negative" : null}
             </button>
-          </Tip>
+          </Tip>}
           {onToggleHistory ? (
             // Styled as the Negative toggle at its icon-only size: one family of composer controls.
             <Tip content="Recent prompts (↑ in an empty prompt)">

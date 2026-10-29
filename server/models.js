@@ -244,7 +244,55 @@ export function offlineModelResult(comfyUrl = "") {
 }
 
 /** Fake models for HEISS_DEMO=1 (agent and UI testing without ComfyUI). */
+/** The GPT Image engine's one model: no sampler, steps, CFG, seed or LoRAs, just prompt, size and references. */
+export function gptModelResult() {
+  const profile = buildProfile({
+    id: "gpt-image",
+    kind: "image",
+    label: "GPT Image",
+    displayName: "GPT Image",
+    description: "ChatGPT’s image model, on your ChatGPT subscription",
+    model: "gpt-image",
+    baseModel: "gpt-image",
+    workflow: "gptimage",
+    family: "gptimage",
+    defaults: { width: 1024, height: 1024, steps: 1, cfg: 1, sampler: "euler", scheduler: "simple" },
+    aspects: [["1:1", 1024, 1024], ["3:2", 1536, 1024], ["2:3", 1024, 1536], ["16:9", 1536, 864], ["9:16", 864, 1536]]
+      .map(([label, w, h]) => ({ label, value: `${w}x${h}`, w, h, default: w === 1024 && h === 1024 })),
+    // Up to six pictures to draw from or edit, each slot opening once the one before is filled.
+    mediaInputs: Array.from({ length: 6 }, (_, index) => ({
+      id: index ? `reference_${index + 1}` : "reference",
+      kind: "image", required: false, min: 0, max: 1,
+      label: index ? `Reference ${index + 1}` : "Reference image",
+      role: "reference",
+      ...(index ? { follows: index > 1 ? `reference_${index}` : "reference" } : {})
+    })),
+    maxLoras: 1,
+    capabilities: {
+      negativePrompt: false, steps: false, seed: false, cfg: false, sampler: false, scheduler: false,
+      lora: false, startImage: true, startImageRequired: false, variations: true
+    }
+  });
+  return {
+    engine: "gptimage",
+    imageModels: [{ label: profile.label, value: profile.id }],
+    videoModels: [],
+    profiles: [profile],
+    unsupportedModels: [],
+    textEncoders: [],
+    vaes: [],
+    clipTypes: [],
+    weightDtypes: [],
+    samplers: ["euler"],
+    schedulers: ["simple"],
+    loras: [],
+    defaults: { imageModel: profile.id, videoModel: "" },
+    capabilities: { image: true, video: false, startImage: true }
+  };
+}
+
 export function mockModelResult() {
+  if (process.env.HEISS_ENGINE === "gptimage") return gptModelResult();
   const imageProfiles = [
     buildProfile({
       id: "mock-flux-schnell",
