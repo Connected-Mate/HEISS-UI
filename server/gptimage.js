@@ -134,6 +134,11 @@ export function runAgentImage({ prompt, references = [], width, height, workDir,
           const event = JSON.parse(line);
           if (event?.type === "item.completed" && event.item?.type === "agent_message") lastMessage = String(event.item.text || "");
           if (event?.type === "error" || event?.type === "turn.failed") stderr += ` ${JSON.stringify(event)}`;
+          // The turn is over: take the picture now. Codex can linger a while after its last turn.
+          if (event?.type === "turn.completed" && threadId) {
+            const file = newestPng(path.join(codexHome, "generated_images", threadId), startedAt);
+            if (file) { child.kill("SIGTERM"); finish(resolve, file); }
+          }
         } catch { /* not an event */ }
       }
     });

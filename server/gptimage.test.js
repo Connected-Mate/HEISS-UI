@@ -34,6 +34,9 @@ process.stdin.on("end", () => {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "exec-1.png"), Buffer.from(${JSON.stringify(png)}, "base64"));
     console.log(JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "DONE" } }));
+    console.log(JSON.stringify({ type: "turn.completed" }));
+    // Like Codex after a code-tool turn: done, but the process stays up a while.
+    if (mode === "linger") setTimeout(() => {}, 20000);
   };
   if (mode === "slow") setTimeout(finish, 20000); else finish();
 });
@@ -118,6 +121,14 @@ for (const [mode, pattern] of [["fail", /couldn’t be made/], ["auth", /signed 
     assert.equal(fs.readdirSync(path.join(outputDir, "gptimage")).length, before);
   });
 }
+
+test("a finished turn delivers the picture even while Codex lingers", async () => {
+  process.env.FAKE_CODEX = "linger";
+  const startedAt = Date.now();
+  const results = await gpt.makeImages({ prompt: "linger", count: 1, width: 1024, height: 1024 });
+  assert.ok(results[0]?.filename);
+  assert.ok(Date.now() - startedAt < 5000);
+});
 
 test("canceling stops the agent right away", async () => {
   process.env.FAKE_CODEX = "slow";

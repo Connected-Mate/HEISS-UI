@@ -808,13 +808,20 @@ export async function runGptJob(id, body, references = []) {
   const job = jobs.get(id);
   if (job) job.abort = () => controller.abort();
   const count = Math.max(1, Math.min(8, Number(body.count || 1)));
-  const expectedMs = 45_000;
+  // About 50 s an image, two at a time; the bar runs on that clock and stretches if ChatGPT is slower.
+  const expectedMs = 50_000 * Math.ceil(count / 2);
   const startedAt = Date.now();
-  updateGalleryJob(id, { status: "running", progress: { step: 1, maxSteps: 100, nodeName: "GPT Image" } }, { persist: false });
-  const ticker = setInterval(() => {
-    const share = 1 - Math.exp(-(Date.now() - startedAt) / expectedMs);
-    updateGalleryJob(id, { progress: { step: Math.max(1, Math.min(97, Math.round(share * 100))), maxSteps: 100, nodeName: "GPT Image" } }, { persist: false });
-  }, 1000);
+  let endsAt = startedAt + expectedMs;
+  const progress = () => {
+    const now = Date.now();
+    if (now > endsAt - 4000) endsAt = now + 8000;
+    const value = Math.max(1, Math.min(97, Math.round(((now - startedAt) / (endsAt - startedAt)) * 100)));
+    return { value, max: 100, phase: "Drawing with ChatGPT", runStartedAt: startedAt, endsAt };
+  };
+  // The tile stays "pending" (it shows the bar and Stop); only the job itself is running.
+  if (job) jobs.set(id, { ...job, status: "running" });
+  updateGalleryJob(id, { progress: progress() }, { persist: false });
+  const ticker = setInterval(() => updateGalleryJob(id, { progress: progress() }, { persist: false }), 1000);
   let results = [];
   try {
     results = await makeImages({ prompt: body.prompt, count, width: Number(body.width || 1024), height: Number(body.height || 1024), references, signal: controller.signal });
