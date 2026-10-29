@@ -53,6 +53,7 @@
     "@types/react-dom": "^19.2.3",
     "@videojs/react": "^10.0.1",
     "@vitejs/plugin-react": "^5.1.2",
+    "@xyflow/react": "12.12.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "concurrently": "^9.2.1",

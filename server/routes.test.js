@@ -153,3 +153,29 @@ test("the gallery's trash and other dot folders are never served, not even throu
     }
   }
 });
+
+test("whiteboards: create, save with links, refuse a stale save, rename, list and delete", async () => {
+  const created = await api("/api/boards", { method: "POST", body: { name: "Route board" } });
+  assert.equal(created.status, 201);
+  const { id, revision } = created.body.board;
+  const nodes = [
+    { id: "a", type: "image", x: 0, y: 0, data: { assetId: "asset-a", url: "/api/reference-assets/a/media", name: "a.png" } },
+    { id: "g", type: "generate", x: 300, y: 0, data: { prompt: "a fox", aspect: "3:2", count: 1 } }
+  ];
+  const saved = await api(`/api/boards/${id}`, { method: "PUT", body: { baseRevision: revision, board: { name: "Route board", nodes, edges: [{ id: "e", source: "a", target: "g", order: 0 }] } } });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.board.edges.length, 1);
+  const stale = await api(`/api/boards/${id}`, { method: "PUT", body: { baseRevision: revision, board: { nodes: [] } } });
+  assert.equal(stale.status, 409);
+  assert.equal(stale.body.board.nodes.length, 2);
+  const renamed = await api(`/api/boards/${id}`, { method: "PATCH", body: { name: "Renamed" } });
+  assert.equal(renamed.body.board.name, "Renamed");
+  const list = await api("/api/boards");
+  assert.ok(list.body.boards.some((board) => board.id === id && board.name === "Renamed" && board.nodeCount === 2));
+  // Changes need the studio's header or JSON: a plain cross-site form post is refused.
+  const plain = await fetch(`${base}/api/boards/${id}`, { method: "DELETE" });
+  assert.equal(plain.status, 403);
+  const removed = await api(`/api/boards/${id}`, { method: "DELETE", headers: { "x-heiss": "1" } });
+  assert.equal(removed.status, 200);
+  assert.equal((await api(`/api/boards/${id}`)).status, 404);
+});

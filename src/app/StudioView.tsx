@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNeighborPrefetch } from './useNeighborPrefetch';
 import { GridAutoplayButton } from './GridAutoplayButton';
-import { ArrowLeft, ChevronDown, CircleStop, Columns2, ChevronLeft, ChevronRight, ChevronUp, Download, Eye, EyeOff, GalleryHorizontalEnd, ImagePlus, Lock, LockKeyhole, Maximize2, Minimize2, PanelLeft, Plug, RefreshCw, RotateCcw, Settings, SlidersHorizontal, Smartphone, Square, Star, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Workflow, CircleStop, Columns2, ChevronLeft, ChevronRight, ChevronUp, Download, Eye, EyeOff, GalleryHorizontalEnd, ImagePlus, Lock, LockKeyhole, Maximize2, Minimize2, PanelLeft, Plug, RefreshCw, RotateCcw, Settings, SlidersHorizontal, Smartphone, Square, Star, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn, nearTextLimit, settingsText, type GenerationDetailSection } from './format';
 import { GallerySkeleton, Media, Skeleton, Tip } from './components';
@@ -58,6 +58,9 @@ import { refreshPrompts, usePromptHistory } from './recentPrompts';
 import type { GalleryItem } from './types';
 import type { HiddenState } from './useHidden';
 import { memoLatest } from '@/lib/memo-latest';
+
+// Loaded on first open: the canvas library stays out of the gallery's first paint.
+const Whiteboard = React.lazy(() => import('./whiteboard/Whiteboard').then((module) => ({ default: module.Whiteboard })));
 
 // App rebuilds every prop on each render (a keystroke in the prompt, a poll);
 // these skip re-rendering unless their data actually changed.
@@ -126,6 +129,22 @@ export function StudioView({ view }: { view: Record<string, any> }) {
   const strayModelCount = modelFolders?.strayCount || 0;
   const canUseNegativePrompt = currentProfile?.capabilities?.negativePrompt !== false;
   const { confirmAction, referenceAssets, referenceInputs, referenceInpaint, referenceRole, retryComfyStatus, comfyRetrying, comfyReconnectedAt } = view;
+  // The whiteboard (whiteboard/Whiteboard.tsx): pictures and prompts linked on a canvas, over the studio.
+  const [whiteboardOpen, setWhiteboardOpen] = React.useState(false);
+  const whiteboardBlocked = comfyStatus?.engine !== "gptimage"
+    ? (comfyStatus?.checked || comfyStatus?.connected !== undefined ? "The whiteboard generates with GPT Image. Start HEISS Studio on the GPT Image engine to use it." : "")
+    : comfyStatus?.connected === false ? "Sign in to ChatGPT first: run codex login in a terminal, then try again." : "";
+  // ⌘/Ctrl + B opens and closes it from anywhere outside a dialog.
+  React.useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== "b") return;
+      if (document.querySelector('[role="alertdialog"], [role="dialog"]:not([data-whiteboard]):not([data-focus-trap])')) return;
+      event.preventDefault();
+      setWhiteboardOpen((value) => !value);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   const gallerySearch = (view.gallerySearch || emptySearch) as GallerySearch;
   const setGallerySearch = view.setGallerySearch as (next: GallerySearch) => void;
   const toggleFavorite = view.toggleFavorite as (items: GalleryItem[], favorite: boolean) => void;
@@ -454,6 +473,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
         </button>
       </Tip>
       <Tip content="Workflow Gallery"><button className="icon-button" aria-label="Workflow Gallery" onClick={() => setWorkflowGalleryOpen(true)}><GalleryHorizontalEnd size={16} /></button></Tip>
+      <Tip content="Whiteboard (⌘/Ctrl + B)"><button className="icon-button" aria-label="Open the whiteboard" data-whiteboard-open onClick={() => setWhiteboardOpen(true)}><Workflow size={16} /></button></Tip>
       <Tip content="Settings"><button className="icon-button" aria-label="Settings" onClick={() => setSettings(true)}><Settings size={16} /></button></Tip>
       {prefs.zenMode ? (
         <Tip content="Exit zen (Esc)"><button className="icon-button" aria-label="Exit zen" onClick={() => setZenMode(false)}><Minimize2 size={16} /></button></Tip>
@@ -555,7 +575,7 @@ export function StudioView({ view }: { view: Record<string, any> }) {
     <HiddenActionsContext.Provider value={hiddenActions}>
     <TileLongPressContext.Provider value={phoneTiles}>
     <FavoriteContext.Provider value={toggleFavorite}>
-    <div className={cn(phone ? "phone-shell" : prefs.zenMode ? "zen-shell" : "app-shell", showNegativePrompt && canUseNegativePrompt && "negative-open", hiddenSpace && "is-hidden-space", hiddenLocked && "is-hidden-locked", !hiddenLocked && (searchOpen || searchOn) && "is-searching", passageClass)}>
+    <div inert={whiteboardOpen || undefined} className={cn(phone ? "phone-shell" : prefs.zenMode ? "zen-shell" : "app-shell", showNegativePrompt && canUseNegativePrompt && "negative-open", hiddenSpace && "is-hidden-space", hiddenLocked && "is-hidden-locked", !hiddenLocked && (searchOpen || searchOn) && "is-searching", passageClass)}>
       {phone ? <RunSheet run={runSheet} onClose={() => setRunSheet(null)} openItem={openItem} onShowInGallery={showRunInGallery} /> : null}
       {phone ? (
         <PhoneShell
@@ -1083,6 +1103,20 @@ export function StudioView({ view }: { view: Record<string, any> }) {
       {/* Portaled to <body>: inside the fixed shell it would sit under every dialog's scrim. */}
       <Toaster offset={islandsHeight ? islandsHeight + 8 : 0} />
     </div>
+    {whiteboardOpen ? (
+      <React.Suspense fallback={<div className="wb-root" data-whiteboard aria-busy="true" />}>
+        <Whiteboard
+          onClose={() => {
+            setWhiteboardOpen(false);
+            window.setTimeout(() => (document.querySelector("[data-whiteboard-open]") as HTMLElement | null)?.focus(), 0);
+          }}
+          confirmAction={confirmAction}
+          promptText={view.promptText}
+          showToast={showToast}
+          blocked={whiteboardBlocked}
+        />
+      </React.Suspense>
+    ) : null}
     </FavoriteContext.Provider>
     </TileLongPressContext.Provider>
     </HiddenActionsContext.Provider>

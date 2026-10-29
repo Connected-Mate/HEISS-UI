@@ -5,6 +5,7 @@ import "./crash-log-install.js";
 import { addProbe, logDir, logWarning } from "./crash-log.js";
 import { noteAlive, startSession } from "./exit-record.js";
 import { loadSavedSizes, saveSavedSizes } from "./saved-sizes.js";
+import { createBoard, deleteBoard, getBoard, listBoards, renameBoard, saveBoard } from "./boards.js";
 import express from "express";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -1052,6 +1053,55 @@ app.put("/api/sizes", (req, res) => {
     res.json({ ok: true, sizes: saveSavedSizes(req.body?.sizes, req.body?.base) });
   } catch (error) {
     res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+// Whiteboards (boards.js): pictures and prompt nodes linked on a canvas, the same on every device.
+const boardError = (res, error) => res.status(error.status || 400).json({ ok: false, error: error.message, ...(error.board ? { board: error.board } : {}) });
+
+app.get("/api/boards", (_req, res) => {
+  res.json({ ok: true, boards: listBoards() });
+});
+
+app.post("/api/boards", (req, res) => {
+  if (!requireLocal(req, res)) return;
+  try {
+    res.status(201).json({ ok: true, board: createBoard({ name: req.body?.name }) });
+  } catch (error) {
+    boardError(res, error);
+  }
+});
+
+app.get("/api/boards/:id", (req, res) => {
+  const board = getBoard(req.params.id);
+  if (!board) return res.status(404).json({ ok: false, error: "That board is gone. It may have been deleted on another device." });
+  res.json({ ok: true, board });
+});
+
+app.put("/api/boards/:id", (req, res) => {
+  if (!requireLocal(req, res)) return;
+  try {
+    res.json({ ok: true, board: saveBoard(req.params.id, req.body?.board, req.body?.baseRevision) });
+  } catch (error) {
+    boardError(res, error);
+  }
+});
+
+app.patch("/api/boards/:id", (req, res) => {
+  if (!requireLocal(req, res)) return;
+  try {
+    res.json({ ok: true, board: renameBoard(req.params.id, req.body?.name) });
+  } catch (error) {
+    boardError(res, error);
+  }
+});
+
+app.delete("/api/boards/:id", (req, res) => {
+  if (!requireLocal(req, res)) return;
+  try {
+    res.json(deleteBoard(req.params.id));
+  } catch (error) {
+    boardError(res, error);
   }
 });
 
